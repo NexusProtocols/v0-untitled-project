@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Key</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Include your CSS if necessary -->
+</head>
+<body>
+    <div class="container">
+        <h1>Your Premium Key</h1>
+        <div id="key-display" class="key-display">
+            <p><strong>Key:</strong> <span id="premium-key"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Function to get a query parameter value from the URL
+        function getQueryParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // On page load, display the key if it's passed in the URL
+        document.addEventListener("DOMContentLoaded", function() {
+            const key = getQueryParam("key");
+
+            if (key) {
+                // Display the key in the appropriate element
+                document.getElementById("premium-key").textContent = key;
+            } else {
+                document.getElementById("premium-key").textContent = "Key not found!";
+            }
+        });
+    </script>
+</body>
+</html>

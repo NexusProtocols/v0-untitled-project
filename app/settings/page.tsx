@@ -164,13 +164,14 @@ export default function SettingsPage() {
     const reader = new FileReader()
     reader.onload = (event) => {
       if (event.target?.result) {
-        setProfilePicture(event.target.result as string)
+        const profilePicData = event.target.result as string
+        setProfilePicture(profilePicData)
 
         // Save the profile picture immediately
         if (profileUser) {
           const updatedProfile = {
             ...profileUser,
-            profilePicture: event.target.result as string,
+            profilePicture: profilePicData,
           }
           localStorage.setItem(`nexus_profile_${user.username}`, JSON.stringify(updatedProfile))
           setProfileUser(updatedProfile)

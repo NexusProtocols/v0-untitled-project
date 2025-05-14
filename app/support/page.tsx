@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
@@ -9,6 +11,10 @@ export default function SupportPage() {
   const router = useRouter()
   const { user } = useAuth()
   const [hoveredOption, setHoveredOption] = useState<"ai" | "human" | null>(null)
+  const [showHumanSupportForm, setShowHumanSupportForm] = useState(false)
+  const [supportIssue, setSupportIssue] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState({ type: "", text: "" })
 
   const handleOptionSelect = (option: "ai" | "human") => {
     if (option === "ai") {
@@ -16,8 +22,90 @@ export default function SupportPage() {
       const chatId = Date.now().toString()
       router.push(`/ai/support/${chatId}`)
     } else {
-      // Human support is coming soon
-      alert("Human support is coming soon!")
+      // Show human support form
+      setShowHumanSupportForm(true)
+    }
+  }
+
+  const handleSubmitHumanSupport = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!supportIssue.trim()) {
+      setSubmitMessage({ type: "error", text: "Please describe your issue" })
+      return
+    }
+
+    setIsSubmitting(true)
+    setSubmitMessage({ type: "", text: "" })
+
+    try {
+      // Generate a unique request ID
+      const requestId = `REQ-${Date.now().toString(36).toUpperCase()}`
+      const timestamp = new Date().toISOString()
+
+      // Create support request in localStorage
+      const supportRequest = {
+        id: requestId,
+        userId: user?.username,
+        issue: supportIssue,
+        timestamp,
+        status: "pending",
+        messages: [
+          {
+            sender: user?.username,
+            content: supportIssue,
+            timestamp,
+          },
+        ],
+      }
+
+      // Store in localStorage
+      const existingRequests = JSON.parse(localStorage.getItem("nexus_support_requests") || "[]")
+      existingRequests.push(supportRequest)
+      localStorage.setItem("nexus_support_requests", JSON.stringify(existingRequests))
+
+      // Send to Discord webhook (this will be handled server-side in production)
+      // In this client-side implementation, we'll just simulate it
+      console.log("Support request would be sent to Discord webhook:", {
+        username: user?.username,
+        requestId,
+        timestamp,
+        issue: supportIssue,
+      })
+
+      // In a real implementation, you would use a server action or API route:
+      /*
+      await fetch('/api/support/webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: user?.username,
+          requestId,
+          timestamp,
+          issue: supportIssue
+        }),
+      })
+      */
+
+      setSubmitMessage({
+        type: "success",
+        text: "Your support request has been submitted. An admin will contact you shortly.",
+      })
+
+      // Redirect to the support chat
+      setTimeout(() => {
+        router.push(`/support/chat/${requestId}`)
+      }, 2000)
+    } catch (error) {
+      console.error("Error submitting support request:", error)
+      setSubmitMessage({
+        type: "error",
+        text: "An error occurred while submitting your request. Please try again.",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -52,66 +140,123 @@ export default function SupportPage() {
         speak with a human support agent.
       </p>
 
-      <div className="grid gap-8 md:grid-cols-2">
-        <div
-          className={`rounded-lg border border-red-500/30 bg-[#1a1a1a] p-8 text-center transition-all duration-300 ${
-            hoveredOption === "ai" ? "transform scale-105 shadow-lg shadow-red-500/20" : ""
-          }`}
-          onMouseEnter={() => setHoveredOption("ai")}
-          onMouseLeave={() => setHoveredOption(null)}
-          onClick={() => handleOptionSelect("ai")}
-        >
-          <div className="mb-4 text-6xl text-red-500">
-            <i className="fas fa-robot"></i>
-          </div>
-          <h2 className="mb-2 text-2xl font-bold text-white">AI Support</h2>
-          <p className="mb-6 text-gray-400">
-            Get instant help from our AI assistant powered by Grok. Available 24/7 for quick responses to your
-            questions.
-          </p>
-          <button
-            className="inline-flex items-center rounded bg-gradient-to-r from-red-500 to-red-700 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-red-500/20"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleOptionSelect("ai")
-            }}
-          >
-            <i className="fas fa-comments mr-2"></i> Chat with AI
-          </button>
-          <div className="mt-4 text-sm text-gray-500">
-            <p>3 messages per day • 100 words per message • 5000 token response limit</p>
-          </div>
-        </div>
+      {showHumanSupportForm ? (
+        <div className="rounded-lg border border-blue-500/30 bg-[#1a1a1a] p-8">
+          <h2 className="mb-4 text-2xl font-bold text-white">Human Support Request</h2>
 
-        <div
-          className={`rounded-lg border border-blue-500/30 bg-[#1a1a1a] p-8 text-center transition-all duration-300 ${
-            hoveredOption === "human" ? "transform scale-105 shadow-lg shadow-blue-500/20" : ""
-          }`}
-          onMouseEnter={() => setHoveredOption("human")}
-          onMouseLeave={() => setHoveredOption(null)}
-          onClick={() => handleOptionSelect("human")}
-        >
-          <div className="mb-4 text-6xl text-blue-500">
-            <i className="fas fa-user-headset"></i>
-          </div>
-          <h2 className="mb-2 text-2xl font-bold text-white">Human Support</h2>
-          <p className="mb-6 text-gray-400">
-            Connect with our support team for more complex issues or personalized assistance with your account.
-          </p>
-          <button
-            className="inline-flex items-center rounded bg-gradient-to-r from-blue-500 to-blue-700 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-blue-500/20"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleOptionSelect("human")
-            }}
+          {submitMessage.text && (
+            <div
+              className={`mb-6 rounded p-4 ${
+                submitMessage.type === "error" ? "bg-red-900/30 text-red-200" : "bg-green-900/30 text-green-200"
+              }`}
+            >
+              {submitMessage.text}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmitHumanSupport}>
+            <div className="mb-4">
+              <label htmlFor="supportIssue" className="mb-2 block font-medium text-blue-400">
+                Describe your issue
+              </label>
+              <textarea
+                id="supportIssue"
+                value={supportIssue}
+                onChange={(e) => setSupportIssue(e.target.value)}
+                className="w-full rounded border border-white/10 bg-[#0a0a0a] px-4 py-3 text-white transition-all focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                rows={5}
+                placeholder="Please describe your issue in detail..."
+                disabled={isSubmitting}
+              ></textarea>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 rounded bg-gradient-to-r from-blue-500 to-blue-700 px-4 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-blue-500/20 disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+                    <span>Submitting...</span>
+                  </div>
+                ) : (
+                  <>
+                    <i className="fas fa-paper-plane mr-2"></i> Submit Request
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowHumanSupportForm(false)}
+                className="rounded border border-white/10 bg-[#0a0a0a] px-4 py-3 font-semibold text-white transition-all hover:bg-[#1a1a1a]"
+                disabled={isSubmitting}
+              >
+                <i className="fas fa-arrow-left mr-2"></i> Back
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div className="grid gap-8 md:grid-cols-2">
+          <div
+            className={`rounded-lg border border-red-500/30 bg-[#1a1a1a] p-8 text-center transition-all duration-300 ${
+              hoveredOption === "ai" ? "transform scale-105 shadow-lg shadow-red-500/20" : ""
+            }`}
+            onMouseEnter={() => setHoveredOption("ai")}
+            onMouseLeave={() => setHoveredOption(null)}
+            onClick={() => handleOptionSelect("ai")}
           >
-            <i className="fas fa-headset mr-2"></i> Contact Support
-          </button>
-          <div className="mt-4 text-sm text-gray-500">
-            <p>Coming Soon!</p>
+            <div className="mb-4 text-6xl text-red-500">
+              <i className="fas fa-robot"></i>
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-white">AI Support</h2>
+            <p className="mb-6 text-gray-400">
+              Get instant help from our AI assistant powered by Grok. Available 24/7 for quick responses to your
+              questions.
+            </p>
+            <button
+              className="inline-flex items-center rounded bg-gradient-to-r from-red-500 to-red-700 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-red-500/20"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleOptionSelect("ai")
+              }}
+            >
+              <i className="fas fa-comments mr-2"></i> Chat with AI
+            </button>
+            <div className="mt-4 text-sm text-gray-500">
+              <p>3 messages per day • 100 words per message • 5000 token response limit</p>
+            </div>
+          </div>
+
+          <div
+            className={`rounded-lg border border-blue-500/30 bg-[#1a1a1a] p-8 text-center transition-all duration-300 ${
+              hoveredOption === "human" ? "transform scale-105 shadow-lg shadow-blue-500/20" : ""
+            }`}
+            onMouseEnter={() => setHoveredOption("human")}
+            onMouseLeave={() => setHoveredOption(null)}
+            onClick={() => handleOptionSelect("human")}
+          >
+            <div className="mb-4 text-6xl text-blue-500">
+              <i className="fas fa-user-headset"></i>
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-white">Human Support</h2>
+            <p className="mb-6 text-gray-400">
+              Connect with our support team for more complex issues or personalized assistance with your account.
+            </p>
+            <button
+              className="inline-flex items-center rounded bg-gradient-to-r from-blue-500 to-blue-700 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-blue-500/20"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleOptionSelect("human")
+              }}
+            >
+              <i className="fas fa-headset mr-2"></i> Contact Support
+            </button>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="mt-12 rounded-lg border border-white/10 bg-[#1a1a1a] p-6">
         <h2 className="mb-4 text-xl font-bold text-white">Frequently Asked Questions</h2>

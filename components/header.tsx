@@ -213,22 +213,24 @@ export default function Header() {
                 ></span>
               </Link>
             </li>
-            <li>
-              <Link
-                href="/upload-keys"
-                className={`nav-item flex items-center rounded px-5 py-2.5 text-sm font-medium transition-all relative group
-                  ${
-                    isActive("/upload-keys")
-                      ? "text-[#ff3e3e]"
-                      : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
-                  }`}
-              >
-                <i className="fas fa-upload mr-2"></i> Upload Keys
-                <span
-                  className={`absolute bottom-0 left-0 h-0.5 w-0 bg-[#ff3e3e] transition-all duration-300 ${isActive("/upload-keys") ? "w-full" : "group-hover:w-full"}`}
-                ></span>
-              </Link>
-            </li>
+            {userIsAdmin && (
+              <li>
+                <Link
+                  href="/upload-keys"
+                  className={`nav-item flex items-center rounded px-5 py-2.5 text-sm font-medium transition-all relative group
+                    ${
+                      isActive("/upload-keys")
+                        ? "text-[#ff3e3e]"
+                        : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
+                    }`}
+                >
+                  <i className="fas fa-upload mr-2"></i> Upload Keys
+                  <span
+                    className={`absolute bottom-0 left-0 h-0.5 w-0 bg-[#ff3e3e] transition-all duration-300 ${isActive("/upload-keys") ? "w-full" : "group-hover:w-full"}`}
+                  ></span>
+                </Link>
+              </li>
+            )}
             <li>
               <Link
                 href="/support"
@@ -416,18 +418,20 @@ export default function Header() {
                     <i className="fas fa-terminal mr-3 w-5 text-center"></i> Executors
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    href="/upload-keys"
-                    className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-all transform hover:scale-105 ${
-                      isActive("/upload-keys")
-                        ? "bg-[rgba(255,62,62,0.15)] text-[#ff3e3e]"
-                        : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
-                    }`}
-                  >
-                    <i className="fas fa-upload mr-3 w-5 text-center"></i> Upload Keys
-                  </Link>
-                </li>
+                {userIsAdmin && (
+                  <li>
+                    <Link
+                      href="/upload-keys"
+                      className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-all transform hover:scale-105 ${
+                        isActive("/upload-keys")
+                          ? "bg-[rgba(255,62,62,0.15)] text-[#ff3e3e]"
+                          : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
+                      }`}
+                    >
+                      <i className="fas fa-upload mr-3 w-5 text-center"></i> Upload Keys
+                    </Link>
+                  </li>
+                )}
                 <li>
                   <Link
                     href="/support"

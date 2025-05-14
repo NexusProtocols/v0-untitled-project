@@ -55,27 +55,6 @@ export default function PremiumKeyPage() {
             </a>
           </div>
         </div>
-
-        <div className="rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] p-6">
-          <h3 className="mb-4 text-xl font-bold text-[#ff3e3e]">Premium Benefits Coming Soon</h3>
-          <ul className="space-y-3 text-left">
-            <li className="flex items-center text-gray-300">
-              <i className="fas fa-check-circle mr-2 text-[#ff3e3e]"></i> Exclusive scripts
-            </li>
-            <li className="flex items-center text-gray-300">
-              <i className="fas fa-check-circle mr-2 text-[#ff3e3e]"></i> Priority support
-            </li>
-            <li className="flex items-center text-gray-300">
-              <i className="fas fa-check-circle mr-2 text-[#ff3e3e]"></i> Early access to new features
-            </li>
-            <li className="flex items-center text-gray-300">
-              <i className="fas fa-check-circle mr-2 text-[#ff3e3e]"></i> Ad-free experience
-            </li>
-            <li className="flex items-center text-gray-300">
-              <i className="fas fa-check-circle mr-2 text-[#ff3e3e]"></i> Custom profile badges
-            </li>
-          </ul>
-        </div>
       </div>
     </div>
   )

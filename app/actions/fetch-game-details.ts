@@ -1,139 +1,107 @@
 "use server"
 
-import { load } from "cheerio"
-
-// Function to fetch game details by ID
 export async function fetchGameDetailsById(gameId: string) {
   try {
-    // Validate game ID
-    if (!gameId || !/^\d+$/.test(gameId)) {
-      return { success: false, error: "Invalid game ID. Please enter a valid Roblox game ID." }
-    }
-
-    const url = `https://www.roblox.com/games/${gameId}`
-
-    // Fetch the HTML content
-    const response = await fetch(url, {
+    // Call the client function but from the server
+    const response = await fetch(`https://games.roblox.com/v1/games?universeIds=${gameId}`, {
+      method: "GET",
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        Accept: "application/json",
       },
     })
 
     if (!response.ok) {
-      return { success: false, error: `Failed to fetch game details. Status: ${response.status}` }
+      throw new Error(`Error ${response.status}: ${response.statusText}`)
     }
 
-    const html = await response.text()
+    const data = await response.json()
 
-    // Use cheerio to parse the HTML
-    const $ = load(html)
-
-    // Extract the game title from the h1 element with class "game-name"
-    const title = $("h1.game-name").attr("title") || $("h1.game-name").text()
-
-    // Extract the game image from meta tag
-    const imageMatch = html.match(/<meta property="og:image" content="([^"]+)"/)
-    const imageUrl = imageMatch ? imageMatch[1] : null
-
-    if (!title || !imageUrl) {
-      return { success: false, error: "Could not extract game details from the page." }
+    if (!data.data || data.data.length === 0) {
+      return { success: false, error: "Game not found" }
     }
+
+    const gameData = data.data[0]
+
+    // Fetch thumbnail
+    const thumbnailResponse = await fetch(
+      `https://thumbnails.roblox.com/v1/games/icons?universeIds=${gameId}&size=512x512&format=Png&isCircular=false`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      },
+    )
+
+    const thumbnailData = await thumbnailResponse.json()
+    const imageUrl =
+      thumbnailData.data && thumbnailData.data.length > 0
+        ? thumbnailData.data[0].imageUrl
+        : "/placeholder.svg?height=512&width=512"
 
     return {
       success: true,
       data: {
-        name: title,
+        name: gameData.name,
+        description: gameData.description || "",
         imageUrl: imageUrl,
         gameId: gameId,
+        stats: {
+          playing: gameData.playing || 0,
+          visits: gameData.visits || 0,
+          likes: gameData.totalUpVotes || 0,
+          dislikes: gameData.totalDownVotes || 0,
+        },
       },
     }
   } catch (error) {
     console.error("Error fetching game details:", error)
-    return { success: false, error: "An error occurred while fetching game details." }
+    return { success: false, error: "Failed to fetch game details" }
   }
 }
 
-// Function to search games by name
 export async function fetchGameDetailsByName(gameName: string) {
   try {
-    if (!gameName || gameName.trim() === "") {
-      return { success: false, error: "Please enter a game name." }
-    }
-
-    // Encode the game name for URL
-    const encodedName = encodeURIComponent(gameName)
-    const url = `https://www.roblox.com/discover/?Keyword=${encodedName}`
-
-    // Fetch the HTML content
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    // Call the client function but from the server
+    const response = await fetch(
+      `https://games.roblox.com/v1/games/list?model.keyword=${encodeURIComponent(gameName)}&model.maxRows=10&model.startRowIndex=0`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
       },
-    })
+    )
 
     if (!response.ok) {
-      return { success: false, error: `Failed to fetch game details. Status: ${response.status}` }
+      throw new Error(`Error ${response.status}: ${response.statusText}`)
     }
 
-    const html = await response.text()
+    const data = await response.json()
 
-    // Use cheerio to parse the HTML
-    const $ = load(html)
-
-    // Find all game cards
-    const gameResults = []
-
-    // Process each game card
-    $("a.game-card-link").each((index, element) => {
-      const $element = $(element)
-
-      // Extract game ID and link from href attribute
-      const href = $element.attr("href")
-      let gameId = ""
-
-      if (href) {
-        const gameIdMatch = href.match(/\/games\/(\d+)/)
-        if (gameIdMatch && gameIdMatch[1]) {
-          gameId = gameIdMatch[1]
-        }
-      }
-
-      // Extract game name
-      const gameName = $element.find(".game-card-name").attr("title") || $element.find(".game-card-name").text()
-
-      // Extract thumbnail
-      const thumbnail = $element.find("img").attr("src")
-
-      // Extract stats (likes and playing count)
-      const likePercentage = $element.find(".vote-percentage-label").text()
-      const playingCount = $element.find(".playing-counts-label").text()
-
-      if (gameId && gameName && thumbnail) {
-        gameResults.push({
-          gameId,
-          name: gameName,
-          imageUrl: thumbnail,
-          link: href,
-          stats: {
-            likes: likePercentage,
-            playing: playingCount,
-          },
-        })
-      }
-    })
-
-    if (gameResults.length === 0) {
-      return { success: false, error: "No games found with that name." }
+    if (!data.games || data.games.length === 0) {
+      return { success: false, error: "No games found matching that name" }
     }
+
+    // Map the results to our format
+    const games = data.games.map((game: any) => ({
+      name: game.name,
+      imageUrl: game.imageUrl,
+      gameId: game.universeId.toString(),
+      stats: {
+        playing: game.playerCount || 0,
+        visits: game.visitCount || 0,
+        likes: game.totalUpVotes || 0,
+        dislikes: game.totalDownVotes || 0,
+      },
+    }))
 
     return {
       success: true,
-      data: gameResults,
+      data: games,
     }
   } catch (error) {
-    console.error("Error searching games by name:", error)
-    return { success: false, error: "An error occurred while searching for games." }
+    console.error("Error searching games:", error)
+    return { success: false, error: "Failed to search games" }
   }
 }

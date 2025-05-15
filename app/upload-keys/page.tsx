@@ -6,9 +6,8 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
-
-// Add these imports at the top
-import { fetchGameDetailsById, fetchGameDetailsByName } from "@/app/actions/fetch-game-details"
+import { fetchGameDetailsById, searchGamesByName } from "@/lib/roblox-api"
+import { generateKey } from "@/lib/crypto"
 
 // Define the admin token constant - same as in key-generator
 const ADMIN_TOKEN_KEY =
@@ -28,7 +27,7 @@ export default function UploadKeysPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
-  // Add these state variables
+  // Game search state variables
   const [gameId, setGameId] = useState("")
   const [gameName, setGameName] = useState("")
   const [gameDetails, setGameDetails] = useState<any | null>(null)
@@ -37,6 +36,17 @@ export default function UploadKeysPage() {
   const [searchMethod, setSearchMethod] = useState<"id" | "name">("id")
   const [gameSearchResults, setGameSearchResults] = useState<any[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
+
+  // Key settings state variables
+  const [adLevel, setAdLevel] = useState(1)
+  const [maxAdLevel, setMaxAdLevel] = useState(3) // Default for free users
+  const [adultAds, setAdultAds] = useState(false)
+  const [keyDuration, setKeyDuration] = useState(7) // Default 7 days
+  const [maxUses, setMaxUses] = useState(1) // Default 1 use
+  const [hwidLock, setHwidLock] = useState(true) // Default enabled
+  const [keyPrefix, setKeyPrefix] = useState("NEXUS-")
+  const [gatewayCount, setGatewayCount] = useState(1) // Default 1 gateway
+  const [generatedKey, setGeneratedKey] = useState("")
 
   // Check for mobile devices
   useEffect(() => {
@@ -60,6 +70,20 @@ export default function UploadKeysPage() {
         const isUserAdmin = adminUsernames.includes(user.username)
         setUserIsAdmin(isUserAdmin)
         setAdminCheckComplete(true)
+
+        // Check if user has Discord linked
+        const userData = JSON.parse(localStorage.getItem(`nexus_user_${user.username}`) || "{}")
+        const hasDiscordLinked = userData.discordId !== undefined
+
+        // Set max ad level based on user status
+        if (isUserAdmin) {
+          setMaxAdLevel(5) // Admins get level 5
+        } else if (hasDiscordLinked) {
+          setMaxAdLevel(4) // Discord-linked users get level 4
+        } else {
+          setMaxAdLevel(3) // Free users get level 3
+        }
+
         return
       }
 
@@ -68,6 +92,7 @@ export default function UploadKeysPage() {
       if (adminToken) {
         setUserIsAdmin(true)
         setAdminCheckComplete(true)
+        setMaxAdLevel(5) // Admin token gives level 5
         return
       }
 
@@ -104,7 +129,7 @@ export default function UploadKeysPage() {
     reader.readAsDataURL(file)
   }
 
-  // Add these functions
+  // Game search functions
   const handleFetchGameDetailsById = async () => {
     if (!gameId) {
       setGameError("Please enter a game ID")
@@ -148,7 +173,7 @@ export default function UploadKeysPage() {
     setGameSearchResults([])
 
     try {
-      const result = await fetchGameDetailsByName(gameName)
+      const result = await searchGamesByName(gameName)
 
       if (result.success) {
         setGameSearchResults(result.data)
@@ -169,11 +194,18 @@ export default function UploadKeysPage() {
       name: game.name,
       imageUrl: game.imageUrl,
       gameId: game.gameId,
+      stats: game.stats,
     })
     setGameId(game.gameId)
     setShowSearchResults(false)
     // Automatically set the image URL from the selected game
     setImageUrl(game.imageUrl)
+  }
+
+  // Generate a key for preview
+  const handleGenerateKeyPreview = () => {
+    const key = generateKey(keyPrefix)
+    setGeneratedKey(key)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -196,7 +228,12 @@ export default function UploadKeysPage() {
       // Get author name - use user.username if logged in, or "NEXUS Admin" if not
       const authorName = user ? user.username : "NEXUS Admin"
 
-      // Create a key object
+      // Generate a key if one hasn't been generated yet
+      if (!generatedKey) {
+        handleGenerateKeyPreview()
+      }
+
+      // Create a key object with new fields
       const key = {
         id: `key-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         title: keyTitle,
@@ -210,6 +247,17 @@ export default function UploadKeysPage() {
         isPremium: isPremium,
         isNexusTeam: true, // Since only admins can upload keys
         game: gameDetails, // Add game details if available
+
+        // New fields
+        adLevel: adLevel,
+        adultAds: adultAds,
+        keyDuration: keyDuration,
+        maxUses: maxUses,
+        hwidLock: hwidLock,
+        keyPrefix: keyPrefix,
+        gatewayCount: gatewayCount,
+        expiresAt: new Date(Date.now() + keyDuration * 24 * 60 * 60 * 1000).toISOString(), // Calculate expiry date
+        activationKey: generatedKey || generateKey(keyPrefix),
       }
 
       // Get existing keys from localStorage or initialize empty array
@@ -233,6 +281,14 @@ export default function UploadKeysPage() {
       setGameId("")
       setGameName("")
       setGameDetails(null)
+      setAdLevel(1)
+      setAdultAds(false)
+      setKeyDuration(7)
+      setMaxUses(1)
+      setHwidLock(true)
+      setKeyPrefix("NEXUS-")
+      setGatewayCount(1)
+      setGeneratedKey("")
 
       // Reset file input
       const fileInput = document.getElementById("keyImage") as HTMLInputElement
@@ -474,6 +530,16 @@ export default function UploadKeysPage() {
                 <div>
                   <h3 className="font-medium text-white">{gameDetails.name}</h3>
                   <p className="text-sm text-gray-400">Game ID: {gameDetails.gameId}</p>
+                  {gameDetails.stats && (
+                    <div className="mt-1 flex items-center gap-3 text-xs text-gray-400">
+                      <span>
+                        <i className="fas fa-user mr-1"></i> {gameDetails.stats.playing} playing
+                      </span>
+                      <span>
+                        <i className="fas fa-thumbs-up mr-1"></i> {gameDetails.stats.likes}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -558,17 +624,162 @@ export default function UploadKeysPage() {
             />
           </div>
 
-          <div className="mb-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isPremium}
-                onChange={() => setIsPremium(!isPremium)}
-                className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
-              />
-              <span className="text-white">Mark as Premium Key</span>
-            </label>
-            <p className="mt-1 text-xs text-gray-400">Premium keys will be highlighted with special styling</p>
+          {/* New section for key settings */}
+          <div className="mb-6 p-4 rounded border border-white/10 bg-[#0a0a0a]">
+            <h3 className="text-lg font-bold text-white mb-4">Key Settings</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label htmlFor="keyPrefix" className="mb-2 block font-medium text-[#ff3e3e]">
+                  Key Prefix
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="keyPrefix"
+                    value={keyPrefix}
+                    onChange={(e) => setKeyPrefix(e.target.value)}
+                    maxLength={10}
+                    className="input-focus-effect flex-1 rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGenerateKeyPreview}
+                    className="interactive-element button-glow rounded bg-[#ff3e3e] px-4 py-2 font-semibold text-white transition-all hover:bg-[#ff0000]"
+                  >
+                    Generate
+                  </button>
+                </div>
+                {generatedKey && (
+                  <div className="mt-2 p-2 bg-[#050505] border border-white/10 rounded">
+                    <p className="font-mono text-sm text-white break-all">{generatedKey}</p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="keyDuration" className="mb-2 block font-medium text-[#ff3e3e]">
+                  Key Duration (days)
+                </label>
+                <input
+                  type="number"
+                  id="keyDuration"
+                  value={keyDuration}
+                  onChange={(e) => setKeyDuration(Number.parseInt(e.target.value))}
+                  min="1"
+                  max="365"
+                  className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="maxUses" className="mb-2 block font-medium text-[#ff3e3e]">
+                  Maximum Uses
+                </label>
+                <input
+                  type="number"
+                  id="maxUses"
+                  value={maxUses}
+                  onChange={(e) => setMaxUses(Number.parseInt(e.target.value))}
+                  min="1"
+                  max="1000"
+                  className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="gatewayCount" className="mb-2 block font-medium text-[#ff3e3e]">
+                  Gateway Count
+                </label>
+                <input
+                  type="number"
+                  id="gatewayCount"
+                  value={gatewayCount}
+                  onChange={(e) => setGatewayCount(Number.parseInt(e.target.value))}
+                  min="1"
+                  max="5"
+                  className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="hwidLock"
+                  checked={hwidLock}
+                  onChange={() => setHwidLock(!hwidLock)}
+                  className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                />
+                <label htmlFor="hwidLock" className="text-white">
+                  HWID Lock
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="isPremium"
+                  checked={isPremium}
+                  onChange={() => setIsPremium(!isPremium)}
+                  className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                />
+                <label htmlFor="isPremium" className="text-white">
+                  Premium Key
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-white opacity-50">Anti-Emulator</span>
+                <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded">Coming Soon</span>
+              </div>
+            </div>
+          </div>
+
+          {/* New section for ad settings */}
+          <div className="mb-6 p-4 rounded border border-white/10 bg-[#0a0a0a]">
+            <h3 className="text-lg font-bold text-white mb-4">Ad Settings</h3>
+
+            <div className="mb-4">
+              <label htmlFor="adLevel" className="mb-2 block font-medium text-[#ff3e3e]">
+                Ad Level (1-{maxAdLevel})
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  id="adLevel"
+                  min="1"
+                  max={maxAdLevel}
+                  value={adLevel}
+                  onChange={(e) => setAdLevel(Number.parseInt(e.target.value))}
+                  className="w-full h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-white font-bold min-w-[30px] text-center">{adLevel}</span>
+              </div>
+              <div className="mt-2 text-xs text-gray-400">
+                {adLevel === 1 && "Level 1: 5 native ads around the page"}
+                {adLevel === 2 && "Level 2: 10 native ads + direct link ads with popup"}
+                {adLevel === 3 && "Level 3: Level 2 + additional popups and redirects"}
+                {adLevel === 4 && "Level 4: Level 3 + Opera GX offerwall"}
+                {adLevel === 5 && "Level 5: Maximum monetization (admin only)"}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={adultAds}
+                  onChange={() => setAdultAds(!adultAds)}
+                  className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                />
+                <span className="text-white">Allow Adult Ads (18+)</span>
+              </label>
+              <p className="mt-1 text-xs text-gray-400">
+                Enabling this will allow adult-oriented advertisements to appear in your key gateways
+              </p>
+            </div>
           </div>
 
           <button

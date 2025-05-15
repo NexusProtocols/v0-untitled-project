@@ -6,6 +6,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
+import { sendSupportWebhook } from "@/app/actions/send-support-webhook"
 
 export default function SupportPage() {
   const router = useRouter()
@@ -64,30 +65,18 @@ export default function SupportPage() {
       existingRequests.push(supportRequest)
       localStorage.setItem("nexus_support_requests", JSON.stringify(existingRequests))
 
-      // Send to Discord webhook (this will be handled server-side in production)
-      // In this client-side implementation, we'll just simulate it
-      console.log("Support request would be sent to Discord webhook:", {
-        username: user?.username,
+      // Send to Discord webhook using server action
+      const webhookResult = await sendSupportWebhook({
+        username: user?.username || "Anonymous",
         requestId,
         timestamp,
         issue: supportIssue,
       })
 
-      // In a real implementation, you would use a server action or API route:
-      /*
-      await fetch('/api/support/webhook', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: user?.username,
-          requestId,
-          timestamp,
-          issue: supportIssue
-        }),
-      })
-      */
+      if (!webhookResult.success) {
+        console.error("Failed to send webhook:", webhookResult.error)
+        // Continue anyway since we saved to localStorage
+      }
 
       setSubmitMessage({
         type: "success",

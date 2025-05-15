@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import TermsConsentModal from "@/components/terms-consent-modal"
 
 export default function SignupPage() {
   const [username, setUsername] = useState("")
@@ -19,6 +20,12 @@ export default function SignupPage() {
     text: null,
   })
 
+  // New state variables for consent
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [cookieConsent, setCookieConsent] = useState(false)
+  const [showCookieError, setShowCookieError] = useState(false)
+
   // Check for mobile devices
   useEffect(() => {
     const checkMobile = () => {
@@ -27,6 +34,14 @@ export default function SignupPage() {
     checkMobile()
     window.addEventListener("resize", checkMobile)
     return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  // Check if cookies are accepted
+  useEffect(() => {
+    const cookieConsent = localStorage.getItem("nexus_cookie_consent")
+    if (cookieConsent) {
+      setCookieConsent(true)
+    }
   }, [])
 
   const validateUsername = (username: string): string | null => {
@@ -56,12 +71,28 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setShowCookieError(false)
     setIsLoading(true)
     setMessage({ type: null, text: null })
 
     try {
+      // Check if cookies are accepted
+      if (!cookieConsent) {
+        setShowCookieError(true)
+        setIsLoading(false)
+        return
+      }
+
+      // Check if terms are accepted
+      if (!acceptedTerms) {
+        setError("You must accept the Terms of Service to create an account")
+        setIsLoading(false)
+        return
+      }
+
       if (!username || !password || !confirmPassword) {
         setError("All fields are required")
+        setIsLoading(false)
         return
       }
 
@@ -69,6 +100,7 @@ export default function SignupPage() {
       const usernameError = validateUsername(username)
       if (usernameError) {
         setError(usernameError)
+        setIsLoading(false)
         return
       }
 
@@ -76,6 +108,7 @@ export default function SignupPage() {
       const blacklistedUsernames = JSON.parse(localStorage.getItem("nexus_blacklisted_usernames") || "[]")
       if (blacklistedUsernames.some((banned: string) => banned.toLowerCase() === username.toLowerCase())) {
         setError("This username is not available. Please choose a different one.")
+        setIsLoading(false)
         return
       }
 
@@ -83,11 +116,13 @@ export default function SignupPage() {
       const passwordError = validatePassword(password, username)
       if (passwordError) {
         setError(passwordError)
+        setIsLoading(false)
         return
       }
 
       if (password !== confirmPassword) {
         setError("Passwords do not match")
+        setIsLoading(false)
         return
       }
 
@@ -98,6 +133,7 @@ export default function SignupPage() {
           const storedUsername = key.replace("nexus_user_", "")
           if (storedUsername.toLowerCase() === username.toLowerCase()) {
             setError("Username already exists. Please choose a different one.")
+            setIsLoading(false)
             return
           }
         }
@@ -125,6 +161,9 @@ export default function SignupPage() {
         ip,
         browser,
         os,
+        acceptedTerms: true,
+        acceptedCookies: true,
+        termsAcceptedAt: new Date().toISOString(),
       }
 
       localStorage.setItem(`nexus_user_${username}`, JSON.stringify(userData))
@@ -185,6 +224,12 @@ export default function SignupPage() {
     return osName
   }
 
+  // Function to handle terms acceptance
+  const handleTermsAccept = () => {
+    setAcceptedTerms(true)
+    setShowTermsModal(false)
+  }
+
   return (
     <div className="container mx-auto px-5 py-12">
       <div className="mx-auto max-w-md rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-8 shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-[#ff3e3e]/10">
@@ -195,6 +240,12 @@ export default function SignupPage() {
         {error && <div className="mb-4 rounded bg-red-900/30 p-3 text-sm text-red-200">{error}</div>}
         {message.type === "success" && (
           <div className="mb-4 rounded bg-green-900/30 p-3 text-sm text-green-200">{message.text}</div>
+        )}
+
+        {showCookieError && (
+          <div className="mb-4 rounded bg-red-900/30 p-3 text-sm text-red-200">
+            You must accept cookies to create an account. Please refresh the page and accept cookies when prompted.
+          </div>
         )}
 
         <form onSubmit={handleSubmit}>
@@ -241,6 +292,27 @@ export default function SignupPage() {
             />
           </div>
 
+          <div className="mb-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={() => setShowTermsModal(true)}
+                className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+              />
+              <span className="text-sm text-gray-300">
+                I agree to the{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal(true)}
+                  className="text-[#ff3e3e] hover:underline"
+                >
+                  Terms of Service
+                </button>
+              </span>
+            </label>
+          </div>
+
           <button
             type="submit"
             disabled={isLoading}
@@ -264,6 +336,13 @@ export default function SignupPage() {
           </Link>
         </div>
       </div>
+
+      {/* Terms of Service Modal */}
+      <TermsConsentModal
+        isOpen={showTermsModal}
+        onAccept={handleTermsAccept}
+        onClose={() => setShowTermsModal(false)}
+      />
     </div>
   )
 }

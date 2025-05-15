@@ -146,7 +146,7 @@ export function AdminPanel({ username }: { username: string }) {
         isBanned: true,
         bannedReason: finalBanReason || "Violation of terms of service",
         banExpiration: banExpiration,
-      })
+      }),
     )
 
     if (banOptions.ipBan && userData.ip) {
@@ -186,7 +186,7 @@ export function AdminPanel({ username }: { username: string }) {
         isBanned: false,
         bannedReason: "",
         banExpiration: null,
-      })
+      }),
     )
   }
 
@@ -205,16 +205,14 @@ export function AdminPanel({ username }: { username: string }) {
   return (
     <div className="p-4 space-y-4">
       <h2 className="text-xl font-bold">Admin Panel: {username}</h2>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-gray-100 p-4 rounded-lg">
           <h3 className="font-semibold mb-2">User Information</h3>
           <p>Email: {userData.email || "N/A"}</p>
           <p>Joined: {new Date(userData.createdAt).toLocaleDateString()}</p>
           <p>Status: {userData.isBanned ? "Banned" : "Active"}</p>
-          {userData.isBanned && (
-            <p>Ban Reason: {userData.bannedReason}</p>
-          )}
+          {userData.isBanned && <p>Ban Reason: {userData.bannedReason}</p>}
         </div>
 
         <div className="bg-gray-100 p-4 rounded-lg">
@@ -247,10 +245,7 @@ export function AdminPanel({ username }: { username: string }) {
           Ban User
         </button>
         {userData.isBanned && (
-          <button
-            onClick={handleUnbanUser}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-          >
+          <button onClick={handleUnbanUser} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
             Unban User
           </button>
         )}
@@ -267,7 +262,7 @@ export function AdminPanel({ username }: { username: string }) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg max-w-md w-full">
             <h3 className="text-lg font-bold mb-4">Ban User: {username}</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block mb-2">Ban Reason</label>
@@ -313,7 +308,7 @@ export function AdminPanel({ username }: { username: string }) {
                     <input
                       type="checkbox"
                       checked={banOptions.accountBan}
-                      onChange={(e) => setBanOptions({...banOptions, accountBan: e.target.checked})}
+                      onChange={(e) => setBanOptions({ ...banOptions, accountBan: e.target.checked })}
                       className="mr-2"
                     />
                     Account Ban
@@ -322,7 +317,7 @@ export function AdminPanel({ username }: { username: string }) {
                     <input
                       type="checkbox"
                       checked={banOptions.ipBan}
-                      onChange={(e) => setBanOptions({...banOptions, ipBan: e.target.checked})}
+                      onChange={(e) => setBanOptions({ ...banOptions, ipBan: e.target.checked })}
                       className="mr-2"
                     />
                     IP Ban
@@ -331,7 +326,7 @@ export function AdminPanel({ username }: { username: string }) {
                     <input
                       type="checkbox"
                       checked={banOptions.hwidBan}
-                      onChange={(e) => setBanOptions({...banOptions, hwidBan: e.target.checked})}
+                      onChange={(e) => setBanOptions({ ...banOptions, hwidBan: e.target.checked })}
                       className="mr-2"
                     />
                     HWID Ban
@@ -340,16 +335,10 @@ export function AdminPanel({ username }: { username: string }) {
               </div>
 
               <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setShowBanModal(false)}
-                  className="px-4 py-2 border rounded"
-                >
+                <button onClick={() => setShowBanModal(false)} className="px-4 py-2 border rounded">
                   Cancel
                 </button>
-                <button
-                  onClick={handleBanUser}
-                  className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                >
+                <button onClick={handleBanUser} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
                   Confirm Ban
                 </button>
               </div>

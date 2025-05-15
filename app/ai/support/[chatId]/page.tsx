@@ -26,6 +26,55 @@ const MAX_MESSAGES_PER_DAY = 3
 const MAX_MESSAGE_LENGTH = 100 // words
 const MAX_RESPONSE_TOKENS = 5000
 
+// More varied AI responses
+const AI_RESPONSES = {
+  script: [
+    "I can help with script-related questions! Our platform supports Lua scripts for Roblox games. Make sure your scripts follow our guidelines and don't contain malicious code. If you're having trouble with a specific script, please provide more details about the issue you're experiencing.",
+    "For script issues, I'd need to know more about what you're trying to accomplish. Nexus supports various Lua scripts, but they must comply with our content guidelines. Could you share more details about the script you're working with?",
+    "Scripts on our platform need to follow certain guidelines to ensure they're safe and effective. If you're having trouble with a specific script, I can help troubleshoot. What exactly are you trying to do with your script?",
+  ],
+  account: [
+    "For account-related issues, make sure you're using the correct credentials. If you've forgotten your password, you can reset it from the login page. If you're having trouble linking your Discord account, ensure you're granting the necessary permissions during the authorization process.",
+    "Account problems can be frustrating! If you're having login issues, try clearing your browser cache or using a different browser. For password resets, use the 'Forgot Password' link on the login page. Discord linking requires proper permissions to be granted.",
+    "If you're experiencing account issues, first check that you're entering the correct username and password. For Discord linking problems, make sure you're logged into Discord in the same browser and have granted all the required permissions.",
+  ],
+  discord: [
+    "Discord integration allows you to upload scripts for popular games and access premium features. To link your Discord account, go to your profile settings and click on 'Link Discord Account'. Follow the authorization process to complete the linking.",
+    "Our Discord integration provides access to exclusive scripts and features. To connect your accounts, navigate to your profile page, find the Discord section, and click the link button. You'll need to authorize Nexus in the Discord popup that appears.",
+    "Linking your Discord account unlocks additional benefits like higher ad levels and access to premium scripts. The process is simple - just go to your profile, click on the Discord connection option, and follow the prompts to authorize the integration.",
+  ],
+  game: [
+    "We support scripts for various Roblox games. Some popular games require Discord authentication before you can upload scripts for them. This helps us maintain quality and prevent abuse. Check the game details when uploading to see if Discord authentication is required.",
+    "Our platform offers scripts for a wide range of Roblox games. For certain popular titles, we require Discord verification to ensure script quality and prevent misuse. You can see these requirements on the game's detail page.",
+    "Nexus provides scripts for most popular Roblox games. The requirements vary by game - some need Discord verification, others might have additional security checks. This helps us maintain a high-quality script library for our users.",
+  ],
+  error: [
+    "I'm sorry to hear you're experiencing issues. For technical problems, please provide specific error messages or screenshots if possible. Common issues can be resolved by clearing your browser cache, using a different browser, or checking your internet connection.",
+    "Technical issues can be frustrating. To help you better, could you share any error messages you're seeing? Often, problems can be resolved by refreshing the page, clearing cache, or trying a different browser.",
+    "If you're encountering errors, the most helpful information would be any error codes or messages you're seeing. Many technical problems can be fixed by simple troubleshooting steps like clearing cookies or updating your browser.",
+  ],
+  premium: [
+    "Premium features include access to exclusive scripts, priority support, and no daily limits on AI chat. To upgrade to premium, visit your account settings and select 'Upgrade to Premium'. We accept various payment methods including credit cards and PayPal.",
+    "Our premium subscription offers several benefits: unlimited AI support, exclusive script access, priority customer service, and ad-free browsing. You can upgrade through your account dashboard using credit card, PayPal, or crypto payments.",
+    "Premium members enjoy many advantages, including access to our exclusive script library, unlimited AI chat support, priority in the support queue, and a completely ad-free experience. Subscription options include monthly or annual plans with significant savings for longer commitments.",
+  ],
+  thank: [
+    "You're welcome! I'm glad I could help. If you have any other questions, feel free to ask. Have a great day!",
+    "Happy to help! If you need anything else, don't hesitate to reach out. Enjoy using Nexus!",
+    "My pleasure! I'm here whenever you need assistance with Nexus. Is there anything else I can help with today?",
+  ],
+  hello: [
+    "Hello there! Welcome to Nexus AI support. How can I assist you today with scripts, account issues, or any other questions about our platform?",
+    "Hi! I'm the Nexus AI assistant powered by Grok. I'm here to help with any questions about our platform, scripts, or account management. What can I help you with?",
+    "Welcome to Nexus support! I'm your AI assistant, ready to help with any questions about scripts, account management, or platform features. How can I assist you today?",
+  ],
+  default: [
+    "Thank you for your question. As the Nexus AI assistant, I'm here to help with questions about scripts, account management, Discord integration, and other platform features. If your question is about something specific, please provide more details so I can give you a more helpful response.",
+    "I appreciate your question. I'm designed to assist with all aspects of the Nexus platform, including script troubleshooting, account management, and technical support. Could you provide more specific details about what you need help with?",
+    "Thanks for reaching out. I can help with most questions about Nexus, including script issues, account management, and platform features. For me to provide the most helpful response, could you share more details about your specific situation or question?",
+  ],
+}
+
 export default function AiSupportChat() {
   const { chatId } = useParams()
   const router = useRouter()
@@ -39,6 +88,7 @@ export default function AiSupportChat() {
   const [wordCount, setWordCount] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const [usedResponses, setUsedResponses] = useState<Record<string, number[]>>({})
 
   // Load chat history
   useEffect(() => {
@@ -109,6 +159,40 @@ export default function AiSupportChat() {
     setDailyLimit(todayMessageCount >= MAX_MESSAGES_PER_DAY)
   }
 
+  // Function to get a random response that hasn't been used recently
+  const getRandomResponse = (category: string): string => {
+    const responses = AI_RESPONSES[category as keyof typeof AI_RESPONSES] || AI_RESPONSES.default
+
+    // Initialize used indices for this category if not exists
+    if (!usedResponses[category]) {
+      setUsedResponses((prev) => ({ ...prev, [category]: [] }))
+    }
+
+    // Get unused indices
+    const usedIndices = usedResponses[category] || []
+    const availableIndices = Array.from({ length: responses.length }, (_, i) => i).filter(
+      (i) => !usedIndices.includes(i),
+    )
+
+    // If all responses have been used, reset
+    if (availableIndices.length === 0) {
+      setUsedResponses((prev) => ({ ...prev, [category]: [] }))
+      const randomIndex = Math.floor(Math.random() * responses.length)
+      return responses[randomIndex]
+    }
+
+    // Get random unused response
+    const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)]
+
+    // Mark as used
+    setUsedResponses((prev) => ({
+      ...prev,
+      [category]: [...(prev[category] || []), randomIndex],
+    }))
+
+    return responses[randomIndex]
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -152,36 +236,28 @@ export default function AiSupportChat() {
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // Generate a response based on the user input
-      let response = ""
+      let responseCategory = "default"
+      const lowerInput = userInput.toLowerCase()
 
-      if (userInput.toLowerCase().includes("script") || userInput.toLowerCase().includes("code")) {
-        response =
-          "I can help with script-related questions! Our platform supports Lua scripts for Roblox games. Make sure your scripts follow our guidelines and don't contain malicious code. If you're having trouble with a specific script, please provide more details about the issue you're experiencing."
-      } else if (userInput.toLowerCase().includes("account") || userInput.toLowerCase().includes("login")) {
-        response =
-          "For account-related issues, make sure you're using the correct credentials. If you've forgotten your password, you can reset it from the login page. If you're having trouble linking your Discord account, ensure you're granting the necessary permissions during the authorization process."
-      } else if (userInput.toLowerCase().includes("discord")) {
-        response =
-          "Discord integration allows you to upload scripts for popular games and access premium features. To link your Discord account, go to your profile settings and click on 'Link Discord Account'. Follow the authorization process to complete the linking."
-      } else if (userInput.toLowerCase().includes("game") || userInput.toLowerCase().includes("roblox")) {
-        response =
-          "We support scripts for various Roblox games. Some popular games require Discord authentication before you can upload scripts for them. This helps us maintain quality and prevent abuse. Check the game details when uploading to see if Discord authentication is required."
-      } else if (userInput.toLowerCase().includes("error") || userInput.toLowerCase().includes("bug")) {
-        response =
-          "I'm sorry to hear you're experiencing issues. For technical problems, please provide specific error messages or screenshots if possible. Common issues can be resolved by clearing your browser cache, using a different browser, or checking your internet connection."
-      } else if (userInput.toLowerCase().includes("premium") || userInput.toLowerCase().includes("subscription")) {
-        response =
-          "Premium features include access to exclusive scripts, priority support, and no daily limits on AI chat. To upgrade to premium, visit your account settings and select 'Upgrade to Premium'. We accept various payment methods including credit cards and PayPal."
-      } else if (userInput.toLowerCase().includes("thank")) {
-        response =
-          "You're welcome! I'm glad I could help. If you have any other questions, feel free to ask. Have a great day!"
-      } else if (userInput.toLowerCase().includes("hello") || userInput.toLowerCase().includes("hi")) {
-        response =
-          "Hello there! Welcome to Nexus AI support. How can I assist you today with scripts, account issues, or any other questions about our platform?"
-      } else {
-        response =
-          "Thank you for your question. As the Nexus AI assistant, I'm here to help with questions about scripts, account management, Discord integration, and other platform features. If your question is about something specific, please provide more details so I can give you a more helpful response."
+      if (lowerInput.includes("script") || lowerInput.includes("code") || lowerInput.includes("lua")) {
+        responseCategory = "script"
+      } else if (lowerInput.includes("account") || lowerInput.includes("login") || lowerInput.includes("password")) {
+        responseCategory = "account"
+      } else if (lowerInput.includes("discord")) {
+        responseCategory = "discord"
+      } else if (lowerInput.includes("game") || lowerInput.includes("roblox")) {
+        responseCategory = "game"
+      } else if (lowerInput.includes("error") || lowerInput.includes("bug") || lowerInput.includes("issue")) {
+        responseCategory = "error"
+      } else if (lowerInput.includes("premium") || lowerInput.includes("subscription") || lowerInput.includes("pay")) {
+        responseCategory = "premium"
+      } else if (lowerInput.includes("thank") || lowerInput.includes("thanks") || lowerInput.includes("appreciate")) {
+        responseCategory = "thank"
+      } else if (lowerInput.includes("hello") || lowerInput.includes("hi") || lowerInput.includes("hey")) {
+        responseCategory = "hello"
       }
+
+      const response = getRandomResponse(responseCategory)
 
       // Simulate streaming response
       for (let i = 0; i < response.length; i++) {

@@ -21,56 +21,109 @@ export default function ExecutorsPage() {
   return (
     <div className="container mx-auto px-5 py-16">
       <div className="mx-auto max-w-6xl">
-        <h1 className="mb-8 text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]">
-          BEST EXECUTORS
-        </h1>
-        <p className="mb-12 text-lg text-gray-300">
-          Select from our range of powerful and undetectable script execution tools
-        </p>
+        <div className="mb-12 text-center">
+          <h1 className="mb-4 text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]">
+            PREMIUM EXECUTORS
+          </h1>
+          <p className="mx-auto max-w-2xl text-lg text-gray-300">
+            Select from our range of powerful and undetectable script execution tools, carefully vetted for performance
+            and security
+          </p>
+        </div>
 
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {/* Wave Executor - Paid */}
-          <div className="group rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] overflow-hidden transition-all duration-300 hover:border-[#ff3e3e]/30 hover:shadow-lg hover:-translate-y-2 relative">
+          <div className="group rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] overflow-hidden transition-all duration-500 hover:border-[#ff3e3e]/50 hover:shadow-xl hover:shadow-[#ff3e3e]/10 hover:-translate-y-2 relative">
             <div className="absolute top-4 left-4 z-10">
               <span className="rounded bg-[#ff3e3e]/20 px-3 py-1 text-xs font-medium text-[#ff3e3e]">PAID</span>
             </div>
             <div className="absolute top-0 right-0 z-10 transform rotate-45 translate-x-[30%] -translate-y-[10%]">
               <span className="block w-36 bg-[#ff3e3e] text-center text-xs font-bold py-1 text-black">FEATURED</span>
             </div>
-            <div className="relative h-48 w-full">
+            <div className="relative h-56 w-full overflow-hidden">
               <Image
                 src="https://cdn.sellsn.io/142d60b2-b958-45f8-bc4c-a7ed326d6a15.png"
                 alt="Wave Executor"
                 fill
-                className="object-cover"
+                className="object-cover transition-transform duration-700 group-hover:scale-110"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] to-transparent opacity-70"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <h2 className="text-3xl font-bold text-white drop-shadow-lg">Wave</h2>
+                <p className="text-sm text-gray-200 drop-shadow-md">The most advanced executor available</p>
+              </div>
             </div>
             <div className="p-6">
-              <h2 className="mb-2 text-2xl font-bold text-[#ff3e3e]">Wave</h2>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="text-xs font-medium text-green-400">
+                    <i className="fas fa-shield-alt mr-1"></i> 100% Undetected
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-xs font-medium text-blue-400">
+                    <i className="fas fa-bolt mr-1"></i> Ultra Fast
+                  </span>
+                </div>
+              </div>
+
               <p className="mb-4 text-gray-300">
-                The most advanced executor with unparalleled performance and security features.
+                The most advanced executor with unparalleled performance and security features. Wave offers the best
+                script execution experience with regular updates and premium support.
               </p>
+
+              <div className="mb-6 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Execution Speed</span>
+                  <div className="w-32 bg-[#0a0a0a] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] h-full rounded-full"
+                      style={{ width: "95%" }}
+                    ></div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Script Compatibility</span>
+                  <div className="w-32 bg-[#0a0a0a] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] h-full rounded-full"
+                      style={{ width: "98%" }}
+                    ></div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Anti-Detection</span>
+                  <div className="w-32 bg-[#0a0a0a] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] h-full rounded-full"
+                      style={{ width: "100%" }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
               <ul className="mb-6 space-y-2">
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Ultra-fast execution
+                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Ultra-fast execution engine
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Advanced anti-detection
+                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Advanced anti-detection system
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Built-in script hub
+                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Built-in script hub with 1000+ scripts
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Auto-update system
+                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Auto-update system with instant patches
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Multi-game support
+                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Multi-game support with custom APIs
                 </li>
               </ul>
+
               <div className="flex gap-2">
                 <a
                   href="https://cdn.getwave.gg/userinterface/Wave-Setup.exe"
-                  className="flex-1 rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-4 py-2 text-center font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
+                  className="flex-1 rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-4 py-3 text-center font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -78,7 +131,7 @@ export default function ExecutorsPage() {
                 </a>
                 <a
                   href="https://getwave.gg/"
-                  className="rounded border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 text-center text-white transition-all hover:border-[#ff3e3e]/30"
+                  className="rounded border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-3 text-center text-white transition-all hover:border-[#ff3e3e]/30"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -89,42 +142,94 @@ export default function ExecutorsPage() {
           </div>
 
           {/* ByteBreaker - Free PC */}
-          <div className="group rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] overflow-hidden transition-all duration-300 hover:border-[#ff3e3e]/30 hover:shadow-lg hover:-translate-y-2 relative">
+          <div className="group rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] overflow-hidden transition-all duration-500 hover:border-[#00ff9d]/50 hover:shadow-xl hover:shadow-[#00ff9d]/10 hover:-translate-y-2 relative">
             <div className="absolute top-4 left-4 z-10">
               <span className="rounded bg-[#00ff9d]/20 px-3 py-1 text-xs font-medium text-[#00ff9d]">FREE</span>
             </div>
-            <div className="relative h-48 w-full">
+            <div className="relative h-56 w-full overflow-hidden">
               <Image
                 src="https://bytebreaker.cc/assets/images/share.jpg?v=f9214227"
                 alt="ByteBreaker Executor"
                 fill
-                className="object-cover"
+                className="object-cover transition-transform duration-700 group-hover:scale-110"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] to-transparent opacity-70"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <h2 className="text-3xl font-bold text-white drop-shadow-lg">ByteBreaker</h2>
+                <p className="text-sm text-gray-200 drop-shadow-md">Free PC Web Executor</p>
+              </div>
             </div>
             <div className="p-6">
-              <h2 className="mb-2 text-2xl font-bold text-[#ff3e3e]">bytebreaker.cc</h2>
-              <p className="mb-4 text-gray-300">Free PC Web Executor with 90% UNC detection rate.</p>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="text-xs font-medium text-green-400">
+                    <i className="fas fa-shield-alt mr-1"></i> 90% Undetected
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-xs font-medium text-blue-400">
+                    <i className="fas fa-bolt mr-1"></i> Fast
+                  </span>
+                </div>
+              </div>
+
+              <p className="mb-4 text-gray-300">
+                A powerful free executor with excellent script compatibility and a clean, user-friendly interface.
+                ByteBreaker offers great performance without any cost.
+              </p>
+
+              <div className="mb-6 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Execution Speed</span>
+                  <div className="w-32 bg-[#0a0a0a] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#00ff9d] to-[#00cc7d] h-full rounded-full"
+                      style={{ width: "85%" }}
+                    ></div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Script Compatibility</span>
+                  <div className="w-32 bg-[#0a0a0a] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#00ff9d] to-[#00cc7d] h-full rounded-full"
+                      style={{ width: "90%" }}
+                    ></div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Anti-Detection</span>
+                  <div className="w-32 bg-[#0a0a0a] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#00ff9d] to-[#00cc7d] h-full rounded-full"
+                      style={{ width: "90%" }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
               <ul className="mb-6 space-y-2">
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Fast script execution
+                  <i className="fas fa-check mr-2 text-[#00ff9d]"></i> Fast script execution
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Basic anti-detection
+                  <i className="fas fa-check mr-2 text-[#00ff9d]"></i> Basic anti-detection
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Built-in script hub
+                  <i className="fas fa-check mr-2 text-[#00ff9d]"></i> Built-in script hub
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Low resource usage
+                  <i className="fas fa-check mr-2 text-[#00ff9d]"></i> Low resource usage
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Stable performance
+                  <i className="fas fa-check mr-2 text-[#00ff9d]"></i> Stable performance
                 </li>
               </ul>
+
               <div className="flex gap-2">
                 <a
                   href="http://a.directfiledl.com/getfile?id=72232183&s=9429BB72"
-                  className="flex-1 rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-4 py-2 text-center font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
+                  className="flex-1 rounded bg-gradient-to-r from-[#00ff9d] to-[#00cc7d] px-4 py-3 text-center font-semibold text-black transition-all hover:shadow-lg hover:shadow-[#00ff9d]/20"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -132,7 +237,7 @@ export default function ExecutorsPage() {
                 </a>
                 <a
                   href="https://bytebreaker.cc/"
-                  className="rounded border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 text-center text-white transition-all hover:border-[#ff3e3e]/30"
+                  className="rounded border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-3 text-center text-white transition-all hover:border-[#00ff9d]/30"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -143,43 +248,95 @@ export default function ExecutorsPage() {
           </div>
 
           {/* Codex Mobile */}
-          <div className="group rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] overflow-hidden transition-all duration-300 hover:border-[#ff3e3e]/30 hover:shadow-lg hover:-translate-y-2 relative">
+          <div className="group rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] overflow-hidden transition-all duration-500 hover:border-[#5865F2]/50 hover:shadow-xl hover:shadow-[#5865F2]/10 hover:-translate-y-2 relative">
             <div className="absolute top-4 left-4 z-10">
               <span className="rounded bg-[#5865F2]/20 px-3 py-1 text-xs font-medium text-[#5865F2]">MOBILE</span>
             </div>
-            <div className="relative h-48 w-full">
+            <div className="relative h-56 w-full overflow-hidden">
               <Image
                 src="https://cdn.sellsn.io/987b657b-ea89-49e9-965f-f0273558b9cc.png"
                 alt="Codex Mobile Executor"
                 fill
-                className="object-cover"
+                className="object-cover transition-transform duration-700 group-hover:scale-110"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] to-transparent opacity-70"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <h2 className="text-3xl font-bold text-white drop-shadow-lg">Codex</h2>
+                <p className="text-sm text-gray-200 drop-shadow-md">Premium Mobile Executor</p>
+              </div>
             </div>
             <div className="p-6">
-              <h2 className="mb-2 text-2xl font-bold text-[#ff3e3e]">Codex MOBILE</h2>
-              <p className="mb-4 text-gray-300">Optimized executor for mobile gaming platforms with key system.</p>
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="text-xs font-medium text-green-400">
+                    <i className="fas fa-shield-alt mr-1"></i> 100% Undetected
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-xs font-medium text-blue-400">
+                    <i className="fas fa-bolt mr-1"></i> Mobile Optimized
+                  </span>
+                </div>
+              </div>
+
+              <p className="mb-4 text-gray-300">
+                The ultimate mobile executor for Android and iOS devices. Codex delivers desktop-level performance with
+                a touch-optimized interface designed specifically for mobile gaming.
+              </p>
+
+              <div className="mb-6 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Execution Speed</span>
+                  <div className="w-32 bg-[#0a0a0a] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#5865F2] to-[#4752C4] h-full rounded-full"
+                      style={{ width: "90%" }}
+                    ></div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Script Compatibility</span>
+                  <div className="w-32 bg-[#0a0a0a] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#5865F2] to-[#4752C4] h-full rounded-full"
+                      style={{ width: "95%" }}
+                    ></div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Anti-Detection</span>
+                  <div className="w-32 bg-[#0a0a0a] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#5865F2] to-[#4752C4] h-full rounded-full"
+                      style={{ width: "100%" }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
               <ul className="mb-6 space-y-2">
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Android/iOS support
+                  <i className="fas fa-check mr-2 text-[#5865F2]"></i> Android/iOS support
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Touch-optimized UI
+                  <i className="fas fa-check mr-2 text-[#5865F2]"></i> Touch-optimized UI
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Built-in script hub
+                  <i className="fas fa-check mr-2 text-[#5865F2]"></i> Built-in script hub
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> 100% UNC
+                  <i className="fas fa-check mr-2 text-[#5865F2]"></i> 100% undetectable
                 </li>
                 <li className="flex items-center text-sm text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Low battery usage
+                  <i className="fas fa-check mr-2 text-[#5865F2]"></i> Low battery usage
                 </li>
               </ul>
+
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
                   <a
                     href="https://download2444.mediafire.com/lu8x9jgv5yfgm1zt-S_tivaOS_6rPUTjemOlx5UPzk1BkIfzUKQ_W3ptJ_mMjWzmWsk_QJqnu9Wl4w5jcUyTgEavU_s_sNlk28ryuq-UN6fgl1iElJYPZoD3-9hg1BXeG7mZBozJ43SKJ5LtNp77bZ8fw-uHvPdZdSWiDnQ0Cec/rwycygi6rvci9to/Codex+v2.668.660.apk"
-                    className="flex-1 rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-4 py-2 text-center font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
+                    className="flex-1 rounded bg-gradient-to-r from-[#5865F2] to-[#4752C4] px-4 py-3 text-center font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#5865F2]/20"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -187,7 +344,7 @@ export default function ExecutorsPage() {
                   </a>
                   <a
                     href="https://Codex.lol"
-                    className="rounded border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-2 text-center text-white transition-all hover:border-[#ff3e3e]/30"
+                    className="rounded border border-[#2a2a2a] bg-[#0a0a0a] px-3 py-3 text-center text-white transition-all hover:border-[#5865F2]/30"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -196,7 +353,7 @@ export default function ExecutorsPage() {
                 </div>
                 <a
                   href="https://roxploits.gitbook.io/iosdirectinstall"
-                  className="rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-4 py-2 text-center font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
+                  className="rounded bg-gradient-to-r from-[#5865F2] to-[#4752C4] px-4 py-3 text-center font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#5865F2]/20"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -207,68 +364,133 @@ export default function ExecutorsPage() {
           </div>
         </div>
 
-        {/* System Requirements Section */}
-        <div className="mt-16">
+        {/* Features Comparison Section */}
+        <div className="mt-16 rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] p-8">
           <h2 className="mb-8 text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]">
-            SYSTEM REQUIREMENTS
+            FEATURES COMPARISON
           </h2>
-          <div className="grid gap-8 md:grid-cols-3">
-            <div className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-6 transition-all hover:shadow-lg">
-              <h3 className="mb-4 text-xl font-bold text-[#ff3e3e]">Windows</h3>
-              <ul className="space-y-3">
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Windows 10/11 (64-bit)
-                </li>
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> 4GB RAM minimum
-                </li>
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> 500MB free storage
-                </li>
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> .NET Framework 4.8
-                </li>
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> DirectX 11
-                </li>
-              </ul>
-            </div>
 
-            <div className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-6 transition-all hover:shadow-lg">
-              <h3 className="mb-4 text-xl font-bold text-[#ff3e3e]">MacOS</h3>
-              <ul className="space-y-3">
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> macOS 10.15 or later
-                </li>
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> 8GB RAM recommended
-                </li>
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Intel/Apple Silicon
-                </li>
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> 1GB free storage
-                </li>
-              </ul>
-            </div>
-
-            <div className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-6 transition-all hover:shadow-lg">
-              <h3 className="mb-4 text-xl font-bold text-[#ff3e3e]">Mobile</h3>
-              <ul className="space-y-3">
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Android 9+ / iOS 14+
-                </li>
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> 3GB RAM minimum
-                </li>
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> 200MB free space
-                </li>
-                <li className="flex items-center text-gray-300">
-                  <i className="fas fa-check mr-2 text-[#ff3e3e]"></i> Root/JB not required
-                </li>
-              </ul>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="pb-4 text-left text-gray-400">Feature</th>
+                  <th className="pb-4 text-center text-[#ff3e3e]">Wave</th>
+                  <th className="pb-4 text-center text-[#00ff9d]">ByteBreaker</th>
+                  <th className="pb-4 text-center text-[#5865F2]">Codex</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 text-left text-gray-300">Platform</td>
+                  <td className="py-3 text-center text-white">Windows</td>
+                  <td className="py-3 text-center text-white">Windows</td>
+                  <td className="py-3 text-center text-white">Android/iOS</td>
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 text-left text-gray-300">Execution Speed</td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                  </td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star-half-alt text-[#00ff9d]"></i>
+                  </td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star-half-alt text-[#5865F2]"></i>
+                  </td>
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 text-left text-gray-300">Script Compatibility</td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                  </td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                  </td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                  </td>
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 text-left text-gray-300">Anti-Detection</td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                  </td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star-half-alt text-[#00ff9d]"></i>
+                  </td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                  </td>
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 text-left text-gray-300">UI Experience</td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                    <i className="fas fa-star text-[#ff3e3e]"></i>
+                  </td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="fas fa-star text-[#00ff9d]"></i>
+                    <i className="far fa-star text-[#00ff9d]"></i>
+                  </td>
+                  <td className="py-3 text-center text-white">
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star text-[#5865F2]"></i>
+                    <i className="fas fa-star-half-alt text-[#5865F2]"></i>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-3 text-left text-gray-300">Price</td>
+                  <td className="py-3 text-center text-white">$19.99</td>
+                  <td className="py-3 text-center text-white">Free</td>
+                  <td className="py-3 text-center text-white">$9.99</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

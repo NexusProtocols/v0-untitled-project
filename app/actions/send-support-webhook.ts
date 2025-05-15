@@ -1,11 +1,5 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
-
-// This would be stored in environment variables in a real application
-const DISCORD_WEBHOOK_URL =
-  "https://discord.com/api/webhooks/1363692804865396989/fqIA-uwyByrtZX-OuzGg8vI_42zcXU_muNkZOUBy6U0N3OmuM5DoQAfKoTXLkiYhIcHw"
-
 export async function sendSupportWebhook(data: {
   username: string
   requestId: string
@@ -13,78 +7,61 @@ export async function sendSupportWebhook(data: {
   issue: string
 }) {
   try {
-    // Validate input
-    if (!data.username || !data.requestId || !data.issue) {
-      return { success: false, error: "Missing required fields" }
-    }
+    const webhookUrl =
+      "https://discord.com/api/webhooks/1363692804865396989/fqIA-uwyByrtZX-OuzGg8vI_42zcXU_muNkZOUBy6U0N3OmuM5DoQAfKoTXLkiYhIcHw"
 
-    // Sanitize input
-    const sanitizedData = {
-      username: sanitizeInput(data.username),
-      requestId: sanitizeInput(data.requestId),
-      timestamp: data.timestamp,
-      issue: sanitizeInput(data.issue),
-    }
-
-    // Format message for Discord
-    const webhookData = {
-      content: null,
+    const payload = {
       embeds: [
         {
-          title: "New Support Request",
-          color: 3447003, // Blue color
+          title: `New Support Request: ${data.requestId}`,
+          color: 0xff3e3e,
           fields: [
             {
-              name: "Username",
-              value: sanitizedData.username,
+              name: "User",
+              value: data.username,
               inline: true,
             },
             {
               name: "Request ID",
-              value: sanitizedData.requestId,
+              value: data.requestId,
               inline: true,
             },
             {
               name: "Time",
-              value: new Date(sanitizedData.timestamp).toLocaleString(),
+              value: new Date(data.timestamp).toLocaleString(),
               inline: true,
             },
             {
               name: "Issue",
-              value: sanitizedData.issue,
+              value: data.issue,
             },
           ],
           footer: {
-            text: "NEXUS Support System",
+            text: "Nexus Support System",
           },
-          timestamp: new Date().toISOString(),
+          timestamp: data.timestamp,
         },
       ],
     }
 
-    // Send to Discord webhook
-    const response = await fetch(DISCORD_WEBHOOK_URL, {
+    const response = await fetch(webhookUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(webhookData),
+      body: JSON.stringify(payload),
     })
 
     if (!response.ok) {
-      console.error("Discord webhook error:", await response.text())
-      return { success: false, error: "Failed to send webhook" }
+      throw new Error(`Discord webhook error: ${response.status} ${response.statusText}`)
     }
 
-    revalidatePath("/support")
     return { success: true }
   } catch (error) {
-    console.error("Error sending support webhook:", error)
-    return { success: false, error: "An unexpected error occurred" }
+    console.error("Error sending Discord webhook:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
   }
-}
-
-// Simple sanitization function
-function sanitizeInput(input: string): string {
-  return input.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;")
 }

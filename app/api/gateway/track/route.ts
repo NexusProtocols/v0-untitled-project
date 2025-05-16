@@ -1,120 +1,68 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
-// Simulated database for gateway statistics (use a real database in production)
-const gatewayStats: Record<string, any> = {}
-
-export async function POST(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { gatewayId, stepId, action, validationToken, userData } = await request.json()
+    const searchParams = request.nextUrl.searchParams
+    const gatewayId = searchParams.get("gatewayId")
 
-    if (!gatewayId || !action) {
-      return NextResponse.json({ success: false, error: "Gateway ID and action are required" }, { status: 400 })
+    if (!gatewayId) {
+      return NextResponse.json({ success: false, error: "Gateway ID is required" }, { status: 400 })
     }
 
-    // Initialize stats for this gateway if they don't exist
-    if (!gatewayStats[gatewayId]) {
-      gatewayStats[gatewayId] = {
-        visits: 0,
-        completions: 0,
-        stepStats: {},
-        lastUpdated: new Date().toISOString(),
-      }
+    // In a real implementation, this would fetch data from a database
+    // For now, we'll return mock data
+    const mockStats = {
+      visits: Math.floor(Math.random() * 1000) + 100,
+      completions: Math.floor(Math.random() * 500) + 50,
+      conversionRate: Math.random() * 0.5 + 0.1, // 10-60%
+      revenue: (Math.random() * 100 + 10).toFixed(2),
+      stepData: [
+        {
+          stepId: "step-1",
+          views: Math.floor(Math.random() * 1000) + 100,
+          completions: Math.floor(Math.random() * 500) + 50,
+          skips: Math.floor(Math.random() * 100),
+        },
+        {
+          stepId: "step-2",
+          views: Math.floor(Math.random() * 800) + 80,
+          completions: Math.floor(Math.random() * 400) + 40,
+          skips: Math.floor(Math.random() * 80),
+        },
+      ],
     }
 
-    const stats = gatewayStats[gatewayId]
-
-    // Update stats based on action
-    switch (action) {
-      case "visit":
-        stats.visits += 1
-        break
-      case "complete":
-        stats.completions += 1
-        // Calculate conversion rate
-        stats.conversionRate = stats.completions / stats.visits
-        break
-      case "step_start":
-        if (!stepId) {
-          return NextResponse.json({ success: false, error: "Step ID is required for step tracking" }, { status: 400 })
-        }
-        if (!stats.stepStats[stepId]) {
-          stats.stepStats[stepId] = { starts: 0, completes: 0, skips: 0 }
-        }
-        stats.stepStats[stepId].starts += 1
-        break
-      case "step_complete":
-        if (!stepId) {
-          return NextResponse.json({ success: false, error: "Step ID is required for step tracking" }, { status: 400 })
-        }
-        if (!stats.stepStats[stepId]) {
-          stats.stepStats[stepId] = { starts: 0, completes: 0, skips: 0 }
-        }
-        stats.stepStats[stepId].completes += 1
-        break
-      case "step_skip":
-        if (!stepId) {
-          return NextResponse.json({ success: false, error: "Step ID is required for step tracking" }, { status: 400 })
-        }
-        if (!stats.stepStats[stepId]) {
-          stats.stepStats[stepId] = { starts: 0, completes: 0, skips: 0 }
-        }
-        stats.stepStats[stepId].skips += 1
-        break
-      default:
-        return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 })
-    }
-
-    // Store user data if provided
-    if (userData) {
-      stats.userData = stats.userData || []
-      stats.userData.push({
-        ...userData,
-        action,
-        stepId: stepId || null,
-        timestamp: new Date().toISOString(),
-        validationToken: validationToken || null,
-      })
-    }
-
-    stats.lastUpdated = new Date().toISOString()
-
-    // In a real implementation, you would save these changes to a database
-    gatewayStats[gatewayId] = stats
-
-    return NextResponse.json({
-      success: true,
-      message: "Gateway tracking updated successfully",
-    })
+    return NextResponse.json({ success: true, data: mockStats })
   } catch (error) {
-    console.error("Error tracking gateway:", error)
-    return NextResponse.json({ success: false, error: "Failed to track gateway" }, { status: 500 })
+    console.error("Error fetching gateway stats:", error)
+    return NextResponse.json({ success: false, error: "Failed to fetch gateway stats" }, { status: 500 })
   }
 }
 
-// Admin-only route to get gateway stats (would require authentication in production)
-export async function GET(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const gatewayId = searchParams.get("gatewayId")
+    const body = await request.json()
+    const { gatewayId, stepId, action, validationToken, userData } = body
 
-    if (gatewayId) {
-      // Return stats for a specific gateway
-      if (!gatewayStats[gatewayId]) {
-        return NextResponse.json({ success: false, error: "Gateway not found" }, { status: 404 })
-      }
-      return NextResponse.json({
-        success: true,
-        data: gatewayStats[gatewayId],
-      })
-    } else {
-      // Return all gateway stats
-      return NextResponse.json({
-        success: true,
-        data: gatewayStats,
-      })
+    if (!gatewayId) {
+      return NextResponse.json({ success: false, error: "Gateway ID is required" }, { status: 400 })
     }
+
+    if (!action) {
+      return NextResponse.json({ success: false, error: "Action is required" }, { status: 400 })
+    }
+
+    // In a real implementation, this would validate the token and store the tracking data
+    console.log(`Tracking gateway ${gatewayId}, action: ${action}`, {
+      stepId,
+      validationToken,
+      userData,
+    })
+
+    // Return success
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error getting gateway stats:", error)
-    return NextResponse.json({ success: false, error: "Failed to get gateway stats" }, { status: 500 })
+    console.error("Error tracking gateway action:", error)
+    return NextResponse.json({ success: false, error: "Failed to track gateway action" }, { status: 500 })
   }
 }

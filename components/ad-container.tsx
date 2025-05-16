@@ -1,78 +1,187 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState, useRef } from "react"
 
 interface AdContainerProps {
   tier: 1 | 2 | 3 | 4 | 5
   adultAds?: boolean
+  placement?: "banner" | "sidebar" | "footer" | "popup" | "native"
+  size?: "small" | "medium" | "large" | "custom"
+  width?: number
+  height?: number
   onAdLoaded?: () => void
+  creatorId?: string
+  pageId?: string
 }
 
-export function AdContainer({ tier, adultAds = false, onAdLoaded }: AdContainerProps) {
-  useEffect(() => {
-    // Simulate ad loading
-    const loadAd = () => {
-      console.log(`Loading ad with tier ${tier}, adult content: ${adultAds}`)
+export function AdContainer({
+  tier = 1,
+  adultAds = false,
+  placement = "banner",
+  size = "medium",
+  width,
+  height,
+  onAdLoaded,
+  creatorId = "default",
+  pageId = "default",
+}: AdContainerProps) {
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [isVisible, setIsVisible] = useState(true)
+  const [adError, setAdError] = useState(false)
+  const adContainerRef = useRef<HTMLDivElement>(null)
+  const adId = useRef(`ad-${Math.random().toString(36).substring(2, 9)}`)
 
-      // Create a script element to simulate ad loading
+  // Define ad sizes
+  const getAdDimensions = () => {
+    if (width && height) return { width, height }
+
+    switch (size) {
+      case "small":
+        return { width: 300, height: 250 }
+      case "medium":
+        return { width: 728, height: 90 }
+      case "large":
+        return { width: 970, height: 250 }
+      default:
+        return { width: 300, height: 250 }
+    }
+  }
+
+  // Get ad key based on size and adult content flag
+  const getAdKey = () => {
+    // Non-adult ads
+    if (!adultAds) {
+      switch (size) {
+        case "small":
+          return "bcc7655c0da0cf4f4cae5db51791ed6e" // 300x250
+        case "medium":
+          return "afac5c8a22a4279d096f7e7e4a6af7bb" // 728x90
+        case "large":
+          return "206fc6e4acc07626edbea4a600bf0144" // 160x600
+        default:
+          return "bcc7655c0da0cf4f4cae5db51791ed6e" // Default to 300x250
+      }
+    } else {
+      // Adult ads - using the same keys for demo, but would use different ones in production
+      return "bcc7655c0da0cf4f4cae5db51791ed6e"
+    }
+  }
+
+  const loadAdScript = () => {
+    try {
+      const dimensions = getAdDimensions()
+      const adKey = getAdKey()
+      const apiKey = "01d60cbbf2c43ca8e7a491a0cb3a7160" // Demo API key
+
+      // Create a script element for the ad
       const script = document.createElement("script")
-      script.id = "ad-script"
+      script.type = "text/javascript"
+      script.innerHTML = `
+        atOptions = {
+          'key': '${adKey}',
+          'format': 'iframe',
+          'height': ${dimensions.height},
+          'width': ${dimensions.width},
+          'params': {
+            'creatorId': '${creatorId}',
+            'pageId': '${pageId}',
+            'tier': ${tier},
+            'placement': '${placement}'
+          }
+        };
+      `
+      document.head.appendChild(script)
 
-      // Different ad networks based on tier
-      if (tier <= 2) {
-        script.innerHTML = `
-          console.log("Loading basic ads");
-          // In a real implementation, this would load actual ad code
-          document.getElementById('ad-container').innerHTML = '<div class="bg-gray-800 p-4 text-center text-white">Ad Space (Tier ${tier})</div>';
-        `
-      } else if (tier <= 4) {
-        script.innerHTML = `
-          console.log("Loading premium ads");
-          // In a real implementation, this would load actual ad code
-          document.getElementById('ad-container').innerHTML = '<div class="bg-gray-800 p-4 text-center text-white">Premium Ad Space (Tier ${tier})</div>';
-        `
-      } else {
-        script.innerHTML = `
-          console.log("Loading maximum monetization ads");
-          // In a real implementation, this would load actual ad code
-          document.getElementById('ad-container').innerHTML = '<div class="bg-gray-800 p-4 text-center text-white">Maximum Monetization Ad Space (Tier ${tier})</div>';
-        `
+      // Create the invocation script
+      const invocationScript = document.createElement("script")
+      invocationScript.type = "text/javascript"
+      invocationScript.src = `//www.highperformanceformat.com/${adKey}/invoke.js`
+      invocationScript.onload = () => {
+        setIsLoaded(true)
+        if (onAdLoaded) onAdLoaded()
       }
-
-      // Add adult content if enabled
-      if (adultAds) {
-        script.innerHTML += `
-          console.log("Loading adult content ads");
-          // In a real implementation, this would load actual adult ad code
-        `
+      invocationScript.onerror = () => {
+        setAdError(true)
+        console.error("Failed to load ad script")
       }
+      document.head.appendChild(invocationScript)
 
-      document.body.appendChild(script)
+      // If tier is high enough, add additional ad formats
+      if (tier >= 3) {
+        // Add a direct link ad
+        const directLinkScript = document.createElement("script")
+        directLinkScript.setAttribute("data-cfasync", "false")
+        directLinkScript.setAttribute("async", "async")
+        directLinkScript.src = "//pl26646335.profitableratecpm.com/7f32779aa4a341d6d3904d2bfbad1ba3/invoke.js"
+        document.head.appendChild(directLinkScript)
 
-      // Notify parent component that ad has loaded
-      if (onAdLoaded) {
-        setTimeout(onAdLoaded, 1000) // Simulate ad load time
+        // For tier 4+, add native ads
+        if (tier >= 4) {
+          const nativeScript = document.createElement("script")
+          nativeScript.setAttribute("async", "async")
+          nativeScript.setAttribute("data-cfasync", "false")
+          nativeScript.src = "//pl26646335.profitableratecpm.com/7f32779aa4a341d6d3904d2bfbad1ba3/invoke.js"
+          document.head.appendChild(nativeScript)
+        }
+
+        // For tier 5, add popunder ads
+        if (tier >= 5) {
+          const popunderScript = document.createElement("script")
+          popunderScript.type = "text/javascript"
+          popunderScript.innerHTML = `
+            (function(s,u,z,p){s.src=u,s.setAttribute('data-zone',z),p.appendChild(s);})(
+            document.createElement('script'),
+            'https://inklinkor.com/tag.min.js',
+            5846405,
+            document.body||document.documentElement)
+          `
+          document.head.appendChild(popunderScript)
+        }
       }
+    } catch (error) {
+      console.error("Error loading ad:", error)
+      setAdError(true)
     }
+  }
 
-    loadAd()
+  useEffect(() => {
+    // Load the ad
+    loadAdScript()
 
+    // Cleanup function
     return () => {
-      // Clean up
-      const script = document.getElementById("ad-script")
-      if (script) {
-        script.remove()
-      }
+      // Remove all ad scripts when component unmounts
+      const scripts = document.head.querySelectorAll("script[src*='highperformanceformat']")
+      scripts.forEach((script) => script.remove())
     }
-  }, [tier, adultAds, onAdLoaded])
+  }, [tier, size, adultAds, placement])
+
+  const dimensions = getAdDimensions()
+
+  if (!isVisible) return null
 
   return (
-    <div className="w-full">
+    <div className="ad-container w-full">
+      <div className="text-xs text-center text-gray-500 mb-1">ADVERTISEMENT</div>
       <div
-        id="ad-container"
-        className="min-h-[250px] w-full bg-gray-900 flex items-center justify-center text-gray-500"
+        ref={adContainerRef}
+        id={adId.current}
+        className={`w-full bg-gray-900 flex items-center justify-center overflow-hidden ${adError ? "border border-red-500/20" : "border border-white/5"}`}
+        style={{
+          width: dimensions.width,
+          height: dimensions.height,
+          margin: "0 auto",
+        }}
       >
-        <div className="animate-pulse">Loading advertisement...</div>
+        {!isLoaded && !adError && <div className="animate-pulse text-gray-500">Loading advertisement...</div>}
+
+        {adError && (
+          <div className="text-red-400 text-sm">
+            <i className="fas fa-exclamation-circle mr-2"></i> Ad failed to load
+          </div>
+        )}
+
+        {tier >= 3 && placement === "footer" && <div id="container-7f32779aa4a341d6d3904d2bfbad1ba3"></div>}
       </div>
     </div>
   )

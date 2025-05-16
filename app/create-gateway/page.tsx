@@ -12,7 +12,7 @@ interface GatewayStep {
   title: string
   description: string
   imageUrl: string
-  type: "social" | "youtube" | "article" | "download" | "custom"
+  type: "offerwall" | "article" | "video" | "download" | "custom" | "link"
   waitTime: number
   content: {
     url?: string
@@ -20,12 +20,10 @@ interface GatewayStep {
     videoId?: string
     downloadUrl?: string
     customHtml?: string
-    socialType?: "discord" | "twitter" | "instagram" | "tiktok" | "youtube" | "twitch" | "other"
-    socialValue?: string
+    platform?: string
+    buttonText?: string
   }
   skipAllowed: boolean
-  bgColor: string
-  textColor: string
 }
 
 export default function CreateGatewayPage() {
@@ -44,10 +42,9 @@ export default function CreateGatewayPage() {
   const [message, setMessage] = useState({ type: "", text: "" })
   const [showSubscriptionOptions, setShowSubscriptionOptions] = useState(true)
   const [showOperaGxOffer, setShowOperaGxOffer] = useState(true)
-  const [bgColor, setBgColor] = useState("#1a1a1a")
-  const [textColor, setTextColor] = useState("#ffffff")
-  const [buttonBgColor, setButtonBgColor] = useState("#ff3e3e")
-  const [buttonTextColor, setButtonTextColor] = useState("#ffffff")
+  const [isRewardUrlRedirect, setIsRewardUrlRedirect] = useState(true)
+  const [adLevel, setAdLevel] = useState(3)
+  const [adultAds, setAdultAds] = useState(false)
 
   useEffect(() => {
     // Redirect if not logged in
@@ -115,15 +112,10 @@ export default function CreateGatewayPage() {
       title: "",
       description: "",
       imageUrl: "",
-      type: "social",
-      waitTime: 5,
-      content: {
-        socialType: "discord",
-        socialValue: "",
-      },
-      skipAllowed: false,
-      bgColor: "#1a1a1a",
-      textColor: "#ffffff",
+      type: "link",
+      waitTime: 10,
+      content: {},
+      skipAllowed: false, // Default to non-skippable
     }
     setCurrentStep(newStep)
     setEditingStepIndex(null)
@@ -147,41 +139,21 @@ export default function CreateGatewayPage() {
       return
     }
 
-    // Validate social link
-    if (currentStep.type === "social" && !currentStep.content.socialValue) {
-      setMessage({ type: "error", text: "Social link value is required" })
-      return
-    }
-
-    // Format social URL
-    if (currentStep.type === "social" && currentStep.content.socialValue) {
-      const value = currentStep.content.socialValue.trim()
-      let fullUrl = ""
-
-      switch (currentStep.content.socialType) {
-        case "discord":
-          fullUrl = value.startsWith("https://") ? value : `https://discord.gg/${value}`
-          break
-        case "twitter":
-          fullUrl = value.startsWith("https://") ? value : `https://twitter.com/${value}`
-          break
-        case "instagram":
-          fullUrl = value.startsWith("https://") ? value : `https://instagram.com/${value}`
-          break
-        case "tiktok":
-          fullUrl = value.startsWith("https://") ? value : `https://tiktok.com/@${value}`
-          break
-        case "youtube":
-          fullUrl = value.startsWith("https://") ? value : `https://youtube.com/${value}`
-          break
-        case "twitch":
-          fullUrl = value.startsWith("https://") ? value : `https://twitch.tv/${value}`
-          break
-        default:
-          fullUrl = value.startsWith("https://") ? value : `https://${value}`
+    // For link type, ensure the URL is properly formatted
+    if (currentStep.type === "link" && currentStep.content.url) {
+      // If it's a Discord invite, format it properly
+      if (currentStep.content.platform === "discord" && !currentStep.content.url.startsWith("https://")) {
+        // Check if it's just the invite code
+        if (!currentStep.content.url.includes("discord.gg/")) {
+          currentStep.content.url = `https://discord.gg/${currentStep.content.url}`
+        } else if (!currentStep.content.url.startsWith("https://")) {
+          currentStep.content.url = `https://${currentStep.content.url}`
+        }
       }
-
-      currentStep.content.url = fullUrl
+      // For other URLs, ensure they have https://
+      else if (!currentStep.content.url.startsWith("http://") && !currentStep.content.url.startsWith("https://")) {
+        currentStep.content.url = `https://${currentStep.content.url}`
+      }
     }
 
     if (editingStepIndex !== null) {
@@ -277,10 +249,8 @@ export default function CreateGatewayPage() {
         settings: {
           showSubscriptionOptions,
           showOperaGxOffer,
-          bgColor,
-          textColor,
-          buttonBgColor,
-          buttonTextColor,
+          adLevel,
+          adultAds,
         },
         stats: {
           visits: 0,
@@ -311,25 +281,6 @@ export default function CreateGatewayPage() {
       setMessage({ type: "error", text: "An error occurred while creating the gateway" })
     } finally {
       setIsSubmitting(false)
-    }
-  }
-
-  const getSocialIcon = (type: string) => {
-    switch (type) {
-      case "discord":
-        return "fab fa-discord"
-      case "twitter":
-        return "fab fa-twitter"
-      case "instagram":
-        return "fab fa-instagram"
-      case "tiktok":
-        return "fab fa-tiktok"
-      case "youtube":
-        return "fab fa-youtube"
-      case "twitch":
-        return "fab fa-twitch"
-      default:
-        return "fas fa-link"
     }
   }
 
@@ -437,111 +388,6 @@ export default function CreateGatewayPage() {
                 </div>
               )}
             </div>
-
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="bgColor" className="mb-2 block font-medium text-[#ff3e3e]">
-                  Background Color
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    id="bgColor"
-                    value={bgColor}
-                    onChange={(e) => setBgColor(e.target.value)}
-                    className="h-10 w-10 rounded border border-white/10 bg-[#050505]"
-                  />
-                  <input
-                    type="text"
-                    value={bgColor}
-                    onChange={(e) => setBgColor(e.target.value)}
-                    className="input-focus-effect flex-1 rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="textColor" className="mb-2 block font-medium text-[#ff3e3e]">
-                  Text Color
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    id="textColor"
-                    value={textColor}
-                    onChange={(e) => setTextColor(e.target.value)}
-                    className="h-10 w-10 rounded border border-white/10 bg-[#050505]"
-                  />
-                  <input
-                    type="text"
-                    value={textColor}
-                    onChange={(e) => setTextColor(e.target.value)}
-                    className="input-focus-effect flex-1 rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="buttonBgColor" className="mb-2 block font-medium text-[#ff3e3e]">
-                  Button Background Color
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    id="buttonBgColor"
-                    value={buttonBgColor}
-                    onChange={(e) => setButtonBgColor(e.target.value)}
-                    className="h-10 w-10 rounded border border-white/10 bg-[#050505]"
-                  />
-                  <input
-                    type="text"
-                    value={buttonBgColor}
-                    onChange={(e) => setButtonBgColor(e.target.value)}
-                    className="input-focus-effect flex-1 rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="buttonTextColor" className="mb-2 block font-medium text-[#ff3e3e]">
-                  Button Text Color
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    id="buttonTextColor"
-                    value={buttonTextColor}
-                    onChange={(e) => setButtonTextColor(e.target.value)}
-                    className="h-10 w-10 rounded border border-white/10 bg-[#050505]"
-                  />
-                  <input
-                    type="text"
-                    value={buttonTextColor}
-                    onChange={(e) => setButtonTextColor(e.target.value)}
-                    className="input-focus-effect flex-1 rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 p-4 rounded border border-white/10 bg-[#050505]">
-              <h3 className="mb-2 text-lg font-medium text-white">Preview</h3>
-              <div className="p-4 rounded" style={{ backgroundColor: bgColor, color: textColor }}>
-                <h4 className="text-xl font-bold" style={{ color: textColor }}>
-                  {gatewayTitle || "Gateway Title"}
-                </h4>
-                <p className="mt-2" style={{ color: textColor }}>
-                  {gatewayDescription || "Gateway description will appear here."}
-                </p>
-                <button
-                  type="button"
-                  className="mt-4 px-4 py-2 rounded font-medium"
-                  style={{ backgroundColor: buttonBgColor, color: buttonTextColor }}
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
           </div>
 
           <div className="mb-6">
@@ -595,12 +441,9 @@ export default function CreateGatewayPage() {
                     </div>
                     <div className="mt-2 text-sm text-gray-400">{step.description}</div>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                      {step.type === "social" && step.content.socialType && (
-                        <span className="rounded bg-[#1a1a1a] px-2 py-1 text-gray-300">
-                          <i className={`${getSocialIcon(step.content.socialType)} mr-1`}></i>
-                          {step.content.socialType.charAt(0).toUpperCase() + step.content.socialType.slice(1)}
-                        </span>
-                      )}
+                      <span className="rounded bg-[#1a1a1a] px-2 py-1 text-gray-300">
+                        Type: {step.type.charAt(0).toUpperCase() + step.type.slice(1)}
+                      </span>
                       <span className="rounded bg-[#1a1a1a] px-2 py-1 text-gray-300">Wait Time: {step.waitTime}s</span>
                       {step.skipAllowed ? (
                         <span className="rounded bg-green-900/30 px-2 py-1 text-green-300">Skippable</span>
@@ -661,7 +504,7 @@ export default function CreateGatewayPage() {
 
                 <div className="mb-4">
                   <label htmlFor="stepImage" className="mb-2 block font-medium text-[#ff3e3e]">
-                    Step Image (Optional)
+                    Step Image
                   </label>
                   <div className="mb-2">
                     <input
@@ -715,14 +558,15 @@ export default function CreateGatewayPage() {
                       onChange={(e) =>
                         setCurrentStep({
                           ...currentStep,
-                          type: e.target.value as "social" | "youtube" | "article" | "download" | "custom",
+                          type: e.target.value as "offerwall" | "article" | "video" | "download" | "custom" | "link",
                         })
                       }
                       className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
                     >
-                      <option value="social">Social Link</option>
-                      <option value="youtube">YouTube Video</option>
+                      <option value="link">Social Link</option>
+                      <option value="offerwall">Offerwall</option>
                       <option value="article">Article</option>
+                      <option value="video">Video</option>
                       <option value="download">Download</option>
                       <option value="custom">Custom</option>
                     </select>
@@ -737,153 +581,157 @@ export default function CreateGatewayPage() {
                       id="waitTime"
                       value={currentStep.waitTime}
                       onChange={(e) =>
-                        setCurrentStep({ ...currentStep, waitTime: Math.max(1, Number.parseInt(e.target.value) || 1) })
+                        setCurrentStep({ ...currentStep, waitTime: Math.max(0, Number.parseInt(e.target.value) || 0) })
                       }
-                      min="1"
+                      min="0"
                       max="60"
                       className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
                     />
                   </div>
                 </div>
 
-                <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="stepBgColor" className="mb-2 block font-medium text-[#ff3e3e]">
-                      Step Background Color
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="color"
-                        id="stepBgColor"
-                        value={currentStep.bgColor}
-                        onChange={(e) => setCurrentStep({ ...currentStep, bgColor: e.target.value })}
-                        className="h-10 w-10 rounded border border-white/10 bg-[#050505]"
-                      />
-                      <input
-                        type="text"
-                        value={currentStep.bgColor}
-                        onChange={(e) => setCurrentStep({ ...currentStep, bgColor: e.target.value })}
-                        className="input-focus-effect flex-1 rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="stepTextColor" className="mb-2 block font-medium text-[#ff3e3e]">
-                      Step Text Color
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="color"
-                        id="stepTextColor"
-                        value={currentStep.textColor}
-                        onChange={(e) => setCurrentStep({ ...currentStep, textColor: e.target.value })}
-                        className="h-10 w-10 rounded border border-white/10 bg-[#050505]"
-                      />
-                      <input
-                        type="text"
-                        value={currentStep.textColor}
-                        onChange={(e) => setCurrentStep({ ...currentStep, textColor: e.target.value })}
-                        className="input-focus-effect flex-1 rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 {/* Content based on step type */}
-                {currentStep.type === "social" && (
+                {currentStep.type === "link" && (
                   <div className="mb-4">
-                    <label htmlFor="socialType" className="mb-2 block font-medium text-[#ff3e3e]">
-                      Social Platform
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <select
-                        id="socialType"
-                        value={currentStep.content.socialType || "discord"}
-                        onChange={(e) =>
+                    <label className="mb-2 block font-medium text-[#ff3e3e]">Social Platform</label>
+                    <div className="mb-4 flex gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() =>
                           setCurrentStep({
                             ...currentStep,
                             content: {
                               ...currentStep.content,
-                              socialType: e.target.value as
-                                | "discord"
-                                | "twitter"
-                                | "instagram"
-                                | "tiktok"
-                                | "youtube"
-                                | "twitch"
-                                | "other",
+                              platform: "discord",
+                              buttonText: "Join Discord",
                             },
                           })
                         }
-                        className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                        className={`px-3 py-2 rounded flex items-center gap-2 ${
+                          currentStep.content.platform === "discord"
+                            ? "bg-[#5865F2] text-white"
+                            : "bg-[#050505] text-white border border-white/10"
+                        }`}
                       >
-                        <option value="discord">Discord</option>
-                        <option value="twitter">Twitter</option>
-                        <option value="instagram">Instagram</option>
-                        <option value="tiktok">TikTok</option>
-                        <option value="youtube">YouTube</option>
-                        <option value="twitch">Twitch</option>
-                        <option value="other">Other</option>
-                      </select>
-
-                      <input
-                        type="text"
-                        id="socialValue"
-                        value={currentStep.content.socialValue || ""}
-                        onChange={(e) =>
+                        <i className="fab fa-discord"></i> Discord
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
                           setCurrentStep({
                             ...currentStep,
-                            content: { ...currentStep.content, socialValue: e.target.value },
+                            content: {
+                              ...currentStep.content,
+                              platform: "youtube",
+                              buttonText: "Subscribe on YouTube",
+                            },
                           })
                         }
-                        className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                        placeholder={
-                          currentStep.content.socialType === "discord"
-                            ? "Discord invite code (e.g. ZWCqcuxAv3)"
-                            : currentStep.content.socialType === "twitter"
-                              ? "Twitter username (e.g. username)"
-                              : currentStep.content.socialType === "instagram"
-                                ? "Instagram username (e.g. username)"
-                                : currentStep.content.socialType === "tiktok"
-                                  ? "TikTok username (e.g. username)"
-                                  : currentStep.content.socialType === "youtube"
-                                    ? "YouTube channel (e.g. @channel)"
-                                    : currentStep.content.socialType === "twitch"
-                                      ? "Twitch username (e.g. username)"
-                                      : "Full URL (e.g. https://example.com)"
+                        className={`px-3 py-2 rounded flex items-center gap-2 ${
+                          currentStep.content.platform === "youtube"
+                            ? "bg-[#FF0000] text-white"
+                            : "bg-[#050505] text-white border border-white/10"
+                        }`}
+                      >
+                        <i className="fab fa-youtube"></i> YouTube
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentStep({
+                            ...currentStep,
+                            content: {
+                              ...currentStep.content,
+                              platform: "twitter",
+                              buttonText: "Follow on Twitter",
+                            },
+                          })
                         }
-                      />
+                        className={`px-3 py-2 rounded flex items-center gap-2 ${
+                          currentStep.content.platform === "twitter"
+                            ? "bg-[#1DA1F2] text-white"
+                            : "bg-[#050505] text-white border border-white/10"
+                        }`}
+                      >
+                        <i className="fab fa-twitter"></i> Twitter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentStep({
+                            ...currentStep,
+                            content: {
+                              ...currentStep.content,
+                              platform: "other",
+                              buttonText: "Visit Link",
+                            },
+                          })
+                        }
+                        className={`px-3 py-2 rounded flex items-center gap-2 ${
+                          currentStep.content.platform === "other" || !currentStep.content.platform
+                            ? "bg-[#ff3e3e] text-white"
+                            : "bg-[#050505] text-white border border-white/10"
+                        }`}
+                      >
+                        <i className="fas fa-link"></i> Other
+                      </button>
                     </div>
-                    <p className="mt-1 text-xs text-gray-400">
-                      {currentStep.content.socialType === "discord"
-                        ? "Enter just the invite code or full Discord invite URL"
-                        : currentStep.content.socialType === "other"
-                          ? "Enter the full URL including https://"
-                          : `Enter just the ${currentStep.content.socialType} username or full URL`}
-                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="linkUrl" className="mb-2 block font-medium text-[#ff3e3e]">
+                          Link URL or Invite Code
+                        </label>
+                        <input
+                          type="text"
+                          id="linkUrl"
+                          value={currentStep.content.url || ""}
+                          onChange={(e) =>
+                            setCurrentStep({
+                              ...currentStep,
+                              content: { ...currentStep.content, url: e.target.value },
+                            })
+                          }
+                          className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                          placeholder={
+                            currentStep.content.platform === "discord"
+                              ? "ZWCqcuxAv3 or discord.gg/ZWCqcuxAv3"
+                              : "https://example.com"
+                          }
+                        />
+                        <p className="mt-1 text-xs text-gray-400">
+                          {currentStep.content.platform === "discord"
+                            ? "You can enter just the invite code or the full URL"
+                            : "Enter the full URL with https://"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label htmlFor="buttonText" className="mb-2 block font-medium text-[#ff3e3e]">
+                          Button Text
+                        </label>
+                        <input
+                          type="text"
+                          id="buttonText"
+                          value={currentStep.content.buttonText || ""}
+                          onChange={(e) =>
+                            setCurrentStep({
+                              ...currentStep,
+                              content: { ...currentStep.content, buttonText: e.target.value },
+                            })
+                          }
+                          className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                          placeholder="Visit Link"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {currentStep.type === "youtube" && (
+                {currentStep.type === "offerwall" && (
                   <div className="mb-4">
-                    <label htmlFor="videoId" className="mb-2 block font-medium text-[#ff3e3e]">
-                      YouTube Video ID
-                    </label>
-                    <input
-                      type="text"
-                      id="videoId"
-                      value={currentStep.content.videoId || ""}
-                      onChange={(e) =>
-                        setCurrentStep({
-                          ...currentStep,
-                          content: { ...currentStep.content, videoId: e.target.value },
-                        })
-                      }
-                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                      placeholder="dQw4w9WgXcQ"
-                    />
-                    <p className="mt-1 text-xs text-gray-400">
-                      Enter the YouTube video ID (e.g., dQw4w9WgXcQ from https://www.youtube.com/watch?v=dQw4w9WgXcQ)
+                    <p className="mb-2 text-sm text-gray-400">
+                      Offerwall will display a list of offers for users to complete. No additional configuration needed.
                     </p>
                   </div>
                 )}
@@ -906,6 +754,30 @@ export default function CreateGatewayPage() {
                       className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
                       placeholder="https://example.com/article"
                     />
+                  </div>
+                )}
+
+                {currentStep.type === "video" && (
+                  <div className="mb-4">
+                    <label htmlFor="videoId" className="mb-2 block font-medium text-[#ff3e3e]">
+                      YouTube Video ID
+                    </label>
+                    <input
+                      type="text"
+                      id="videoId"
+                      value={currentStep.content.videoId || ""}
+                      onChange={(e) =>
+                        setCurrentStep({
+                          ...currentStep,
+                          content: { ...currentStep.content, videoId: e.target.value },
+                        })
+                      }
+                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                      placeholder="dQw4w9WgXcQ"
+                    />
+                    <p className="mt-1 text-xs text-gray-400">
+                      Enter the YouTube video ID (e.g., dQw4w9WgXcQ from https://www.youtube.com/watch?v=dQw4w9WgXcQ)
+                    </p>
                   </div>
                 )}
 
@@ -994,29 +866,36 @@ export default function CreateGatewayPage() {
 
             <div className="mb-4">
               <label className="mb-2 block font-medium text-[#ff3e3e]">Reward Type</label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="rewardType"
-                    value="url"
-                    checked={rewardType === "url"}
-                    onChange={() => setRewardType("url")}
-                    className="h-4 w-4 border-white/10 bg-[#050505] text-[#ff3e3e]"
-                  />
-                  <span className="text-white">URL Redirect</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="rewardType"
-                    value="paste"
-                    checked={rewardType === "paste"}
-                    onChange={() => setRewardType("paste")}
-                    className="h-4 w-4 border-white/10 bg-[#050505] text-[#ff3e3e]"
-                  />
-                  <span className="text-white">Text Content</span>
-                </label>
+              <div className="flex flex-wrap gap-4">
+                <button
+                  type="button"
+                  onClick={() => setRewardType("url")}
+                  className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all ${
+                    rewardType === "url" ? "bg-[#ff3e3e] text-white" : "bg-[#050505] text-white border border-white/10"
+                  }`}
+                >
+                  <i className="fas fa-external-link-alt"></i>
+                  <div>
+                    <div className="font-semibold">URL Redirect</div>
+                    <div className="text-xs opacity-80">Send users to another website</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRewardType("paste")}
+                  className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all ${
+                    rewardType === "paste"
+                      ? "bg-[#ff3e3e] text-white"
+                      : "bg-[#050505] text-white border border-white/10"
+                  }`}
+                >
+                  <i className="fas fa-copy"></i>
+                  <div>
+                    <div className="font-semibold">Text Content</div>
+                    <div className="text-xs opacity-80">Display downloadable content</div>
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -1060,6 +939,31 @@ export default function CreateGatewayPage() {
           <div className="mb-6">
             <h2 className="mb-4 text-xl font-bold text-white">Gateway Settings</h2>
 
+            <div className="mb-4">
+              <label htmlFor="adLevel" className="mb-2 block font-medium text-[#ff3e3e]">
+                Ad Level (1-5)
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  id="adLevel"
+                  min="1"
+                  max="5"
+                  value={adLevel}
+                  onChange={(e) => setAdLevel(Number.parseInt(e.target.value))}
+                  className="w-full h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-white font-bold min-w-[30px] text-center">{adLevel}</span>
+              </div>
+              <div className="mt-2 text-xs text-gray-400">
+                {adLevel === 1 && "Level 1: 5 native ads around the page"}
+                {adLevel === 2 && "Level 2: 10 native ads + direct link ads with popup"}
+                {adLevel === 3 && "Level 3: Level 2 + additional popups and redirects"}
+                {adLevel === 4 && "Level 4: Level 3 + Opera GX offerwall"}
+                {adLevel === 5 && "Level 5: Maximum monetization (adult ads allowed)"}
+              </div>
+            </div>
+
             <div className="space-y-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -1079,6 +983,16 @@ export default function CreateGatewayPage() {
                   className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
                 />
                 <span className="text-white">Show Opera GX offer</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={adultAds}
+                  onChange={(e) => setAdultAds(e.target.checked)}
+                  className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                />
+                <span className="text-white">Allow adult ads (18+)</span>
               </label>
             </div>
           </div>

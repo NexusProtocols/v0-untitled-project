@@ -1,47 +1,83 @@
 import { NextResponse } from "next/server"
-import { encrypt, generateIV, generateKey } from "@/lib/crypto"
+import crypto from "crypto"
+import { generateHWID } from "@/lib/hwid"
+
+// Simulated database for generated keys (use a real database in production)
+const generatedKeys: Record<string, any> = {}
 
 export async function POST(request: Request) {
   try {
-    const { gatewayId, adLevel, adultAds, scriptData, hwidLock, maxUses, duration, keyPrefix } = await request.json()
+    const {
+      prefix = "NEXUS",
+      scriptId,
+      gatewayId,
+      keyType = "standard",
+      duration = 7, // days
+      maxUses = 1,
+      hwidLock = true,
+    } = await request.json()
 
-    if (!scriptData && !gatewayId) {
-      return NextResponse.json({ success: false, error: "Script data or gateway ID is required" }, { status: 400 })
+    if (!scriptId) {
+      return NextResponse.json({ success: false, error: "Script ID is required" }, { status: 400 })
     }
 
-    // Generate a new key
-    const key = generateKey(keyPrefix || "NEXUS-")
+    // Generate a cryptographically secure key
+    const segment1 = crypto.randomBytes(2).toString("hex").toUpperCase()
+    const segment2 = crypto.randomBytes(2).toString("hex").toUpperCase()
+    const segment3 = crypto.randomBytes(2).toString("hex").toUpperCase()
 
-    // Generate IV for encryption
-    const iv = generateIV()
+    const key = `${prefix}-${segment1}-${segment2}-${segment3}`
 
-    // Encrypt the script data if provided
-    let encryptedData = ""
-    if (scriptData) {
-      const result = encrypt(JSON.stringify(scriptData), iv)
-      encryptedData = result.encryptedData
+    // Calculate expiration date
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + duration)
+
+    // Generate HWID if HWID lock is enabled
+    const hwid = hwidLock ? generateHWID() : null
+
+    // Store the key in the database
+    const keyData = {
+      key,
+      scriptId,
+      gatewayId,
+      keyType,
+      createdAt: new Date().toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      usageCount: 0,
+      maxUses,
+      hwid,
+      hwidLock,
+      isValid: true,
     }
 
     // In a real implementation, you would save this to a database
-    // For this example, we'll just return the generated key
+    generatedKeys[key] = keyData
 
     return NextResponse.json({
       success: true,
-      key: key,
-      metadata: {
-        hwidLock: hwidLock || true,
-        maxUses: maxUses || 1,
-        duration: duration || 7,
-        adLevel: adLevel || 1,
-        adultAds: adultAds || false,
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + (duration || 7) * 24 * 60 * 60 * 1000).toISOString(),
-        encryptedData: encryptedData ? encryptedData : undefined,
-        iv: encryptedData ? iv : undefined,
+      message: "Key generated successfully",
+      data: {
+        key,
+        expiresAt: keyData.expiresAt,
+        keyType,
+        maxUses,
       },
     })
   } catch (error) {
     console.error("Error generating key:", error)
     return NextResponse.json({ success: false, error: "Failed to generate key" }, { status: 500 })
+  }
+}
+
+// Admin-only route to get all generated keys (would require authentication in production)
+export async function GET() {
+  try {
+    return NextResponse.json({
+      success: true,
+      data: generatedKeys,
+    })
+  } catch (error) {
+    console.error("Error getting generated keys:", error)
+    return NextResponse.json({ success: false, error: "Failed to get generated keys" }, { status: 500 })
   }
 }

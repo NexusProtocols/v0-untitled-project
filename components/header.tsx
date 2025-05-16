@@ -213,6 +213,38 @@ export default function Header() {
                 ></span>
               </Link>
             </li>
+            <li>
+              <Link
+                href="/submit-script"
+                className={`nav-item flex items-center rounded px-5 py-2.5 text-sm font-medium transition-all relative group
+                  ${
+                    isActive("/submit-script")
+                      ? "text-[#ff3e3e]"
+                      : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
+                  }`}
+              >
+                <i className="fas fa-upload mr-2"></i> Submit Script
+                <span
+                  className={`absolute bottom-0 left-0 h-0.5 w-0 bg-[#ff3e3e] transition-all duration-300 ${isActive("/submit-script") ? "w-full" : "group-hover:w-full"}`}
+                ></span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/roblox-client-example"
+                className={`nav-item flex items-center rounded px-5 py-2.5 text-sm font-medium transition-all relative group
+                  ${
+                    isActive("/roblox-client-example")
+                      ? "text-[#ff3e3e]"
+                      : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
+                  }`}
+              >
+                <i className="fas fa-file-code mr-2"></i> Client Example
+                <span
+                  className={`absolute bottom-0 left-0 h-0.5 w-0 bg-[#ff3e3e] transition-all duration-300 ${isActive("/roblox-client-example") ? "w-full" : "group-hover:w-full"}`}
+                ></span>
+              </Link>
+            </li>
             {userIsAdmin && (
               <li>
                 <Link
@@ -244,6 +276,38 @@ export default function Header() {
                 <i className="fas fa-question-circle mr-2"></i> Support
                 <span
                   className={`absolute bottom-0 left-0 h-0.5 w-0 bg-[#ff3e3e] transition-all duration-300 ${isActive("/support") ? "w-full" : "group-hover:w-full"}`}
+                ></span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/manage-gateways"
+                className={`nav-item flex items-center rounded px-5 py-2.5 text-sm font-medium transition-all relative group
+                  ${
+                    isActive("/manage-gateways")
+                      ? "text-[#ff3e3e]"
+                      : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
+                  }`}
+              >
+                <i className="fas fa-cog mr-2"></i> Manage Gateways
+                <span
+                  className={`absolute bottom-0 left-0 h-0.5 w-0 bg-[#ff3e3e] transition-all duration-300 ${isActive("/manage-gateways") ? "w-full" : "group-hover:w-full"}`}
+                ></span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/create-gateway"
+                className={`nav-item flex items-center rounded px-5 py-2.5 text-sm font-medium transition-all relative group
+                  ${
+                    isActive("/create-gateway")
+                      ? "text-[#ff3e3e]"
+                      : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
+                  }`}
+              >
+                <i className="fas fa-plus-circle mr-2"></i> Create Gateway
+                <span
+                  className={`absolute bottom-0 left-0 h-0.5 w-0 bg-[#ff3e3e] transition-all duration-300 ${isActive("/create-gateway") ? "w-full" : "group-hover:w-full"}`}
                 ></span>
               </Link>
             </li>
@@ -418,6 +482,30 @@ export default function Header() {
                     <i className="fas fa-terminal mr-3 w-5 text-center"></i> Executors
                   </Link>
                 </li>
+                <li>
+                  <Link
+                    href="/submit-script"
+                    className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-all transform hover:scale-105 ${
+                      isActive("/submit-script")
+                        ? "bg-[rgba(255,62,62,0.15)] text-[#ff3e3e]"
+                        : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
+                    }`}
+                  >
+                    <i className="fas fa-upload mr-3 w-5 text-center"></i> Submit Script
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/roblox-client-example"
+                    className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-all transform hover:scale-105 ${
+                      isActive("/roblox-client-example")
+                        ? "bg-[rgba(255,62,62,0.15)] text-[#ff3e3e]"
+                        : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
+                    }`}
+                  >
+                    <i className="fas fa-file-code mr-3 w-5 text-center"></i> Client Example
+                  </Link>
+                </li>
                 {userIsAdmin && (
                   <li>
                     <Link
@@ -442,6 +530,30 @@ export default function Header() {
                     }`}
                   >
                     <i className="fas fa-question-circle mr-3 w-5 text-center"></i> Support
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/manage-gateways"
+                    className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-all transform hover:scale-105 ${
+                      isActive("/manage-gateways")
+                        ? "bg-[rgba(255,62,62,0.15)] text-[#ff3e3e]"
+                        : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
+                    }`}
+                  >
+                    <i className="fas fa-cog mr-3 w-5 text-center"></i> Manage Gateways
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/create-gateway"
+                    className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-all transform hover:scale-105 ${
+                      isActive("/create-gateway")
+                        ? "bg-[rgba(255,62,62,0.15)] text-[#ff3e3e]"
+                        : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
+                    }`}
+                  >
+                    <i className="fas fa-plus-circle mr-3 w-5 text-center"></i> Create Gateway
                   </Link>
                 </li>
 

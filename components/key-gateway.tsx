@@ -1,22 +1,25 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { AdContainer } from "./ad-container"
+import { OperaGxOfferwall } from "./opera-gx-offerwall"
 
 interface KeyGatewayProps {
-  keyId: string
+  gatewayId: string
   adLevel: number
   adultAds: boolean
-  onComplete: () => void
+  onComplete: (key: string) => void
   onSkip?: () => void
   isPremium?: boolean
 }
 
-export function KeyGateway({ keyId, adLevel, adultAds, onComplete, onSkip, isPremium = false }: KeyGatewayProps) {
+export function KeyGateway({ gatewayId, adLevel, adultAds, onComplete, onSkip, isPremium = false }: KeyGatewayProps) {
   const [step, setStep] = useState(1)
   const [countdown, setCountdown] = useState(10)
   const [showPremiumOffer, setShowPremiumOffer] = useState(false)
   const [showOfferwall, setShowOfferwall] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
+  const [generatedKey, setGeneratedKey] = useState("")
 
   // Handle countdown timer
   useEffect(() => {
@@ -59,10 +62,33 @@ export function KeyGateway({ keyId, adLevel, adultAds, onComplete, onSkip, isPre
   const handleComplete = () => {
     setIsCompleting(true)
 
-    // Simulate completion delay
-    setTimeout(() => {
-      onComplete()
-    }, 1000)
+    // Simulate API call to generate key
+    fetch("/api/generate-key", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        gatewayId,
+        adLevel,
+        adultAds,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.key) {
+          setGeneratedKey(data.key)
+          onComplete(data.key)
+        } else {
+          console.error("Failed to generate key:", data.error)
+        }
+      })
+      .catch((error) => {
+        console.error("Error generating key:", error)
+      })
+      .finally(() => {
+        setIsCompleting(false)
+      })
   }
 
   // Handle premium purchase
@@ -76,90 +102,9 @@ export function KeyGateway({ keyId, adLevel, adultAds, onComplete, onSkip, isPre
 
   // Render native ads
   const renderNativeAds = () => {
-    const adCount = adLevel === 1 ? 5 : 10
-
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        {Array.from({ length: adCount }).map((_, index) => (
-          <div
-            key={index}
-            className="interactive-element relative overflow-hidden rounded border border-white/10 bg-[#050505] p-3 hover:bg-[#0a0a0a] cursor-pointer"
-            onClick={() => window.open("https://example.com/native-ad", "_blank")}
-          >
-            <div className="absolute top-1 right-1 bg-[#ff3e3e] text-white text-xs px-1 rounded">Ad</div>
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded bg-[#1a1a1a]"></div>
-              <div>
-                <h4 className="text-sm font-medium text-white">
-                  {adultAds ? `Hot Singles in Your Area ${index + 1}` : `Amazing Product ${index + 1}`}
-                </h4>
-                <p className="text-xs text-gray-400">
-                  {adultAds ? "Click here to meet now!" : "Limited time offer - 50% off!"}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  // Render Opera GX offerwall
-  const renderOfferwall = () => {
-    return (
-      <div className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-6 mb-6">
-        <div className="mb-4 text-center">
-          <img src="/placeholder.svg?height=60&width=200" alt="Opera GX" className="h-15 mx-auto" />
-          <h3 className="mt-4 text-xl font-bold text-white">Complete an offer to continue</h3>
-          <p className="mt-2 text-gray-400">Choose one of the offers below to unlock your key instantly</p>
-        </div>
-
-        <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div
-              key={index}
-              className="interactive-element rounded border border-white/10 bg-[#050505] p-4 hover:bg-[#0a0a0a] cursor-pointer"
-              onClick={() => {
-                window.open("https://example.com/offerwall", "_blank")
-                // Auto-complete after clicking an offer
-                setTimeout(() => {
-                  handleComplete()
-                }, 1000)
-              }}
-            >
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded bg-[#1a1a1a]"></div>
-                <div className="flex-1">
-                  <h4 className="font-medium text-white">
-                    {index === 0
-                      ? "Install Opera GX Browser"
-                      : index === 1
-                        ? "Complete a short survey"
-                        : "Watch a video ad"}
-                  </h4>
-                  <p className="text-sm text-gray-400">
-                    {index === 0
-                      ? "Download and install Opera GX gaming browser"
-                      : index === 1
-                        ? "Answer a few questions about your gaming habits"
-                        : "Watch a 30-second video advertisement"}
-                  </p>
-                </div>
-                <div className="flex-shrink-0 rounded bg-[#ff3e3e] px-3 py-1 text-sm font-medium text-white">
-                  {index === 0 ? "Easy" : index === 1 ? "Medium" : "Quick"}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {onSkip && (
-          <div className="mt-6 text-center">
-            <button onClick={onSkip} className="interactive-element text-sm text-gray-400 hover:text-white">
-              Skip for now
-            </button>
-          </div>
-        )}
+      <div className="mb-6">
+        <AdContainer tier={adLevel as 1 | 2 | 3 | 4 | 5} adultAds={adultAds} onAdLoaded={() => {}} />
       </div>
     )
   }
@@ -258,15 +203,15 @@ export function KeyGateway({ keyId, adLevel, adultAds, onComplete, onSkip, isPre
             {isCompleting ? (
               <div className="flex items-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-                <span>Processing...</span>
+                <span>Generating Key...</span>
               </div>
             ) : (
-              <>Access Key Now</>
+              <>Generate Key Now</>
             )}
           </button>
         </div>
       ) : showOfferwall ? (
-        renderOfferwall()
+        <OperaGxOfferwall onComplete={handleComplete} onSkip={onSkip} />
       ) : showPremiumOffer ? (
         renderPremiumOffer()
       ) : (
@@ -276,7 +221,7 @@ export function KeyGateway({ keyId, adLevel, adultAds, onComplete, onSkip, isPre
               Gateway {step}/{adLevel}
             </h3>
             <div className="text-sm text-gray-400">
-              <i className="fas fa-shield-alt mr-1"></i> Secure Key Access
+              <i className="fas fa-shield-alt mr-1"></i> Secure Key Generation
             </div>
           </div>
 
@@ -287,7 +232,7 @@ export function KeyGateway({ keyId, adLevel, adultAds, onComplete, onSkip, isPre
               onClick={handleAdClick}
               className="interactive-element button-glow button-3d rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
             >
-              {step === adLevel ? "Get Key" : `Continue to Step ${step + 1}`}
+              {step === adLevel ? "Generate Key" : `Continue to Step ${step + 1}`}
             </button>
 
             {onSkip && (

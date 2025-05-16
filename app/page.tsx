@@ -80,6 +80,83 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      {/* Gateway Section */}
+      <section className="py-16 bg-[#0a0a0a]">
+        <div className="container mx-auto px-5">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]">
+              Gateway System
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">
+              Create custom gateways with multiple steps to monetize your content. Users complete steps to unlock
+              rewards.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="interactive-element rounded-lg border border-white/10 bg-[#1a1a1a] p-6 transition-all hover:border-[#ff3e3e]/50 hover:shadow-lg hover:shadow-[#ff3e3e]/5">
+              <div className="mb-4 text-center">
+                <div className="inline-block rounded-full bg-[#ff3e3e]/20 p-4">
+                  <i className="fas fa-door-open text-3xl text-[#ff3e3e]"></i>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-white text-center mb-2">Create Gateways</h3>
+              <p className="text-gray-400 text-center mb-4">
+                Design custom gateways with multiple steps, images, and content types.
+              </p>
+              <div className="text-center">
+                <Link
+                  href="/create-gateway"
+                  className="interactive-element inline-block rounded border border-[#ff3e3e] px-4 py-2 text-[#ff3e3e] transition-all hover:bg-[#ff3e3e]/10"
+                >
+                  Create Gateway
+                </Link>
+              </div>
+            </div>
+
+            <div className="interactive-element rounded-lg border border-white/10 bg-[#1a1a1a] p-6 transition-all hover:border-[#ff3e3e]/50 hover:shadow-lg hover:shadow-[#ff3e3e]/5">
+              <div className="mb-4 text-center">
+                <div className="inline-block rounded-full bg-[#ff3e3e]/20 p-4">
+                  <i className="fas fa-money-bill-wave text-3xl text-[#ff3e3e]"></i>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-white text-center mb-2">Monetize Content</h3>
+              <p className="text-gray-400 text-center mb-4">
+                Earn revenue through ads, offerwalls, and premium subscriptions.
+              </p>
+              <div className="text-center">
+                <Link
+                  href="/manage-gateways"
+                  className="interactive-element inline-block rounded border border-[#ff3e3e] px-4 py-2 text-[#ff3e3e] transition-all hover:bg-[#ff3e3e]/10"
+                >
+                  Manage Gateways
+                </Link>
+              </div>
+            </div>
+
+            <div className="interactive-element rounded-lg border border-white/10 bg-[#1a1a1a] p-6 transition-all hover:border-[#ff3e3e]/50 hover:shadow-lg hover:shadow-[#ff3e3e]/5">
+              <div className="mb-4 text-center">
+                <div className="inline-block rounded-full bg-[#ff3e3e]/20 p-4">
+                  <i className="fas fa-chart-line text-3xl text-[#ff3e3e]"></i>
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-white text-center mb-2">Track Performance</h3>
+              <p className="text-gray-400 text-center mb-4">
+                Monitor visits, completions, and conversion rates for your gateways.
+              </p>
+              <div className="text-center">
+                <Link
+                  href="/manage-gateways"
+                  className="interactive-element inline-block rounded border border-[#ff3e3e] px-4 py-2 text-[#ff3e3e] transition-all hover:bg-[#ff3e3e]/10"
+                >
+                  View Stats
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

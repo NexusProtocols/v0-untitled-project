@@ -26,6 +26,90 @@ const MAX_MESSAGES_PER_DAY = 3
 const MAX_MESSAGE_LENGTH = 100 // words
 const MAX_RESPONSE_TOKENS = 5000
 
+// Knowledge base for AI responses
+const KNOWLEDGE_BASE = {
+  script: [
+    "Our platform supports Lua scripts for Roblox games. Scripts must follow our guidelines and not contain malicious code.",
+    "We have a wide variety of scripts for different Roblox games, from universal admin commands to game-specific features.",
+    "Scripts are reviewed by our team to ensure they're safe and effective before being published.",
+    "You can submit your own scripts through the 'Submit Script' page after logging in.",
+    "Premium users get access to exclusive scripts that aren't available to free users.",
+    "If a script isn't working, try checking if it's compatible with your executor and game version.",
+    "Some scripts require specific executors to run properly due to function support differences.",
+    "We regularly update our scripts to ensure they work with the latest Roblox updates.",
+  ],
+  account: [
+    "You can reset your password from the login page if you've forgotten it.",
+    "Account linking with Discord provides additional benefits and verification.",
+    "Premium accounts have higher daily limits for AI chat and access to exclusive scripts.",
+    "Your account security is important - we recommend using a strong, unique password.",
+    "You can manage your account settings from the profile page after logging in.",
+    "If you're having trouble accessing your account, our support team can help.",
+    "Account verification through email helps protect your account and provides additional features.",
+    "You can update your username and profile information from the settings page.",
+  ],
+  discord: [
+    "Linking your Discord account unlocks additional features and verification benefits.",
+    "Our Discord server has channels for script requests, support, and community discussions.",
+    "Discord verification is required for accessing certain premium scripts and features.",
+    "You can link your Discord account through your profile settings page.",
+    "Discord integration allows for real-time notifications about new scripts and updates.",
+    "If you're having trouble linking your Discord account, make sure you're granting all required permissions.",
+    "Discord members get early access to new features and scripts before they're publicly released.",
+    "Our Discord community is a great place to get help with scripts and connect with other users.",
+  ],
+  game: [
+    "We support scripts for most popular Roblox games, with new ones added regularly.",
+    "Game-specific scripts are optimized for performance and compatibility with that particular game.",
+    "Some games have anti-cheat systems that may detect and ban users of certain scripts.",
+    "We categorize scripts by game to make it easier to find what you're looking for.",
+    "Popular games like Adopt Me, Blox Fruits, and Jailbreak have the most script options.",
+    "Game updates can sometimes break scripts - we try to update them quickly when this happens.",
+    "You can request scripts for specific games through our Discord server or support system.",
+    "Universal scripts work across multiple games but may have limited functionality compared to game-specific ones.",
+  ],
+  error: [
+    "Common script errors include missing dependencies, incompatible executors, or outdated code.",
+    "If you're seeing errors, try clearing your browser cache or using a different browser.",
+    "Error messages often provide clues about what's wrong - sharing the exact message helps us troubleshoot.",
+    "Some errors are caused by server issues and will resolve on their own after a short time.",
+    "Firewall or antivirus software can sometimes block our scripts from functioning properly.",
+    "If you're getting 'Invalid Key' errors, your license key may have expired or been revoked.",
+    "Script execution errors are often specific to the executor you're using.",
+    "Connection errors might indicate network issues or server maintenance.",
+  ],
+  premium: [
+    "Premium features include access to exclusive scripts, priority support, and no daily limits on AI chat.",
+    "We offer several premium subscription options, from 3-day passes to monthly subscriptions.",
+    "Premium users get early access to new scripts before they're released to free users.",
+    "You can upgrade to premium through your account settings page.",
+    "Premium subscriptions can be paid via credit card, PayPal, or cryptocurrency.",
+    "Premium benefits include ad-free browsing and higher usage limits for all features.",
+    "Our premium keys have hardware ID binding for security and can't be shared between devices.",
+    "Premium support tickets are prioritized and typically receive faster responses.",
+  ],
+  executor: [
+    "We recommend using reputable executors like Synapse X, KRNL, or Fluxus for best compatibility.",
+    "Different executors support different functions, which can affect script compatibility.",
+    "Free executors often have limitations that may prevent some scripts from working properly.",
+    "Executor updates are important to maintain compatibility with the latest Roblox updates.",
+    "Some scripts are designed for specific executors and may not work with others.",
+    "Executor crashes can be caused by script errors or conflicts with other software.",
+    "Always download executors from official sources to avoid malware and viruses.",
+    "Premium executors generally offer better performance and compatibility than free ones.",
+  ],
+  security: [
+    "We never store your Roblox credentials and strongly advise against sharing them with anyone.",
+    "Our script execution happens client-side, so your account security depends on the scripts you run.",
+    "We scan all scripts for malicious code before publishing them on our platform.",
+    "Two-factor authentication adds an extra layer of security to your account.",
+    "Be cautious about scripts from unknown sources, as they could contain harmful code.",
+    "We use encryption to protect your data and communications with our servers.",
+    "Report any suspicious activity or scripts to our moderation team immediately.",
+    "Keep your executor and scripts updated to protect against security vulnerabilities.",
+  ],
+}
+
 // More varied AI responses
 const AI_RESPONSES = {
   script: [
@@ -89,6 +173,7 @@ export default function AiSupportChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [usedResponses, setUsedResponses] = useState<Record<string, number[]>>({})
+  const [usedKnowledge, setUsedKnowledge] = useState<string[]>([])
 
   // Load chat history
   useEffect(() => {
@@ -193,6 +278,36 @@ export default function AiSupportChat() {
     return responses[randomIndex]
   }
 
+  // Function to get relevant knowledge that hasn't been used recently
+  const getRelevantKnowledge = (category: string): string => {
+    if (!KNOWLEDGE_BASE[category as keyof typeof KNOWLEDGE_BASE]) {
+      return ""
+    }
+
+    const knowledge = KNOWLEDGE_BASE[category as keyof typeof KNOWLEDGE_BASE]
+
+    // Filter out recently used knowledge
+    const availableKnowledge = knowledge.filter((item) => !usedKnowledge.includes(item))
+
+    // If all knowledge has been used, reset
+    if (availableKnowledge.length === 0) {
+      setUsedKnowledge([])
+      const randomIndex = Math.floor(Math.random() * knowledge.length)
+      const selectedKnowledge = knowledge[randomIndex]
+      setUsedKnowledge([selectedKnowledge])
+      return selectedKnowledge
+    }
+
+    // Get random unused knowledge
+    const randomIndex = Math.floor(Math.random() * availableKnowledge.length)
+    const selectedKnowledge = availableKnowledge[randomIndex]
+
+    // Mark as used
+    setUsedKnowledge((prev) => [...prev, selectedKnowledge])
+
+    return selectedKnowledge
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -255,9 +370,20 @@ export default function AiSupportChat() {
         responseCategory = "thank"
       } else if (lowerInput.includes("hello") || lowerInput.includes("hi") || lowerInput.includes("hey")) {
         responseCategory = "hello"
+      } else if (lowerInput.includes("executor") || lowerInput.includes("synapse") || lowerInput.includes("krnl")) {
+        responseCategory = "executor"
+      } else if (lowerInput.includes("secure") || lowerInput.includes("safe") || lowerInput.includes("protect")) {
+        responseCategory = "security"
       }
 
-      const response = getRandomResponse(responseCategory)
+      // Get base response
+      const baseResponse = getRandomResponse(responseCategory)
+
+      // Get additional knowledge if applicable
+      const additionalKnowledge = getRelevantKnowledge(responseCategory)
+
+      // Combine response with knowledge if available
+      const response = additionalKnowledge ? `${baseResponse}\n\n${additionalKnowledge}` : baseResponse
 
       // Simulate streaming response
       for (let i = 0; i < response.length; i++) {
@@ -341,13 +467,13 @@ export default function AiSupportChat() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto rounded-lg border border-white/10 bg-[#1a1a1a] p-4">
+      <div className="flex-1 overflow-y-auto rounded-lg border border-white/10 bg-[#0a0a0a] p-4">
         <div className="space-y-4">
           {messages.map((message) => (
             <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
               <div
                 className={`max-w-[80%] rounded-lg p-4 ${
-                  message.role === "user" ? "bg-red-500/20 text-white" : "bg-[#252525] text-gray-200"
+                  message.role === "user" ? "bg-red-500/20 text-white" : "bg-[#1a1a1a] text-gray-200"
                 }`}
               >
                 <div className="whitespace-pre-wrap">{message.content}</div>
@@ -360,7 +486,7 @@ export default function AiSupportChat() {
 
           {isGenerating && (
             <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-lg bg-[#252525] p-4 text-gray-200">
+              <div className="max-w-[80%] rounded-lg bg-[#1a1a1a] p-4 text-gray-200">
                 <div className="whitespace-pre-wrap">
                   {generatedText}
                   <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-red-500"></span>
@@ -383,7 +509,7 @@ export default function AiSupportChat() {
             placeholder={
               dailyLimit ? "You've reached your daily message limit" : "Type your message here... (100 words max)"
             }
-            className="w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-4 py-3 pr-24 text-white transition-all focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 hover:border-red-400"
+            className="w-full rounded-lg border border-white/10 bg-[#0a0a0a] px-4 py-3 pr-24 text-white transition-all focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 hover:border-red-400"
             rows={3}
             disabled={isGenerating || dailyLimit}
           />

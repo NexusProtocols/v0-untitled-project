@@ -1,140 +1,117 @@
-import { NextResponse } from "next/server"
-import crypto from "crypto"
-import { isValidKeyFormat } from "@/lib/crypto"
-import { generateHWID } from "@/lib/hwid"
+import { type NextRequest, NextResponse } from "next/server"
+import { headers } from "next/headers"
 
-// Simulated database of keys (in production, use a real database)
-const keyDatabase: Record<string, any> = {}
-
-// Initialize some test keys
-if (Object.keys(keyDatabase).length === 0) {
-  const testKeys = [
-    {
-      key: "NEXUS-1234-5678-ABCD",
-      hwid: generateHWID(),
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      usageCount: 0,
-      maxUsage: 5,
-      keyType: "premium",
-      gatewayId: "gateway-123456",
-      scriptId: "script-123456",
-      isValid: true,
-    },
-  ]
-
-  testKeys.forEach((keyData) => {
-    keyDatabase[keyData.key] = keyData
-  })
-}
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { key, hwid, gameId } = await request.json()
+    const { key, hwid, scriptId, gameId } = await request.json()
 
+    // Validate required parameters
     if (!key) {
       return NextResponse.json({ success: false, error: "Key is required" }, { status: 400 })
     }
 
-    // Check key format
-    if (!isValidKeyFormat(key)) {
-      return NextResponse.json({ success: false, error: "Invalid key format" }, { status: 400 })
-    }
+    // Check if request is from Roblox
+    const userAgent = headers().get("user-agent") || ""
+    const isRoblox = userAgent.includes("Roblox") || request.headers.get("Roblox-Id")
 
-    // Check if key exists in database
-    if (!keyDatabase[key]) {
-      return NextResponse.json({ success: false, error: "Key not found" }, { status: 404 })
-    }
+    // Get stored keys from localStorage (in production this would be a database)
+    // For Roblox requests, we need to handle differently since localStorage isn't available
+    let storedKeys = []
 
-    const keyData = keyDatabase[key]
+    if (isRoblox) {
+      // For Roblox requests, validate against server-side storage
+      // This is a simplified example - in production use a database
+      const validKeys = process.env.VALID_KEYS ? process.env.VALID_KEYS.split(",") : []
+      const keyExists = validKeys.includes(key)
 
-    // Check if key is valid
-    if (!keyData.isValid) {
-      return NextResponse.json({ success: false, error: "Key is invalid or revoked" }, { status: 403 })
-    }
+      if (!keyExists) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Invalid license! Script features will be disabled.",
+            code: "INVALID_LICENSE",
+          },
+          { status: 403 },
+        )
+      }
 
-    // Check if key has expired
-    if (new Date(keyData.expiresAt) < new Date()) {
-      return NextResponse.json({ success: false, error: "Key has expired" }, { status: 403 })
-    }
+      // If scriptId is provided, validate it's the correct script
+      if (scriptId) {
+        // In production, check if this key is valid for this specific script
+        // For now, we'll assume it's valid
+      }
 
-    // Check if key has reached max usage
-    if (keyData.usageCount >= keyData.maxUsage) {
-      return NextResponse.json({ success: false, error: "Key has reached maximum usage" }, { status: 403 })
-    }
-
-    // Check HWID if provided and HWID lock is enabled
-    if (hwid && keyData.hwid && keyData.hwid !== hwid) {
-      // Log the HWID mismatch for analysis
-      console.warn(`HWID mismatch for key ${key}: expected ${keyData.hwid}, got ${hwid}`)
-
-      // Update the database with the HWID attempt
-      keyData.hwidAttempts = keyData.hwidAttempts || []
-      keyData.hwidAttempts.push({
-        hwid,
-        timestamp: new Date().toISOString(),
-        gameId: gameId || "unknown",
-      })
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: "HWID mismatch. This key is locked to another device.",
+      return NextResponse.json({
+        success: true,
+        data: {
+          keyType: "premium",
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          usageCount: 1,
+          maxUsage: 5,
+          scriptAccess: true,
         },
-        { status: 403 },
-      )
+      })
+    } else {
+      // For web requests, use the existing validation logic
+      try {
+        // In a real implementation, this would be fetched from a database
+        storedKeys = typeof localStorage !== "undefined" ? JSON.parse(localStorage.getItem("nexus_keys") || "[]") : []
+      } catch (error) {
+        console.error("Error parsing stored keys:", error)
+        storedKeys = []
+      }
+
+      // Find the key
+      const keyData = storedKeys.find((k: any) => k.key === key)
+
+      if (!keyData) {
+        return NextResponse.json({ success: false, error: "Invalid key" }, { status: 403 })
+      }
+
+      // Check if key is expired
+      if (keyData.expiresAt && new Date(keyData.expiresAt) < new Date()) {
+        return NextResponse.json({ success: false, error: "Key has expired" }, { status: 403 })
+      }
+
+      // Check if key has reached max usage
+      if (keyData.maxUsage && keyData.usageCount >= keyData.maxUsage) {
+        return NextResponse.json({ success: false, error: "Key has reached maximum usage" }, { status: 403 })
+      }
+
+      // Check HWID if provided and required
+      if (hwid && keyData.hwid && keyData.hwid !== hwid) {
+        return NextResponse.json({ success: false, error: "Key is bound to another device" }, { status: 403 })
+      }
+
+      // If scriptId is provided, check if key has access to this script
+      if (scriptId && keyData.scriptAccess === false) {
+        return NextResponse.json({ success: false, error: "Key does not have access to this script" }, { status: 403 })
+      }
+
+      // Update usage count
+      keyData.usageCount = (keyData.usageCount || 0) + 1
+
+      // If HWID is provided and key is not bound, bind it
+      if (hwid && !keyData.hwid) {
+        keyData.hwid = hwid
+      }
+
+      // Update key in localStorage
+      localStorage.setItem("nexus_keys", JSON.stringify(storedKeys.map((k: any) => (k.key === key ? keyData : k))))
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          keyType: keyData.type || "standard",
+          expiresAt: keyData.expiresAt,
+          usageCount: keyData.usageCount,
+          maxUsage: keyData.maxUsage || Number.POSITIVE_INFINITY,
+          scriptAccess: keyData.scriptAccess !== false,
+        },
+      })
     }
-
-    // Update usage count
-    keyData.usageCount += 1
-    keyData.lastUsed = new Date().toISOString()
-
-    // If HWID is not set yet, set it now
-    if (hwid && !keyData.hwid) {
-      keyData.hwid = hwid
-    }
-
-    // Update usage logs
-    keyData.usageLogs = keyData.usageLogs || []
-    keyData.usageLogs.push({
-      timestamp: new Date().toISOString(),
-      hwid: hwid || "unknown",
-      gameId: gameId || "unknown",
-    })
-
-    // In a real implementation, you would save these changes to a database
-    keyDatabase[key] = keyData
-
-    // Return success with key details
-    return NextResponse.json({
-      success: true,
-      message: "Key validated successfully",
-      data: {
-        keyType: keyData.keyType,
-        expiresAt: keyData.expiresAt,
-        usageCount: keyData.usageCount,
-        maxUsage: keyData.maxUsage,
-        createdAt: keyData.createdAt,
-        // Generate a secure session token
-        sessionToken: crypto.randomBytes(32).toString("hex"),
-        // Don't return sensitive data like HWID to the client
-      },
-    })
   } catch (error) {
     console.error("Error validating key:", error)
-    return NextResponse.json({ success: false, error: "Failed to validate key" }, { status: 500 })
-  }
-}
-
-// Admin-only route to get all keys (would require authentication in production)
-export async function GET() {
-  try {
-    return NextResponse.json({
-      success: true,
-      data: keyDatabase,
-    })
-  } catch (error) {
-    console.error("Error getting keys:", error)
-    return NextResponse.json({ success: false, error: "Failed to get keys" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "An error occurred while validating the key" }, { status: 500 })
   }
 }

@@ -25,6 +25,12 @@ export default function AdminSupportPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<"all" | "pending" | "active" | "resolved">("all")
   const [searchTerm, setSearchTerm] = useState("")
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    active: 0,
+    resolved: 0,
+  })
 
   useEffect(() => {
     if (!user) {
@@ -45,6 +51,16 @@ export default function AdminSupportPage() {
     const loadSupportRequests = () => {
       const requests = JSON.parse(localStorage.getItem("nexus_support_requests") || "[]")
       setSupportRequests(requests)
+
+      // Calculate stats
+      const stats = {
+        total: requests.length,
+        pending: requests.filter((req: SupportRequest) => req.status === "pending").length,
+        active: requests.filter((req: SupportRequest) => req.status === "active").length,
+        resolved: requests.filter((req: SupportRequest) => req.status === "resolved").length,
+      }
+      setStats(stats)
+
       setIsLoading(false)
     }
 
@@ -99,6 +115,57 @@ export default function AdminSupportPage() {
         >
           <i className="fas fa-arrow-left mr-2"></i> Back to Dashboard
         </Link>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">Total Requests</p>
+              <h3 className="text-2xl font-bold text-white">{stats.total}</h3>
+            </div>
+            <div className="rounded-full bg-blue-500/20 p-3 text-blue-400">
+              <i className="fas fa-ticket-alt text-xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">Pending</p>
+              <h3 className="text-2xl font-bold text-yellow-400">{stats.pending}</h3>
+            </div>
+            <div className="rounded-full bg-yellow-500/20 p-3 text-yellow-400">
+              <i className="fas fa-clock text-xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">Active</p>
+              <h3 className="text-2xl font-bold text-blue-400">{stats.active}</h3>
+            </div>
+            <div className="rounded-full bg-blue-500/20 p-3 text-blue-400">
+              <i className="fas fa-comment-dots text-xl"></i>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400">Resolved</p>
+              <h3 className="text-2xl font-bold text-green-400">{stats.resolved}</h3>
+            </div>
+            <div className="rounded-full bg-green-500/20 p-3 text-green-400">
+              <i className="fas fa-check-circle text-xl"></i>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

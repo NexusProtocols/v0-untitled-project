@@ -1,4 +1,42 @@
+"use client"
+
+import { useState, useEffect } from "react"
+
 export default function PrivacyPolicyPage() {
+  const [scrolled, setScrolled] = useState(false)
+  const [accepted, setAccepted] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 100)
+    }
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  useEffect(() => {
+    // Check if user has already accepted
+    const hasAccepted = localStorage.getItem("nexus-privacy-accepted") === "true"
+    setAccepted(hasAccepted)
+  }, [])
+
+  const handleAccept = () => {
+    localStorage.setItem("nexus-privacy-accepted", "true")
+    setAccepted(true)
+  }
+
+  if (accepted) {
+    return (
+      <div className="container mx-auto px-5 py-16">
+        <div className="mx-auto max-w-2xl">
+          <div className="p-4 text-green-400 rounded-lg border border-green-500/20 bg-green-500/10">
+            You've already accepted our Privacy Policy.
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto px-5 py-16">
       <div className="mx-auto max-w-4xl">
@@ -95,6 +133,22 @@ export default function PrivacyPolicyPage() {
             <div className="text-center mt-12 text-gray-400">
               <p>For the complete Privacy Policy, please read the entire document.</p>
             </div>
+          </div>
+        </div>
+
+        {/* Acceptance Section */}
+        <div className="bg-[#1a1a1a] border border-[#ff3e3e]/30 rounded-xl p-6 sticky bottom-4 backdrop-blur">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-4 md:mb-0">
+              <h3 className="text-lg font-medium text-white">By using Nexus, you agree to our Privacy Policy.</h3>
+              <p className="text-sm text-gray-400">We collect data to provide and improve our services.</p>
+            </div>
+            <button
+              onClick={handleAccept}
+              className="px-6 py-3 bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] rounded-md font-medium hover:from-[#ff5e5e] hover:to-[#ff2020] transition-all"
+            >
+              I Accept
+            </button>
           </div>
         </div>
       </div>

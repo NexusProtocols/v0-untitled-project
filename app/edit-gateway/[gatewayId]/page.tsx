@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
 
@@ -28,8 +28,9 @@ interface GatewayStep {
   textColor: string
 }
 
-export default function CreateGatewayPage() {
+export default function EditGatewayPage() {
   const { user, isLoading } = useAuth()
+  const params = useParams()
   const router = useRouter()
   const [gatewayTitle, setGatewayTitle] = useState("")
   const [gatewayDescription, setGatewayDescription] = useState("")
@@ -48,13 +49,59 @@ export default function CreateGatewayPage() {
   const [textColor, setTextColor] = useState("#ffffff")
   const [buttonBgColor, setButtonBgColor] = useState("#ff3e3e")
   const [buttonTextColor, setButtonTextColor] = useState("#ffffff")
+  const [isLoadingGateway, setIsLoadingGateway] = useState(true)
+  const [error, setError] = useState("")
 
   useEffect(() => {
     // Redirect if not logged in
     if (!isLoading && !user) {
-      router.push("/login?redirect=/create-gateway")
+      router.push("/login?redirect=/edit-gateway/" + params.gatewayId)
     }
-  }, [user, isLoading, router])
+  }, [user, isLoading, router, params.gatewayId])
+
+  useEffect(() => {
+    const fetchGateway = () => {
+      try {
+        // Get gateway from localStorage
+        const gateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
+        const foundGateway = gateways.find((g: any) => g.id === params.gatewayId)
+
+        if (foundGateway) {
+          // Check if user is the creator
+          if (foundGateway.creatorName !== user?.username) {
+            setError("You don't have permission to edit this gateway")
+            return
+          }
+
+          // Set gateway data
+          setGatewayTitle(foundGateway.title)
+          setGatewayDescription(foundGateway.description)
+          setGatewayImage(foundGateway.imageUrl)
+          setRewardType(foundGateway.reward?.type || "url")
+          setRewardUrl(foundGateway.reward?.url || "")
+          setRewardPaste(foundGateway.reward?.content || "")
+          setSteps(foundGateway.steps || [])
+          setShowSubscriptionOptions(foundGateway.settings?.showSubscriptionOptions ?? true)
+          setShowOperaGxOffer(foundGateway.settings?.showOperaGxOffer ?? true)
+          setBgColor(foundGateway.settings?.bgColor || "#1a1a1a")
+          setTextColor(foundGateway.settings?.textColor || "#ffffff")
+          setButtonBgColor(foundGateway.settings?.buttonBgColor || "#ff3e3e")
+          setButtonTextColor(foundGateway.settings?.buttonTextColor || "#ffffff")
+        } else {
+          setError("Gateway not found")
+        }
+      } catch (error) {
+        console.error("Error fetching gateway:", error)
+        setError("An error occurred while fetching the gateway")
+      } finally {
+        setIsLoadingGateway(false)
+      }
+    }
+
+    if (user) {
+      fetchGateway()
+    }
+  }, [params.gatewayId, user])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -257,58 +304,50 @@ export default function CreateGatewayPage() {
     try {
       setIsSubmitting(true)
 
-      // Create a gateway object
-      const gateway = {
-        id: `gateway-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        title: gatewayTitle,
-        description: gatewayDescription,
-        imageUrl: gatewayImage,
-        creatorId: user?.id,
-        creatorName: user?.username,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isActive: true,
-        steps: steps,
-        reward: {
-          type: rewardType,
-          url: rewardType === "url" ? rewardUrl : undefined,
-          content: rewardType === "paste" ? rewardPaste : undefined,
-        },
-        settings: {
-          showSubscriptionOptions,
-          showOperaGxOffer,
-          bgColor,
-          textColor,
-          buttonBgColor,
-          buttonTextColor,
-        },
-        stats: {
-          visits: 0,
-          completions: 0,
-          conversionRate: 0,
-          revenue: 0,
-        },
-      }
+      // Get all gateways from localStorage
+      const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
 
-      // Get existing gateways from localStorage or initialize empty array
-      const existingGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
-
-      // Add new gateway
-      existingGateways.push(gateway)
+      // Find the gateway to update
+      const updatedGateways = allGateways.map((gateway: any) => {
+        if (gateway.id === params.gatewayId) {
+          return {
+            ...gateway,
+            title: gatewayTitle,
+            description: gatewayDescription,
+            imageUrl: gatewayImage,
+            updatedAt: new Date().toISOString(),
+            steps: steps,
+            reward: {
+              type: rewardType,
+              url: rewardType === "url" ? rewardUrl : undefined,
+              content: rewardType === "paste" ? rewardPaste : undefined,
+            },
+            settings: {
+              showSubscriptionOptions,
+              showOperaGxOffer,
+              bgColor,
+              textColor,
+              buttonBgColor,
+              buttonTextColor,
+            },
+          }
+        }
+        return gateway
+      })
 
       // Save back to localStorage
-      localStorage.setItem("nexus_gateways", JSON.stringify(existingGateways))
+      localStorage.setItem("nexus_gateways", JSON.stringify(updatedGateways))
 
       // Show success message
-      setMessage({ type: "success", text: "Gateway created successfully! Redirecting..." })
+      setMessage({ type: "success", text: "Gateway updated successfully! Redirecting..." })
 
       // Redirect to manage gateways page after a delay
       setTimeout(() => {
         router.push("/manage-gateways")
       }, 2000)
     } catch (error) {
-      console.error("Error creating gateway:", error)
-      setMessage({ type: "error", text: "An error occurred while creating the gateway" })
+      console.error("Error updating gateway:", error)
+      setMessage({ type: "error", text: "An error occurred while updating the gateway" })
     } finally {
       setIsSubmitting(false)
     }
@@ -333,11 +372,33 @@ export default function CreateGatewayPage() {
     }
   }
 
-  if (isLoading) {
+  if (isLoading || isLoadingGateway) {
     return (
       <div className="container mx-auto px-5 py-16">
         <div className="flex items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-[#ff3e3e]"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-5 py-16">
+        <div className="mx-auto max-w-2xl">
+          <div className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-8 text-center">
+            <div className="mb-4 text-5xl text-[#ff3e3e]">
+              <i className="fas fa-exclamation-circle"></i>
+            </div>
+            <h2 className="mb-2 text-xl font-bold text-white">Error</h2>
+            <p className="mb-6 text-gray-400">{error}</p>
+            <Link
+              href="/manage-gateways"
+              className="interactive-element button-glow button-3d inline-flex items-center rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
+            >
+              <i className="fas fa-arrow-left mr-2"></i> Back to Gateways
+            </Link>
+          </div>
         </div>
       </div>
     )
@@ -348,7 +409,7 @@ export default function CreateGatewayPage() {
       <div className="mx-auto max-w-3xl">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]">
-            Create Gateway
+            Edit Gateway
           </h1>
           <Link
             href="/manage-gateways"
@@ -526,7 +587,10 @@ export default function CreateGatewayPage() {
 
             <div className="mt-4 p-4 rounded border border-white/10 bg-[#050505]">
               <h3 className="mb-2 text-lg font-medium text-white">Preview</h3>
-              <div className="p-4 rounded" style={{ backgroundColor: bgColor, color: textColor }}>
+              <div
+                className="p-4 rounded"
+                style={{ backgroundColor: bgColor, color: textColor }}
+              >
                 <h4 className="text-xl font-bold" style={{ color: textColor }}>
                   {gatewayTitle || "Gateway Title"}
                 </h4>
@@ -783,324 +847,4 @@ export default function CreateGatewayPage() {
                         type="text"
                         value={currentStep.textColor}
                         onChange={(e) => setCurrentStep({ ...currentStep, textColor: e.target.value })}
-                        className="input-focus-effect flex-1 rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Content based on step type */}
-                {currentStep.type === "social" && (
-                  <div className="mb-4">
-                    <label htmlFor="socialType" className="mb-2 block font-medium text-[#ff3e3e]">
-                      Social Platform
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <select
-                        id="socialType"
-                        value={currentStep.content.socialType || "discord"}
-                        onChange={(e) =>
-                          setCurrentStep({
-                            ...currentStep,
-                            content: {
-                              ...currentStep.content,
-                              socialType: e.target.value as
-                                | "discord"
-                                | "twitter"
-                                | "instagram"
-                                | "tiktok"
-                                | "youtube"
-                                | "twitch"
-                                | "other",
-                            },
-                          })
-                        }
-                        className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                      >
-                        <option value="discord">Discord</option>
-                        <option value="twitter">Twitter</option>
-                        <option value="instagram">Instagram</option>
-                        <option value="tiktok">TikTok</option>
-                        <option value="youtube">YouTube</option>
-                        <option value="twitch">Twitch</option>
-                        <option value="other">Other</option>
-                      </select>
-
-                      <input
-                        type="text"
-                        id="socialValue"
-                        value={currentStep.content.socialValue || ""}
-                        onChange={(e) =>
-                          setCurrentStep({
-                            ...currentStep,
-                            content: { ...currentStep.content, socialValue: e.target.value },
-                          })
-                        }
-                        className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                        placeholder={
-                          currentStep.content.socialType === "discord"
-                            ? "Discord invite code (e.g. ZWCqcuxAv3)"
-                            : currentStep.content.socialType === "twitter"
-                              ? "Twitter username (e.g. username)"
-                              : currentStep.content.socialType === "instagram"
-                                ? "Instagram username (e.g. username)"
-                                : currentStep.content.socialType === "tiktok"
-                                  ? "TikTok username (e.g. username)"
-                                  : currentStep.content.socialType === "youtube"
-                                    ? "YouTube channel (e.g. @channel)"
-                                    : currentStep.content.socialType === "twitch"
-                                      ? "Twitch username (e.g. username)"
-                                      : "Full URL (e.g. https://example.com)"
-                        }
-                      />
-                    </div>
-                    <p className="mt-1 text-xs text-gray-400">
-                      {currentStep.content.socialType === "discord"
-                        ? "Enter just the invite code or full Discord invite URL"
-                        : currentStep.content.socialType === "other"
-                          ? "Enter the full URL including https://"
-                          : `Enter just the ${currentStep.content.socialType} username or full URL`}
-                    </p>
-                  </div>
-                )}
-
-                {currentStep.type === "youtube" && (
-                  <div className="mb-4">
-                    <label htmlFor="videoId" className="mb-2 block font-medium text-[#ff3e3e]">
-                      YouTube Video ID
-                    </label>
-                    <input
-                      type="text"
-                      id="videoId"
-                      value={currentStep.content.videoId || ""}
-                      onChange={(e) =>
-                        setCurrentStep({
-                          ...currentStep,
-                          content: { ...currentStep.content, videoId: e.target.value },
-                        })
-                      }
-                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                      placeholder="dQw4w9WgXcQ"
-                    />
-                    <p className="mt-1 text-xs text-gray-400">
-                      Enter the YouTube video ID (e.g., dQw4w9WgXcQ from https://www.youtube.com/watch?v=dQw4w9WgXcQ)
-                    </p>
-                  </div>
-                )}
-
-                {currentStep.type === "article" && (
-                  <div className="mb-4">
-                    <label htmlFor="articleUrl" className="mb-2 block font-medium text-[#ff3e3e]">
-                      Article URL
-                    </label>
-                    <input
-                      type="url"
-                      id="articleUrl"
-                      value={currentStep.content.url || ""}
-                      onChange={(e) =>
-                        setCurrentStep({
-                          ...currentStep,
-                          content: { ...currentStep.content, url: e.target.value },
-                        })
-                      }
-                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                      placeholder="https://example.com/article"
-                    />
-                  </div>
-                )}
-
-                {currentStep.type === "download" && (
-                  <div className="mb-4">
-                    <label htmlFor="downloadUrl" className="mb-2 block font-medium text-[#ff3e3e]">
-                      Download URL
-                    </label>
-                    <input
-                      type="url"
-                      id="downloadUrl"
-                      value={currentStep.content.downloadUrl || ""}
-                      onChange={(e) =>
-                        setCurrentStep({
-                          ...currentStep,
-                          content: { ...currentStep.content, downloadUrl: e.target.value },
-                        })
-                      }
-                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                      placeholder="https://example.com/download"
-                    />
-                  </div>
-                )}
-
-                {currentStep.type === "custom" && (
-                  <div className="mb-4">
-                    <label htmlFor="customHtml" className="mb-2 block font-medium text-[#ff3e3e]">
-                      Custom HTML Content
-                    </label>
-                    <textarea
-                      id="customHtml"
-                      value={currentStep.content.customHtml || ""}
-                      onChange={(e) =>
-                        setCurrentStep({
-                          ...currentStep,
-                          content: { ...currentStep.content, customHtml: e.target.value },
-                        })
-                      }
-                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                      rows={4}
-                      placeholder="<div>Your custom HTML content here</div>"
-                    />
-                    <p className="mt-1 text-xs text-gray-400">
-                      Enter custom HTML content. Be careful with scripts as they may be sanitized.
-                    </p>
-                  </div>
-                )}
-
-                <div className="mb-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={currentStep.skipAllowed}
-                      onChange={(e) => setCurrentStep({ ...currentStep, skipAllowed: e.target.checked })}
-                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
-                    />
-                    <span className="text-white">Allow users to skip this step</span>
-                  </label>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={saveStep}
-                    className="interactive-element flex-1 rounded bg-[#ff3e3e] px-4 py-2 font-medium text-white transition-all hover:bg-[#ff0000]"
-                  >
-                    {editingStepIndex !== null ? "Update Step" : "Add Step"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentStep(null)
-                      setEditingStepIndex(null)
-                    }}
-                    className="interactive-element rounded border border-white/10 bg-[#050505] px-4 py-2 font-medium text-white transition-all hover:bg-[#0a0a0a]"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="mb-6">
-            <h2 className="mb-4 text-xl font-bold text-white">Gateway Reward</h2>
-
-            <div className="mb-4">
-              <label className="mb-2 block font-medium text-[#ff3e3e]">Reward Type</label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="rewardType"
-                    value="url"
-                    checked={rewardType === "url"}
-                    onChange={() => setRewardType("url")}
-                    className="h-4 w-4 border-white/10 bg-[#050505] text-[#ff3e3e]"
-                  />
-                  <span className="text-white">URL Redirect</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="rewardType"
-                    value="paste"
-                    checked={rewardType === "paste"}
-                    onChange={() => setRewardType("paste")}
-                    className="h-4 w-4 border-white/10 bg-[#050505] text-[#ff3e3e]"
-                  />
-                  <span className="text-white">Text Content</span>
-                </label>
-              </div>
-            </div>
-
-            {rewardType === "url" ? (
-              <div className="mb-4">
-                <label htmlFor="rewardUrl" className="mb-2 block font-medium text-[#ff3e3e]">
-                  Reward URL
-                </label>
-                <input
-                  type="url"
-                  id="rewardUrl"
-                  value={rewardUrl}
-                  onChange={(e) => setRewardUrl(e.target.value)}
-                  className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                  placeholder="https://example.com/reward"
-                />
-                <p className="mt-1 text-xs text-gray-400">
-                  Users will be redirected to this URL after completing all steps
-                </p>
-              </div>
-            ) : (
-              <div className="mb-4">
-                <label htmlFor="rewardPaste" className="mb-2 block font-medium text-[#ff3e3e]">
-                  Reward Content
-                </label>
-                <textarea
-                  id="rewardPaste"
-                  value={rewardPaste}
-                  onChange={(e) => setRewardPaste(e.target.value)}
-                  className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-                  rows={5}
-                  placeholder="Enter the content users will receive after completing all steps"
-                />
-                <p className="mt-1 text-xs text-gray-400">
-                  This content will be displayed to users after completing all steps
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="mb-6">
-            <h2 className="mb-4 text-xl font-bold text-white">Gateway Settings</h2>
-
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showSubscriptionOptions}
-                  onChange={(e) => setShowSubscriptionOptions(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
-                />
-                <span className="text-white">Show subscription options to skip ads</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showOperaGxOffer}
-                  onChange={(e) => setShowOperaGxOffer(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
-                />
-                <span className="text-white">Show Opera GX offer</span>
-              </label>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="interactive-element button-glow button-3d w-full rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-4 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20 disabled:opacity-50"
-          >
-            {isSubmitting ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-                <span>Creating Gateway...</span>
-              </div>
-            ) : (
-              <>
-                <i className="fas fa-plus mr-2"></i> Create Gateway
-              </>
-            )}
-          </button>
-        </form>
-      </div>
-    </div>
-  )
-}
+                        className="input-focus-effect flex-1 rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e\

@@ -16,6 +16,15 @@ export default function SupportPage() {
   const [supportIssue, setSupportIssue] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState({ type: "", text: "" })
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Check if user is admin
+  useState(() => {
+    if (user) {
+      const adminUsernames = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"]
+      setIsAdmin(adminUsernames.includes(user.username))
+    }
+  })
 
   const handleOptionSelect = (option: "ai" | "human") => {
     if (option === "ai") {
@@ -118,6 +127,92 @@ export default function SupportPage() {
     )
   }
 
+  // Admin view
+  if (isAdmin) {
+    return (
+      <div className="container mx-auto px-5 py-16">
+        <h1 className="mb-8 text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-700">
+          Admin Support Center
+        </h1>
+
+        <div className="grid gap-8 md:grid-cols-2">
+          <div
+            className="rounded-lg border border-blue-500/30 bg-[#1a1a1a] p-8 text-center transition-all duration-300 hover:transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20"
+            onClick={() => router.push("/admin-dashboard/support")}
+          >
+            <div className="mb-4 text-6xl text-blue-500">
+              <i className="fas fa-headset"></i>
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-white">Help Humans</h2>
+            <p className="mb-6 text-gray-400">
+              View and respond to all support requests from users. Manage tickets and provide assistance.
+            </p>
+            <button
+              className="inline-flex items-center rounded bg-gradient-to-r from-blue-500 to-blue-700 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-blue-500/20"
+              onClick={(e) => {
+                e.stopPropagation()
+                router.push("/admin-dashboard/support")
+              }}
+            >
+              <i className="fas fa-users mr-2"></i> View Support Requests
+            </button>
+          </div>
+
+          <div
+            className="rounded-lg border border-red-500/30 bg-[#1a1a1a] p-8 text-center transition-all duration-300 hover:transform hover:scale-105 hover:shadow-lg hover:shadow-red-500/20"
+            onClick={() => handleOptionSelect("ai")}
+          >
+            <div className="mb-4 text-6xl text-red-500">
+              <i className="fas fa-robot"></i>
+            </div>
+            <h2 className="mb-2 text-2xl font-bold text-white">AI Support</h2>
+            <p className="mb-6 text-gray-400">
+              Get instant help from our AI assistant powered by Grok. Available 24/7 for quick responses to your
+              questions.
+            </p>
+            <button
+              className="inline-flex items-center rounded bg-gradient-to-r from-red-500 to-red-700 px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-red-500/20"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleOptionSelect("ai")
+              }}
+            >
+              <i className="fas fa-comments mr-2"></i> Chat with AI
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-12 rounded-lg border border-white/10 bg-[#1a1a1a] p-6">
+          <h2 className="mb-4 text-xl font-bold text-white">Admin Tools</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link
+              href="/admin-dashboard"
+              className="rounded-lg border border-white/10 bg-[#0a0a0a] p-4 text-center hover:bg-[#111] transition-all"
+            >
+              <i className="fas fa-tachometer-alt text-2xl text-blue-400 mb-2"></i>
+              <div className="font-medium text-white">Admin Dashboard</div>
+            </Link>
+            <Link
+              href="/admin-dashboard/users"
+              className="rounded-lg border border-white/10 bg-[#0a0a0a] p-4 text-center hover:bg-[#111] transition-all"
+            >
+              <i className="fas fa-users-cog text-2xl text-green-400 mb-2"></i>
+              <div className="font-medium text-white">User Management</div>
+            </Link>
+            <Link
+              href="/admin-dashboard/scripts"
+              className="rounded-lg border border-white/10 bg-[#0a0a0a] p-4 text-center hover:bg-[#111] transition-all"
+            >
+              <i className="fas fa-code text-2xl text-purple-400 mb-2"></i>
+              <div className="font-medium text-white">Script Manager</div>
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Regular user view
   return (
     <div className="container mx-auto px-5 py-16">
       <h1 className="mb-8 text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-red-700">

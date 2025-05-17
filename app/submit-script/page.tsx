@@ -5,11 +5,12 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
+import Link from "next/link"
 import { generateHWID } from "@/lib/hwid"
 
 // Define the admin token constant
 const ADMIN_TOKEN_KEY =
-  "nexus_admin_token_Do_Not_Share_Leave_Console_Do_Not_Copy----_____-----3258ujaefhih328v6ha fhhag nFB@&F WDHB G#T*&HAF< #GQY* AKJFEB@*F ASLQ#*R(sdfb3ut93"
+  "nexus_admin_token_Do_Not_Share_Leave_Console_Do_Not_Copy----_____-----3258ujaefhih328v6ha fhhag nFB@&F WDHB G#T*&HAF< #GQY* AKJFEB@*F ASLQ#*R(sdfb3ut93)"
 
 export default function SubmitScriptPage() {
   const { user, isLoading } = useAuth()
@@ -19,6 +20,13 @@ export default function SubmitScriptPage() {
   const [scriptCode, setScriptCode] = useState("")
   const [imageUrl, setImageUrl] = useState("")
   const [message, setMessage] = useState({ type: "", text: "" })
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [scripts, setScripts] = useState<any[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filter, setFilter] = useState<"all" | "approved" | "pending" | "rejected">("all")
+  const [isLoading2, setIsLoading2] = useState(true)
+  const [selectedScript, setSelectedScript] = useState<any | null>(null)
+  const [showScriptModal, setShowScriptModal] = useState(false)
   const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [adminCheckComplete, setAdminCheckComplete] = useState(false)
   const [isPremium, setIsPremium] = useState(false)
@@ -38,7 +46,6 @@ export default function SubmitScriptPage() {
   // Key settings state variables
   const [adLevel, setAdLevel] = useState(1)
   const [maxAdLevel, setMaxAdLevel] = useState(3) // Default for free users
-  const [adultAds, setAdultAds] = useState(false)
   const [keyDuration, setKeyDuration] = useState(7) // Default 7 days
   const [maxUses, setMaxUses] = useState(1) // Default 1 use
   const [hwidLock, setHwidLock] = useState(true) // Default enabled
@@ -139,6 +146,9 @@ export default function SubmitScriptPage() {
     setShowSearchResults(false)
 
     try {
+      // Fetch game details using the Roblox URL
+      const url = `https://www.roblox.com/games/${gameId}/`
+
       // In a real implementation, this would call an API to fetch game details
       // For now, we'll simulate a successful response
       setTimeout(() => {
@@ -248,10 +258,10 @@ export default function SubmitScriptPage() {
         isNexusTeam: userIsAdmin,
         game: gameDetails,
         hwid: hwid,
+        status: "pending", // Default status for new scripts
 
         // Key settings
         adLevel: adLevel,
-        adultAds: adultAds,
         keyDuration: keyDuration,
         maxUses: maxUses,
         hwidLock: hwidLock,
@@ -283,35 +293,328 @@ export default function SubmitScriptPage() {
     }
   }
 
-  if (isLoading || !adminCheckComplete) {
+  const loadScripts = () => {
+    try {
+      const allScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
+      setScripts(allScripts)
+    } catch (error) {
+      console.error("Error loading scripts:", error)
+    } finally {
+      setIsLoading2(false)
+    }
+  }
+
+  const handleApproveScript = (scriptId: string) => {
+    const updatedScripts = scripts.map((script) =>
+      script.id === scriptId ? { ...script, status: "approved" } : script,
+    )
+
+    localStorage.setItem("nexus_scripts", JSON.stringify(updatedScripts))
+    setScripts(updatedScripts)
+  }
+
+  const handleRejectScript = (scriptId: string) => {
+    const updatedScripts = scripts.map((script) =>
+      script.id === scriptId ? { ...script, status: "rejected" } : script,
+    )
+
+    localStorage.setItem("nexus_scripts", JSON.stringify(updatedScripts))
+    setScripts(updatedScripts)
+  }
+
+  const handleViewScript = (script: any) => {
+    setSelectedScript(script)
+    setShowScriptModal(true)
+  }
+
+  const handleDeleteScript = (scriptId: string) => {
+    if (confirm("Are you sure you want to delete this script? This action cannot be undone.")) {
+      const updatedScripts = scripts.filter((script) => script.id !== scriptId)
+      localStorage.setItem("nexus_scripts", JSON.stringify(updatedScripts))
+      setScripts(updatedScripts)
+
+      if (selectedScript?.id === scriptId) {
+        setSelectedScript(null)
+        setShowScriptModal(false)
+      }
+    }
+  }
+
+  const filteredScripts = scripts.filter((script) => {
+    // Filter by status
+    if (filter !== "all" && script.status !== filter) {
+      return false
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase()
+      return (
+        script.title.toLowerCase().includes(searchLower) ||
+        script.description.toLowerCase().includes(searchLower) ||
+        script.author.toLowerCase().includes(searchLower) ||
+        script.game?.name.toLowerCase().includes(searchLower)
+      )
+    }
+
+    return true
+  })
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      const adminUsernames = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"]
+      const userIsAdmin = adminUsernames.includes(user.username)
+
+      setIsAdmin(userIsAdmin)
+
+      if (!userIsAdmin) {
+        // Redirect non-admins to upload scripts page
+        router.push("/upload-scripts")
+      } else {
+        // Load scripts for admin
+        loadScripts()
+      }
+    } else if (!isLoading && !user) {
+      router.push("/login?redirect=/submit-script")
+    }
+  }, [user, isLoading, router])
+
+  if (isLoading || isLoading2) {
     return (
       <div className="container mx-auto px-5 py-16">
-        <div className="mx-auto max-w-2xl">
-          <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-[#ff3e3e]"></div>
-          </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-[#ff3e3e]"></div>
         </div>
       </div>
     )
   }
 
+  if (!isAdmin) {
+    return null // Will redirect in useEffect
+  }
+
   return (
     <div className="container mx-auto px-5 py-16">
-      <div className="mx-auto max-w-2xl">
-        <h1 className="mb-8 text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]">
-          Submit Script
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]">
+          Script Manager
         </h1>
+        <Link
+          href="/admin-dashboard"
+          className="interactive-element rounded border border-white/10 bg-[#1a1a1a] px-4 py-2 font-medium text-white transition-all hover:bg-[#0a0a0a]"
+        >
+          <i className="fas fa-arrow-left mr-2"></i> Back to Dashboard
+        </Link>
+      </div>
 
-        {message.text && (
-          <div
-            className={`mb-6 rounded p-4 ${
-              message.type === "error" ? "bg-red-900/30 text-red-200" : "bg-green-900/30 text-green-200"
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setFilter("all")}
+            className={`rounded px-3 py-1 text-sm font-medium ${
+              filter === "all" ? "bg-[#ff3e3e] text-white" : "bg-[#1a1a1a] text-gray-300 hover:bg-[#252525]"
             }`}
           >
-            {message.text}
-          </div>
-        )}
+            All
+          </button>
+          <button
+            onClick={() => setFilter("pending")}
+            className={`rounded px-3 py-1 text-sm font-medium ${
+              filter === "pending" ? "bg-yellow-500 text-white" : "bg-[#1a1a1a] text-gray-300 hover:bg-[#252525]"
+            }`}
+          >
+            <i className="fas fa-clock mr-1"></i> Pending
+          </button>
+          <button
+            onClick={() => setFilter("approved")}
+            className={`rounded px-3 py-1 text-sm font-medium ${
+              filter === "approved" ? "bg-green-500 text-white" : "bg-[#1a1a1a] text-gray-300 hover:bg-[#252525]"
+            }`}
+          >
+            <i className="fas fa-check-circle mr-1"></i> Approved
+          </button>
+          <button
+            onClick={() => setFilter("rejected")}
+            className={`rounded px-3 py-1 text-sm font-medium ${
+              filter === "rejected" ? "bg-red-500 text-white" : "bg-[#1a1a1a] text-gray-300 hover:bg-[#252525]"
+            }`}
+          >
+            <i className="fas fa-times-circle mr-1"></i> Rejected
+          </button>
+        </div>
+        <div className="relative">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search scripts..."
+            className="w-full rounded border border-white/10 bg-[#0a0a0a] px-4 py-2 pl-10 text-white transition-all focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+          />
+          <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        </div>
+      </div>
 
+      {filteredScripts.length === 0 ? (
+        <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-8 text-center">
+          <div className="mb-4 text-5xl text-[#ff3e3e]">
+            <i className="fas fa-code"></i>
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-white">No Scripts Found</h2>
+          <p className="text-gray-400">
+            {filter !== "all"
+              ? `There are no ${filter} scripts.`
+              : searchTerm
+                ? "No scripts match your search criteria."
+                : "There are no scripts at this time."}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredScripts.map((script) => (
+            <div
+              key={script.id}
+              className="rounded-lg border border-white/10 bg-[#1a1a1a] p-4 transition-all hover:border-[#ff3e3e]/30"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-white">{script.title}</h3>
+                  <p className="text-sm text-gray-400">By {script.author}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleApproveScript(script.id)}
+                    className="interactive-element rounded bg-green-500 px-3 py-1 text-sm text-white transition-all hover:bg-green-600"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleRejectScript(script.id)}
+                    className="interactive-element rounded bg-red-500 px-3 py-1 text-sm text-white transition-all hover:bg-red-600"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={() => handleViewScript(script)}
+                    className="interactive-element rounded bg-blue-500 px-3 py-1 text-sm text-white transition-all hover:bg-blue-600"
+                  >
+                    View
+                  </button>
+                  <button
+                    onClick={() => handleDeleteScript(script.id)}
+                    className="interactive-element rounded bg-red-500 px-3 py-1 text-sm text-white transition-all hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal for viewing scripts */}
+      {showScriptModal && selectedScript && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="relative max-w-3xl rounded-lg bg-[#1a1a1a] p-8">
+            <button
+              onClick={() => setShowScriptModal(false)}
+              className="absolute top-4 right-4 interactive-element rounded bg-red-500 px-3 py-1 text-sm text-white transition-all hover:bg-red-600"
+            >
+              <i className="fas fa-times"></i>
+            </button>
+            <h2 className="mb-4 text-2xl font-bold text-white">{selectedScript.title}</h2>
+            <p className="mb-4 text-gray-400">{selectedScript.description}</p>
+            <div className="mb-4 flex items-center gap-4">
+              <div className="h-16 w-16 overflow-hidden rounded">
+                <img
+                  src={selectedScript.imageUrl || "/placeholder.svg"}
+                  alt={selectedScript.title}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div>
+                <h3 className="font-medium text-white">Game: {selectedScript.game?.name}</h3>
+                <p className="text-sm text-gray-400">Game ID: {selectedScript.game?.gameId}</p>
+              </div>
+            </div>
+            <div className="mb-4">
+              <h3 className="mb-2 text-lg font-bold text-white">Script Code</h3>
+              <pre className="rounded-lg border border-white/10 bg-[#050505] p-4 text-white font-mono">
+                {selectedScript.code}
+              </pre>
+            </div>
+            <div className="mb-4">
+              <h3 className="mb-2 text-lg font-bold text-white">Key Settings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block font-medium text-[#ff3e3e]">Key Prefix</label>
+                  <input
+                    type="text"
+                    value={selectedScript.keyPrefix}
+                    readOnly
+                    className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block font-medium text-[#ff3e3e]">Key Duration (days)</label>
+                  <input
+                    type="number"
+                    value={selectedScript.keyDuration}
+                    readOnly
+                    className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block font-medium text-[#ff3e3e]">Maximum Uses</label>
+                  <input
+                    type="number"
+                    value={selectedScript.maxUses}
+                    readOnly
+                    className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block font-medium text-[#ff3e3e]">Gateway Count</label>
+                  <input
+                    type="number"
+                    value={selectedScript.gatewayCount}
+                    readOnly
+                    className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="mb-4">
+              <h3 className="mb-2 text-lg font-bold text-white">Ad Settings</h3>
+              <div className="mb-4">
+                <label className="mb-2 block font-medium text-[#ff3e3e]">Ad Level</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="1"
+                    max={selectedScript.adLevel}
+                    value={selectedScript.adLevel}
+                    readOnly
+                    className="w-full h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-white font-bold min-w-[30px] text-center">{selectedScript.adLevel}</span>
+                </div>
+                <div className="mt-2 text-xs text-gray-400">
+                  {selectedScript.adLevel === 1 && "Level 1: 2 buttons - direct link"}
+                  {selectedScript.adLevel === 2 && "Level 2: 3 buttons - 2 redirect and 1 Opera GX download"}
+                  {selectedScript.adLevel === 3 && "Level 3: 4 buttons - 2 redirect, 1 article and 1 Opera GX"}
+                  {selectedScript.adLevel === 4 &&
+                    "Level 4: 5 buttons - 2 redirect, 1 article, 1 Opera GX and 1 YouTube video"}
+                  {selectedScript.adLevel === 5 && "Level 5: Level 4 + more ads on page"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form for submitting scripts */}
+      {!selectedScript && (
         <form onSubmit={handleSubmit} className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-8">
           <div className="mb-6">
             <label className="mb-2 block font-medium text-[#ff3e3e]">Game Search</label>
@@ -680,27 +983,12 @@ export default function SubmitScriptPage() {
                 <span className="text-white font-bold min-w-[30px] text-center">{adLevel}</span>
               </div>
               <div className="mt-2 text-xs text-gray-400">
-                {adLevel === 1 && "Level 1: 5 native ads around the page"}
-                {adLevel === 2 && "Level 2: 10 native ads + direct link ads with popup"}
-                {adLevel === 3 && "Level 3: Level 2 + additional popups and redirects"}
-                {adLevel === 4 && "Level 4: Level 3 + Opera GX offerwall"}
-                {adLevel === 5 && "Level 5: Maximum monetization (admin only)"}
+                {adLevel === 1 && "Level 1: 2 buttons - direct link"}
+                {adLevel === 2 && "Level 2: 3 buttons - 2 redirect and 1 Opera GX download"}
+                {adLevel === 3 && "Level 3: 4 buttons - 2 redirect, 1 article and 1 Opera GX"}
+                {adLevel === 4 && "Level 4: 5 buttons - 2 redirect, 1 article, 1 Opera GX and 1 YouTube video"}
+                {adLevel === 5 && "Level 5: Level 4 + more ads on page"}
               </div>
-            </div>
-
-            <div className="mb-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={adultAds}
-                  onChange={() => setAdultAds(!adultAds)}
-                  className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
-                />
-                <span className="text-white">Allow Adult Ads (18+)</span>
-              </label>
-              <p className="mt-1 text-xs text-gray-400">
-                Enabling this will allow adult-oriented advertisements to appear in your key gateways
-              </p>
             </div>
           </div>
 
@@ -721,7 +1009,7 @@ export default function SubmitScriptPage() {
             )}
           </button>
         </form>
-      </div>
+      )}
     </div>
   )
 }

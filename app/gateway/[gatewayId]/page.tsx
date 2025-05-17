@@ -1,12 +1,26 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { SubscriptionPopup } from "@/components/subscription-popup"
-import { OperaGxOfferwall } from "@/components/opera-gx-offerwall"
-import { GatewayStep } from "@/components/gateway-step"
-import { AdContainer } from "@/components/ad-container"
+import { SecureAd } from "@/components/secure-ad"
+import { CaptchaValidator } from "@/components/captcha-validator"
+import { GatewayTaskButton } from "@/components/gateway-task-button"
+
+// Gateway step types
+type StepType = "redirect" | "article" | "operagx" | "youtube" | "direct"
+
+// Gateway step interface
+interface GatewayStep {
+  id: string
+  type: StepType
+  title: string
+  description: string
+  content?: {
+    url?: string
+    videoId?: string
+  }
+}
 
 export default function GatewayPage() {
   const params = useParams()
@@ -14,31 +28,71 @@ export default function GatewayPage() {
   const [gateway, setGateway] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
-  const [currentStepIndex, setCurrentStepIndex] = useState(-1)
-  const [showSubscriptionPopup, setShowSubscriptionPopup] = useState(false)
-  const [showOperaGxOffer, setShowOperaGxOffer] = useState(false)
+  const [captchaValidated, setCaptchaValidated] = useState(false)
+  const [showTasks, setShowTasks] = useState(false)
+  const [completedTasks, setCompletedTasks] = useState<string[]>([])
+  const [allTasksCompleted, setAllTasksCompleted] = useState(false)
+  const [showFinalReward, setShowFinalReward] = useState(false)
   const [validationToken, setValidationToken] = useState("")
-  const [isCompleted, setIsCompleted] = useState(false)
-  const [reward, setReward] = useState<{ type: string; content?: string; url?: string } | null>(null)
-  const [completedSteps, setCompletedSteps] = useState<string[]>([])
+  const rewardRef = useRef<HTMLDivElement>(null)
+  const [lastVisitTime, setLastVisitTime] = useState<number | null>(null)
 
+  // Multi-stage gateway
+  const [currentStage, setCurrentStage] = useState(1)
+  const totalStages = 5
+  const stagesCompleted = new Array(totalStages).fill(false)
+  stagesCompleted[0] = captchaValidated // First stage is CAPTCHA
+
+  // Fetch gateway data
   useEffect(() => {
     const fetchGateway = async () => {
       try {
-        // Get gateway from localStorage
-        const gateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
-        const foundGateway = gateways.find((g: any) => g.id === params.gatewayId)
+        // Check if this user has visited recently (rate limiting)
+        const now = Date.now()
+        const lastVisit = localStorage.getItem(`gateway_visit_${params.gatewayId}`)
 
-        if (foundGateway) {
-          setGateway(foundGateway)
+        if (lastVisit) {
+          const lastVisitTime = Number.parseInt(lastVisit)
+          const timeSinceLastVisit = now - lastVisitTime
 
-          // Track gateway visit
-          await trackGatewayAction("visit")
-
-          // Generate initial validation token
-          generateValidationToken()
+          // If less than 30 seconds since last visit, don't count as a new visit
+          if (timeSinceLastVisit < 30000) {
+            setLastVisitTime(lastVisitTime)
+          } else {
+            // Update visit time and count as a new visit
+            localStorage.setItem(`gateway_visit_${params.gatewayId}`, now.toString())
+            incrementGatewayVisits(params.gatewayId as string)
+          }
         } else {
+          // First visit
+          localStorage.setItem(`gateway_visit_${params.gatewayId}`, now.toString())
+          incrementGatewayVisits(params.gatewayId as string)
+        }
+
+        // In a real implementation, fetch from API
+        // For now, get from localStorage
+        const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
+        const currentGateway = allGateways.find((g: any) => g.id === params.gatewayId)
+
+        if (!currentGateway) {
           setError("Gateway not found")
+          setIsLoading(false)
+          return
+        }
+
+        setGateway(currentGateway)
+
+        // Check if user has a valid CAPTCHA token
+        const captchaToken = localStorage.getItem("captchaToken")
+        const captchaExpires = localStorage.getItem("captchaExpires")
+
+        if (captchaToken && captchaExpires) {
+          const expiresAt = new Date(captchaExpires).getTime()
+          const now = Date.now()
+
+          if (expiresAt > now) {
+            setCaptchaValidated(true)
+          }
         }
       } catch (error) {
         console.error("Error fetching gateway:", error)
@@ -51,118 +105,150 @@ export default function GatewayPage() {
     fetchGateway()
   }, [params.gatewayId])
 
-  const generateValidationToken = () => {
-    // Generate a random token
-    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-    setValidationToken(token)
-    return token
-  }
+  // Check if all tasks are completed
+  useEffect(() => {
+    if (gateway && completedTasks.length === gateway.steps.length && showTasks) {
+      setAllTasksCompleted(true)
+      // Mark current stage as completed
+      stagesCompleted[currentStage] = true
 
-  // Track gateway actions with the API
-  const trackGatewayAction = async (action: string, stepId?: string) => {
-    try {
-      await fetch("/api/gateway/track", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          gatewayId: params.gatewayId,
-          stepId,
-          action,
-          validationToken,
-          userData: {
-            userAgent: navigator.userAgent,
-            screenSize: `${window.innerWidth}x${window.innerHeight}`,
-            timestamp: new Date().toISOString(),
-          },
-        }),
-      })
-    } catch (error) {
-      console.error("Failed to track gateway action:", error)
-    }
-  }
-
-  const handleStartGateway = () => {
-    if (gateway?.settings?.showSubscriptionOptions) {
-      setShowSubscriptionPopup(true)
-    } else {
-      startFirstStep()
-    }
-  }
-
-  const startFirstStep = () => {
-    setCurrentStepIndex(0)
-  }
-
-  const handleSubscriptionSkip = () => {
-    setShowSubscriptionPopup(false)
-    startFirstStep()
-  }
-
-  const handleSubscriptionPurchase = () => {
-    setShowSubscriptionPopup(false)
-    // Skip all steps and show reward
-    completeGateway()
-  }
-
-  const handleStepComplete = async (stepId: string) => {
-    // Mark this step as completed
-    setCompletedSteps((prev) => [...prev, stepId])
-
-    const nextStepIndex = currentStepIndex + 1
-
-    if (nextStepIndex < gateway.steps.length) {
-      // Move to next step
-      setCurrentStepIndex(nextStepIndex)
-
-      // Generate new validation token for the next step
-      const newToken = generateValidationToken()
-    } else {
-      // All steps completed
-      await completeGateway()
-    }
-  }
-
-  const handleOperaGxComplete = () => {
-    setShowOperaGxOffer(false)
-    completeGateway()
-  }
-
-  const completeGateway = async () => {
-    // Track gateway completion
-    await trackGatewayAction("complete")
-
-    setIsCompleted(true)
-    setReward(gateway.reward)
-
-    // Update completion count in localStorage
-    const gateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
-    const updatedGateways = gateways.map((g: any) => {
-      if (g.id === params.gatewayId) {
-        const visits = (g.stats?.visits || 0) + 1
-        const completions = (g.stats?.completions || 0) + 1
-
-        return {
-          ...g,
-          stats: {
-            ...g.stats,
-            visits,
-            completions,
-            conversionRate: completions / visits,
-          },
-        }
+      // If this is the final stage, show the reward
+      if (currentStage === totalStages - 1) {
+        handleClaimReward()
       }
-      return g
-    })
+    }
+  }, [completedTasks, gateway, showTasks, currentStage])
 
-    localStorage.setItem("nexus_gateways", JSON.stringify(updatedGateways))
+  // Function to increment gateway visits
+  const incrementGatewayVisits = (gatewayId: string) => {
+    try {
+      const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
+      const updatedGateways = allGateways.map((g: any) => {
+        if (g.id === gatewayId) {
+          // Increment visits
+          const visits = (g.stats?.visits || 0) + 1
+          return {
+            ...g,
+            stats: {
+              ...g.stats,
+              visits,
+              conversionRate: g.stats?.completions ? (g.stats.completions / visits) * 100 : 0,
+              revenue: calculateEstimatedRevenue(visits, g.stats?.completions || 0, g.settings?.adLevel || 3),
+            },
+          }
+        }
+        return g
+      })
+
+      localStorage.setItem("nexus_gateways", JSON.stringify(updatedGateways))
+    } catch (error) {
+      console.error("Error incrementing gateway visits:", error)
+    }
   }
 
+  // Function to increment gateway completions
+  const incrementGatewayCompletions = (gatewayId: string) => {
+    try {
+      const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
+      const updatedGateways = allGateways.map((g: any) => {
+        if (g.id === gatewayId) {
+          // Increment completions
+          const completions = (g.stats?.completions || 0) + 1
+          const visits = g.stats?.visits || 1
+          return {
+            ...g,
+            stats: {
+              ...g.stats,
+              completions,
+              conversionRate: (completions / visits) * 100,
+              revenue: calculateEstimatedRevenue(visits, completions, g.settings?.adLevel || 3),
+            },
+          }
+        }
+        return g
+      })
+
+      localStorage.setItem("nexus_gateways", JSON.stringify(updatedGateways))
+    } catch (error) {
+      console.error("Error incrementing gateway completions:", error)
+    }
+  }
+
+  // Calculate estimated revenue
+  const calculateEstimatedRevenue = (visits: number, completions: number, adLevel: number) => {
+    // Base CPM rate ($ per 1000 visits)
+    const baseCPM = 2.5
+
+    // Adjust based on ad level
+    const adLevelMultiplier = 0.8 + adLevel * 0.2
+
+    // Adjust based on completion rate
+    const completionRate = visits > 0 ? completions / visits : 0
+    const completionMultiplier = 1 + completionRate * 0.5
+
+    // Calculate revenue
+    const revenue = (visits / 1000) * baseCPM * adLevelMultiplier * completionMultiplier
+
+    return Number.parseFloat(revenue.toFixed(2))
+  }
+
+  // Handle CAPTCHA validation
+  const handleCaptchaValidated = (token: string) => {
+    setCaptchaValidated(true)
+    setValidationToken(token)
+    // Mark first stage as completed
+    stagesCompleted[0] = true
+  }
+
+  // Handle task completion
+  const handleTaskComplete = (taskId: string) => {
+    setCompletedTasks((prev) => [...prev, taskId])
+  }
+
+  // Handle start tasks
+  const handleStartTasks = () => {
+    setShowTasks(true)
+    setCurrentStage(1) // Move to stage 1 (tasks)
+  }
+
+  // Move to next stage
+  const handleNextStage = () => {
+    if (currentStage < totalStages - 1) {
+      setCurrentStage(currentStage + 1)
+      // Reset completed tasks for the new stage
+      setCompletedTasks([])
+      setAllTasksCompleted(false)
+    } else {
+      // Final stage completed
+      handleClaimReward()
+    }
+  }
+
+  // Handle claim reward
+  const handleClaimReward = () => {
+    setShowFinalReward(true)
+    incrementGatewayCompletions(params.gatewayId as string)
+
+    // If reward is a URL, redirect after a short delay
+    if (gateway?.reward?.type === "url" && gateway?.reward?.url) {
+      setTimeout(() => {
+        window.location.href = gateway.reward.url
+      }, 1500)
+    }
+  }
+
+  // Handle scroll to reward
+  const handleScrollToReward = () => {
+    if (rewardRef.current) {
+      rewardRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
+  // Handle copy reward
   const handleCopyReward = () => {
-    if (reward?.content) {
+    if (gateway?.reward?.content) {
       navigator.clipboard
-        .writeText(reward.content)
+        .writeText(gateway.reward.content)
         .then(() => {
           alert("Content copied to clipboard!")
         })
@@ -205,183 +291,237 @@ export default function GatewayPage() {
     )
   }
 
-  // Determine ad level from gateway settings
-  const adLevel = gateway?.settings?.adLevel || 3
-  const adultAds = gateway?.settings?.adultAds || false
-
-  // Render ad banners based on the ad level
-  const TopBanner = () => (
-    <div className="mb-6">
-      <AdContainer tier={adLevel as any} adultAds={adultAds} placement="banner" size="large" />
-    </div>
-  )
-
-  const SideBanner = () => (
-    <div className="hidden lg:block fixed right-2 top-1/4 z-10">
-      <AdContainer
-        tier={adLevel as any}
-        adultAds={adultAds}
-        placement="sidebar"
-        size="large"
-        width={160}
-        height={600}
-      />
-    </div>
-  )
-
-  const FooterBanner = () => (
-    <div className="mt-8 py-8 bg-[#080808] border-t border-white/5">
-      <div className="container mx-auto px-5">
-        <div className="text-center mb-4">
-          <h3 className="text-lg font-semibold text-white">Our Sponsors</h3>
-          <p className="text-sm text-gray-400">These sponsors help keep our service free</p>
-        </div>
-        <div className="flex flex-wrap justify-center gap-4">
-          <AdContainer tier={adLevel as any} adultAds={adultAds} placement="footer" size="small" />
-          <AdContainer tier={adLevel as any} adultAds={adultAds} placement="footer" size="small" />
-          {adLevel >= 3 && <AdContainer tier={adLevel as any} adultAds={adultAds} placement="footer" size="small" />}
+  return (
+    <div className="min-h-screen bg-[#050505] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1a1a1a] to-[#050505]">
+      {/* Top banner ad */}
+      <div className="container mx-auto px-5 pt-8">
+        <div className="flex justify-center">
+          <SecureAd adType="BANNER_728x90" creatorId={gateway?.creatorId || "unknown"} />
         </div>
       </div>
-    </div>
-  )
 
-  return (
-    <>
       {/* Main content */}
-      <div className="container mx-auto px-5 py-16">
-        <div className="mx-auto max-w-3xl">
-          <h1 className="mb-8 text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]">
-            {gateway.title}
-          </h1>
+      <div className="container mx-auto px-5 py-8">
+        <div className="relative">
+          {/* Side ads */}
+          <div className="absolute -left-40 top-0 hidden xl:block">
+            <SecureAd adType="BANNER_160x600" creatorId={gateway?.creatorId || "unknown"} />
+          </div>
+          <div className="absolute -right-40 top-0 hidden xl:block">
+            <SecureAd adType="BANNER_160x600" creatorId={gateway?.creatorId || "unknown"} />
+          </div>
 
-          {adLevel >= 2 && <TopBanner />}
-
-          {!isCompleted ? (
-            <>
-              {currentStepIndex === -1 ? (
-                <div className="mb-6 rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-6">
-                  <div className="flex flex-col md:flex-row items-center gap-6">
-                    <div className="h-40 w-full md:w-1/3 overflow-hidden rounded">
+          <div className="mx-auto max-w-3xl">
+            {/* Header with Gateway Info */}
+            <div className="mb-8 rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-6 shadow-lg shadow-[#ff3e3e]/5">
+              <div className="flex flex-col md:flex-row gap-6">
+                {gateway?.imageUrl && (
+                  <div className="w-full md:w-1/3">
+                    <div className="relative h-48 w-full overflow-hidden rounded-lg">
                       <img
-                        src={gateway.imageUrl || "/placeholder.svg?height=200&width=400"}
+                        src={gateway.imageUrl || "/placeholder.svg"}
                         alt={gateway.title}
                         className="h-full w-full object-cover"
                       />
                     </div>
-                    <div className="flex-1 text-center md:text-left">
-                      <h2 className="text-xl font-bold text-white">{gateway.title}</h2>
-                      <p className="mt-2 text-gray-400">{gateway.description}</p>
-                      <div className="mt-4 flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm">
-                        <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
-                          <i className="fas fa-user mr-1"></i> {gateway.creatorName}
-                        </span>
-                        <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
-                          <i className="fas fa-door-open mr-1"></i> {gateway.steps.length} Steps
-                        </span>
-                        <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
-                          <i className="fas fa-clock mr-1"></i> {new Date(gateway.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="mt-6">
-                        <button
-                          onClick={handleStartGateway}
-                          className="interactive-element button-glow button-3d rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
-                        >
-                          <i className="fas fa-play mr-2"></i> Start Gateway
-                        </button>
-                      </div>
-                    </div>
+                  </div>
+                )}
+                <div className="w-full md:w-2/3">
+                  <h1 className="mb-2 text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]">
+                    {gateway?.title || "Gateway"}
+                  </h1>
+                  <p className="mb-4 text-gray-400">
+                    {gateway?.description || "Complete all tasks to access the content"}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
+                      <i className="fas fa-user mr-1"></i> {gateway?.creatorName || "Unknown"}
+                    </span>
+                    <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
+                      <i className="fas fa-tasks mr-1"></i> {gateway?.steps?.length || 0} Tasks
+                    </span>
                   </div>
                 </div>
-              ) : showSubscriptionPopup ? (
-                <SubscriptionPopup onSkip={handleSubscriptionSkip} onPurchase={handleSubscriptionPurchase} />
-              ) : showOperaGxOffer ? (
-                <OperaGxOfferwall onComplete={handleOperaGxComplete} onSkip={completeGateway} />
-              ) : (
-                <>
-                  {/* Progress bar */}
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-sm text-white font-medium">
-                        Step {currentStepIndex + 1} of {gateway.steps.length}
-                      </div>
-                      <div className="text-sm text-gray-400">
-                        {Math.round(((currentStepIndex + 1) / gateway.steps.length) * 100)}% Complete
-                      </div>
-                    </div>
-                    <div className="h-2 w-full bg-[#111] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]"
-                        style={{ width: `${((currentStepIndex + 1) / gateway.steps.length) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <GatewayStep
-                    step={gateway.steps[currentStepIndex]}
-                    stepNumber={currentStepIndex + 1}
-                    totalSteps={gateway.steps.length}
-                    validationToken={validationToken}
-                    gatewayId={gateway.id}
-                    onComplete={() => handleStepComplete(gateway.steps[currentStepIndex].id)}
-                    onShowOperaGx={() => setShowOperaGxOffer(true)}
-                  />
-                </>
-              )}
-            </>
-          ) : (
-            <div className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-8 text-center">
-              <div className="mb-4 inline-block rounded-full bg-green-500/20 p-4">
-                <i className="fas fa-check-circle text-4xl text-green-500"></i>
-              </div>
-              <h2 className="mb-2 text-xl font-bold text-white">Gateway Completed!</h2>
-              <p className="mb-6 text-gray-400">You have successfully completed all steps.</p>
-
-              {reward?.type === "url" ? (
-                <div className="mb-6">
-                  <p className="mb-4 text-white">Click the button below to access your reward:</p>
-                  <a
-                    href={reward.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="interactive-element button-glow button-3d inline-flex items-center rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
-                  >
-                    <i className="fas fa-external-link-alt mr-2"></i> Access Reward
-                  </a>
-                </div>
-              ) : (
-                <div className="mb-6">
-                  <p className="mb-4 text-white">Here is your reward:</p>
-                  <div className="mb-4 rounded border border-white/10 bg-[#050505] p-4 text-left">
-                    <pre className="whitespace-pre-wrap break-all text-sm text-gray-300">{reward?.content}</pre>
-                  </div>
-                  <button
-                    onClick={handleCopyReward}
-                    className="interactive-element rounded bg-[#ff3e3e] px-4 py-2 font-medium text-white transition-all hover:bg-[#ff0000]"
-                  >
-                    <i className="fas fa-copy mr-2"></i> Copy to Clipboard
-                  </button>
-                </div>
-              )}
-
-              <div className="mt-6">
-                <Link
-                  href="/"
-                  className="interactive-element button-shine inline-flex items-center rounded border border-[#ff3e3e] px-6 py-3 font-semibold text-[#ff3e3e] transition-all hover:bg-[#ff3e3e]/10"
-                >
-                  <i className="fas fa-home mr-2"></i> Back to Home
-                </Link>
               </div>
             </div>
-          )}
+
+            {/* Multi-stage progress indicator */}
+            <div className="mb-8">
+              <div className="text-center mb-2">
+                <h2 className="text-lg font-medium text-white">
+                  Stage {currentStage + 1} of {totalStages}
+                </h2>
+              </div>
+              <div className="flex justify-center items-center gap-2 mb-4">
+                {Array.from({ length: totalStages }).map((_, index) => (
+                  <div
+                    key={index}
+                    className={`relative w-10 h-10 rounded-full flex items-center justify-center ${
+                      index === currentStage
+                        ? "bg-[#ff3e3e] text-white"
+                        : stagesCompleted[index]
+                          ? "bg-green-500 text-white"
+                          : "bg-[#1a1a1a] text-gray-400"
+                    }`}
+                  >
+                    {index === currentStage && (
+                      <div className="absolute inset-0 rounded-full bg-[#ff3e3e] animate-ping opacity-30"></div>
+                    )}
+                    {stagesCompleted[index] ? <i className="fas fa-check"></i> : <span>{index + 1}</span>}
+                  </div>
+                ))}
+              </div>
+              <div className="h-2 w-full bg-[#111] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]"
+                  style={{
+                    width: `${((currentStage + (stagesCompleted[currentStage] ? 1 : 0)) / totalStages) * 100}%`,
+                  }}
+                ></div>
+              </div>
+            </div>
+
+            {/* CAPTCHA validation */}
+            {!captchaValidated ? (
+              <CaptchaValidator onValidated={handleCaptchaValidated} />
+            ) : !showTasks && !showFinalReward ? (
+              <div className="mb-8 rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-6 text-center">
+                <div className="mb-4 inline-block rounded-full bg-[#ff3e3e]/20 p-4">
+                  <i className="fas fa-rocket text-4xl text-[#ff3e3e]"></i>
+                </div>
+                <h2 className="mb-2 text-xl font-bold text-white">Ready to Begin</h2>
+                <p className="mb-6 text-gray-400">
+                  You're about to start the gateway process. Complete all tasks to access the content.
+                </p>
+                <button
+                  onClick={handleStartTasks}
+                  className="interactive-element button-glow button-3d rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
+                >
+                  <i className="fas fa-play mr-2"></i> Start Tasks
+                </button>
+              </div>
+            ) : showTasks && !showFinalReward ? (
+              <>
+                {/* Progress bar */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm text-white font-medium">
+                      {completedTasks.length} of {gateway?.steps?.length} Tasks Completed
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      {Math.round((completedTasks.length / (gateway?.steps?.length || 1)) * 100)}% Complete
+                    </div>
+                  </div>
+                  <div className="h-2 w-full bg-[#111] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]"
+                      style={{ width: `${(completedTasks.length / (gateway?.steps?.length || 1)) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Tasks */}
+                <div className="mb-8 space-y-4">
+                  {gateway?.steps?.map((step: GatewayStep, index: number) => (
+                    <GatewayTaskButton
+                      key={step.id}
+                      taskType={step.type}
+                      taskNumber={index + 1}
+                      onComplete={() => handleTaskComplete(step.id)}
+                      creatorId={gateway?.creatorId || "unknown"}
+                      gatewayId={gateway?.id || "unknown"}
+                      content={step.content}
+                    />
+                  ))}
+                </div>
+
+                {/* Next stage button */}
+                {allTasksCompleted && (
+                  <div className="mb-8 text-center">
+                    <button
+                      onClick={handleNextStage}
+                      className="interactive-element button-glow button-3d rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
+                    >
+                      <i className="fas fa-arrow-right mr-2"></i> Continue to Next Stage
+                    </button>
+                  </div>
+                )}
+
+                {/* Bottom ads */}
+                <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <SecureAd adType="BANNER_300x250" creatorId={gateway?.creatorId || "unknown"} />
+                  <SecureAd adType="BANNER_300x250_ALT" creatorId={gateway?.creatorId || "unknown"} />
+                </div>
+
+                {/* Native banner */}
+                <div className="mb-8">
+                  <SecureAd adType="NATIVE_BANNER_1" creatorId={gateway?.creatorId || "unknown"} />
+                </div>
+              </>
+            ) : (
+              <div className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-8">
+                <div className="text-center mb-6">
+                  <div className="mb-4 inline-block rounded-full bg-green-500/20 p-4">
+                    <i className="fas fa-check-circle text-4xl text-green-500"></i>
+                  </div>
+                  <h2 className="mb-2 text-xl font-bold text-white">Gateway Completed!</h2>
+                  <p className="mb-6 text-gray-400">You have successfully completed all tasks.</p>
+                </div>
+
+                {gateway?.reward?.type === "paste" ? (
+                  <div className="mb-6">
+                    <div className="mb-4 rounded border border-white/10 bg-[#000000] p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-white font-medium">Your Reward:</h3>
+                        <button
+                          onClick={handleCopyReward}
+                          className="interactive-element rounded bg-[#ff3e3e] px-3 py-1 text-sm font-medium text-white transition-all hover:bg-[#ff0000]"
+                        >
+                          <i className="fas fa-copy mr-1"></i> Copy to Clipboard
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <pre className="whitespace-pre-wrap break-all text-sm text-gray-300 font-mono bg-[#0a0a0a] p-4 rounded-lg max-h-96 overflow-y-auto">
+                          {gateway?.reward?.content}
+                        </pre>
+                        <div className="absolute inset-0 pointer-events-none"></div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mb-6 text-center">
+                    <p className="mb-4 text-white">Redirecting you to your reward...</p>
+                    <div className="flex justify-center">
+                      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-[#ff3e3e]"></div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-6 text-center">
+                  <Link
+                    href="/"
+                    className="interactive-element button-shine inline-flex items-center rounded border border-[#ff3e3e] px-6 py-3 font-semibold text-[#ff3e3e] transition-all hover:bg-[#ff3e3e]/10"
+                  >
+                    <i className="fas fa-home mr-2"></i> Back to Home
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Side banner for desktop */}
-      {adLevel >= 3 && <SideBanner />}
-
-      {/* Footer banners */}
-      <FooterBanner />
-    </>
+      {/* Bottom banner ads */}
+      <div className="container mx-auto px-5 py-8">
+        <div className="mb-8 flex justify-center">
+          <SecureAd adType="BANNER_728x90" creatorId={gateway?.creatorId || "unknown"} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SecureAd adType="BANNER_300x250" creatorId={gateway?.creatorId || "unknown"} />
+          <SecureAd adType="NATIVE_BANNER_2" creatorId={gateway?.creatorId || "unknown"} className="h-full" />
+          <SecureAd adType="BANNER_300x250_ALT" creatorId={gateway?.creatorId || "unknown"} />
+        </div>
+      </div>
+    </div>
   )
 }

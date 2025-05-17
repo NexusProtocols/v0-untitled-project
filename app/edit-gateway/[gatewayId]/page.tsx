@@ -44,9 +44,11 @@ export default function EditGatewayPage() {
   const [message, setMessage] = useState({ type: "", text: "" })
   const [showSubscriptionOptions, setShowSubscriptionOptions] = useState(true)
   const [showOperaGxOffer, setShowOperaGxOffer] = useState(true)
-  const [isRewardUrlRedirect, setIsRewardUrlRedirect] = useState(true)
+  const [blockVpnUsers, setBlockVpnUsers] = useState(true)
+  const [rateLimitEnabled, setRateLimitEnabled] = useState(true)
+  const [rateLimitCount, setRateLimitCount] = useState(1)
+  const [rateLimitPeriod, setRateLimitPeriod] = useState<"hour" | "day" | "week" | "month">("day")
   const [adLevel, setAdLevel] = useState(3)
-  const [adultAds, setAdultAds] = useState(false)
   const [gateway, setGateway] = useState<any | null>(null)
   const [gatewayStats, setGatewayStats] = useState<any | null>(null)
 
@@ -84,7 +86,13 @@ export default function EditGatewayPage() {
             setShowSubscriptionOptions(foundGateway.settings.showSubscriptionOptions !== false)
             setShowOperaGxOffer(foundGateway.settings.showOperaGxOffer !== false)
             setAdLevel(foundGateway.settings.adLevel || 3)
-            setAdultAds(foundGateway.settings.adultAds || false)
+            setBlockVpnUsers(foundGateway.settings.blockVpnUsers !== false)
+
+            if (foundGateway.settings.rateLimit) {
+              setRateLimitEnabled(foundGateway.settings.rateLimit.enabled !== false)
+              setRateLimitCount(foundGateway.settings.rateLimit.count || 1)
+              setRateLimitPeriod(foundGateway.settings.rateLimit.period || "day")
+            }
           }
 
           // Fetch gateway stats (in a real app, this would come from API)
@@ -122,9 +130,9 @@ export default function EditGatewayPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Check file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      setMessage({ type: "error", text: "Image size must be less than 2MB" })
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setMessage({ type: "error", text: "Image size must be less than 10MB" })
       return
     }
 
@@ -147,9 +155,9 @@ export default function EditGatewayPage() {
     const file = e.target.files?.[0]
     if (!file || !currentStep) return
 
-    // Check file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      setMessage({ type: "error", text: "Image size must be less than 2MB" })
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setMessage({ type: "error", text: "Image size must be less than 10MB" })
       return
     }
 
@@ -311,7 +319,12 @@ export default function EditGatewayPage() {
           showSubscriptionOptions,
           showOperaGxOffer,
           adLevel,
-          adultAds,
+          blockVpnUsers,
+          rateLimit: {
+            enabled: rateLimitEnabled,
+            count: rateLimitCount,
+            period: rateLimitPeriod,
+          },
         },
       }
 
@@ -358,7 +371,7 @@ export default function EditGatewayPage() {
           </h1>
           <Link
             href="/manage-gateways"
-            className="interactive-element rounded border border-white/10 bg-[#1a1a1a] px-4 py-2 font-medium text-white transition-all hover:bg-[#0a0a0a]"
+            className="interactive-element rounded border border-white/10 bg-[#1a1a1a] px-4 py-2 font-medium text-white transition-all hover:bg-[#0a0a0a] hover:scale-105 transform duration-200"
           >
             <i className="fas fa-arrow-left mr-2"></i> Back to Gateways
           </Link>
@@ -388,13 +401,13 @@ export default function EditGatewayPage() {
               </div>
               <div className="rounded bg-[#050505] p-4 text-center">
                 <div className="text-3xl font-bold text-[#ff3e3e]">
-                  {gatewayStats.conversionRate ? (gatewayStats.conversionRate * 100).toFixed(1) : 0}%
+                  {gatewayStats.conversionRate ? gatewayStats.conversionRate.toFixed(1) : 0}%
                 </div>
                 <div className="text-sm text-gray-400">Conversion Rate</div>
               </div>
               <div className="rounded bg-[#050505] p-4 text-center">
                 <div className="text-3xl font-bold text-[#ff3e3e]">${gatewayStats.revenue || "0.00"}</div>
-                <div className="text-sm text-gray-400">Estimated Revenue</div>
+                <div className="text-sm text-gray-400">Estimated Profit</div>
               </div>
             </div>
           </div>
@@ -412,7 +425,7 @@ export default function EditGatewayPage() {
                 id="gatewayTitle"
                 value={gatewayTitle}
                 onChange={(e) => setGatewayTitle(e.target.value)}
-                className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                 placeholder="Enter a title for your gateway"
               />
             </div>
@@ -425,7 +438,7 @@ export default function EditGatewayPage() {
                 id="gatewayDescription"
                 value={gatewayDescription}
                 onChange={(e) => setGatewayDescription(e.target.value)}
-                className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                 rows={3}
                 placeholder="Describe what users will get from this gateway"
               />
@@ -439,11 +452,11 @@ export default function EditGatewayPage() {
                 <input type="file" id="gatewayImage" accept="image/*" onChange={handleImageUpload} className="hidden" />
                 <label
                   htmlFor="gatewayImage"
-                  className="interactive-element flex cursor-pointer items-center justify-center rounded border border-dashed border-white/20 bg-[#050505] p-4 transition-all hover:border-[#ff3e3e]/50 hover:shadow-md"
+                  className="interactive-element flex cursor-pointer items-center justify-center rounded border border-dashed border-white/20 bg-[#050505] p-4 transition-all hover:border-[#ff3e3e]/50 hover:shadow-md hover:scale-[1.01] transform duration-200"
                 >
                   <div className="text-center">
                     <i className="fas fa-upload mb-2 text-2xl text-[#ff3e3e]"></i>
-                    <p className="text-sm text-gray-400">Click to upload gateway image (max 2MB)</p>
+                    <p className="text-sm text-gray-400">Click to upload gateway image (max 10MB)</p>
                   </div>
                 </label>
               </div>
@@ -461,7 +474,7 @@ export default function EditGatewayPage() {
                     <button
                       type="button"
                       onClick={() => setGatewayImage("")}
-                      className="interactive-element rounded bg-red-500/20 px-3 py-1 text-xs text-red-300 transition-all hover:bg-red-500/30"
+                      className="interactive-element rounded bg-red-500/20 px-3 py-1 text-xs text-red-300 transition-all hover:bg-red-500/30 hover:scale-105 transform duration-200"
                     >
                       <i className="fas fa-times mr-1"></i> Remove
                     </button>
@@ -477,7 +490,10 @@ export default function EditGatewayPage() {
             {steps.length > 0 ? (
               <div className="mb-4 space-y-4">
                 {steps.map((step, index) => (
-                  <div key={step.id} className="rounded border border-white/10 bg-[#050505] p-4">
+                  <div
+                    key={step.id}
+                    className="rounded border border-white/10 bg-[#050505] p-4 hover:border-[#ff3e3e]/30 transition-all duration-200"
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff3e3e] text-white">
@@ -490,7 +506,7 @@ export default function EditGatewayPage() {
                           <button
                             type="button"
                             onClick={() => moveStep(index, "up")}
-                            className="interactive-element rounded bg-[#1a1a1a] p-1 text-gray-400 transition-all hover:text-white"
+                            className="interactive-element rounded bg-[#1a1a1a] p-1 text-gray-400 transition-all hover:text-white hover:scale-110 transform duration-200"
                           >
                             <i className="fas fa-arrow-up"></i>
                           </button>
@@ -499,7 +515,7 @@ export default function EditGatewayPage() {
                           <button
                             type="button"
                             onClick={() => moveStep(index, "down")}
-                            className="interactive-element rounded bg-[#1a1a1a] p-1 text-gray-400 transition-all hover:text-white"
+                            className="interactive-element rounded bg-[#1a1a1a] p-1 text-gray-400 transition-all hover:text-white hover:scale-110 transform duration-200"
                           >
                             <i className="fas fa-arrow-down"></i>
                           </button>
@@ -507,14 +523,14 @@ export default function EditGatewayPage() {
                         <button
                           type="button"
                           onClick={() => editStep(index)}
-                          className="interactive-element rounded bg-[#1a1a1a] p-1 text-gray-400 transition-all hover:text-white"
+                          className="interactive-element rounded bg-[#1a1a1a] p-1 text-gray-400 transition-all hover:text-white hover:scale-110 transform duration-200"
                         >
                           <i className="fas fa-edit"></i>
                         </button>
                         <button
                           type="button"
                           onClick={() => deleteStep(index)}
-                          className="interactive-element rounded bg-[#1a1a1a] p-1 text-gray-400 transition-all hover:text-red-400"
+                          className="interactive-element rounded bg-[#1a1a1a] p-1 text-gray-400 transition-all hover:text-red-400 hover:scale-110 transform duration-200"
                         >
                           <i className="fas fa-trash"></i>
                         </button>
@@ -545,12 +561,12 @@ export default function EditGatewayPage() {
               <button
                 type="button"
                 onClick={addNewStep}
-                className="interactive-element w-full rounded border border-dashed border-white/20 bg-[#050505] py-3 text-center text-gray-400 transition-all hover:border-[#ff3e3e]/50 hover:text-white"
+                className="interactive-element w-full rounded border border-dashed border-white/20 bg-[#050505] py-3 text-center text-gray-400 transition-all hover:border-[#ff3e3e]/50 hover:text-white hover:scale-[1.01] transform duration-200"
               >
                 <i className="fas fa-plus mr-2"></i> Add Step
               </button>
             ) : (
-              <div className="rounded border border-white/10 bg-[#0a0a0a] p-4">
+              <div className="mt-4 rounded border border-white/10 bg-[#0a0a0a] p-4">
                 <h3 className="mb-4 text-lg font-medium text-white">
                   {editingStepIndex !== null ? "Edit Step" : "Add New Step"}
                 </h3>
@@ -564,7 +580,7 @@ export default function EditGatewayPage() {
                     id="stepTitle"
                     value={currentStep.title}
                     onChange={(e) => setCurrentStep({ ...currentStep, title: e.target.value })}
-                    className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                    className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                     placeholder="Enter step title"
                   />
                 </div>
@@ -577,7 +593,7 @@ export default function EditGatewayPage() {
                     id="stepDescription"
                     value={currentStep.description}
                     onChange={(e) => setCurrentStep({ ...currentStep, description: e.target.value })}
-                    className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                    className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                     rows={2}
                     placeholder="Describe what users need to do in this step"
                   />
@@ -597,11 +613,11 @@ export default function EditGatewayPage() {
                     />
                     <label
                       htmlFor="stepImage"
-                      className="interactive-element flex cursor-pointer items-center justify-center rounded border border-dashed border-white/20 bg-[#050505] p-4 transition-all hover:border-[#ff3e3e]/50 hover:shadow-md"
+                      className="interactive-element flex cursor-pointer items-center justify-center rounded border border-dashed border-white/20 bg-[#050505] p-4 transition-all hover:border-[#ff3e3e]/50 hover:shadow-md hover:scale-[1.01] transform duration-200"
                     >
                       <div className="text-center">
                         <i className="fas fa-upload mb-2 text-2xl text-[#ff3e3e]"></i>
-                        <p className="text-sm text-gray-400">Click to upload step image (max 2MB)</p>
+                        <p className="text-sm text-gray-400">Click to upload step image (max 10MB)</p>
                       </div>
                     </label>
                   </div>
@@ -619,7 +635,7 @@ export default function EditGatewayPage() {
                         <button
                           type="button"
                           onClick={() => setCurrentStep({ ...currentStep, imageUrl: "" })}
-                          className="interactive-element rounded bg-red-500/20 px-3 py-1 text-xs text-red-300 transition-all hover:bg-red-500/30"
+                          className="interactive-element rounded bg-red-500/20 px-3 py-1 text-xs text-red-300 transition-all hover:bg-red-500/30 hover:scale-105 transform duration-200"
                         >
                           <i className="fas fa-times mr-1"></i> Remove
                         </button>
@@ -642,7 +658,7 @@ export default function EditGatewayPage() {
                           type: e.target.value as "offerwall" | "article" | "video" | "download" | "custom" | "link",
                         })
                       }
-                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                     >
                       <option value="link">Social Link</option>
                       <option value="offerwall">Offerwall</option>
@@ -666,7 +682,7 @@ export default function EditGatewayPage() {
                       }
                       min="0"
                       max="60"
-                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                     />
                   </div>
                 </div>
@@ -688,7 +704,7 @@ export default function EditGatewayPage() {
                             },
                           })
                         }
-                        className={`px-3 py-2 rounded flex items-center gap-2 ${
+                        className={`px-3 py-2 rounded flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
                           currentStep.content.platform === "discord"
                             ? "bg-[#5865F2] text-white"
                             : "bg-[#050505] text-white border border-white/10"
@@ -708,7 +724,7 @@ export default function EditGatewayPage() {
                             },
                           })
                         }
-                        className={`px-3 py-2 rounded flex items-center gap-2 ${
+                        className={`px-3 py-2 rounded flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
                           currentStep.content.platform === "youtube"
                             ? "bg-[#FF0000] text-white"
                             : "bg-[#050505] text-white border border-white/10"
@@ -728,7 +744,7 @@ export default function EditGatewayPage() {
                             },
                           })
                         }
-                        className={`px-3 py-2 rounded flex items-center gap-2 ${
+                        className={`px-3 py-2 rounded flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
                           currentStep.content.platform === "twitter"
                             ? "bg-[#1DA1F2] text-white"
                             : "bg-[#050505] text-white border border-white/10"
@@ -748,7 +764,7 @@ export default function EditGatewayPage() {
                             },
                           })
                         }
-                        className={`px-3 py-2 rounded flex items-center gap-2 ${
+                        className={`px-3 py-2 rounded flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
                           currentStep.content.platform === "other" || !currentStep.content.platform
                             ? "bg-[#ff3e3e] text-white"
                             : "bg-[#050505] text-white border border-white/10"
@@ -773,7 +789,7 @@ export default function EditGatewayPage() {
                               content: { ...currentStep.content, url: e.target.value },
                             })
                           }
-                          className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                          className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                           placeholder={
                             currentStep.content.platform === "discord"
                               ? "ZWCqcuxAv3 or discord.gg/ZWCqcuxAv3"
@@ -801,7 +817,7 @@ export default function EditGatewayPage() {
                               content: { ...currentStep.content, buttonText: e.target.value },
                             })
                           }
-                          className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                          className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                           placeholder="Visit Link"
                         />
                       </div>
@@ -832,7 +848,7 @@ export default function EditGatewayPage() {
                           content: { ...currentStep.content, url: e.target.value },
                         })
                       }
-                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                       placeholder="https://example.com/article"
                     />
                   </div>
@@ -853,7 +869,7 @@ export default function EditGatewayPage() {
                           content: { ...currentStep.content, videoId: e.target.value },
                         })
                       }
-                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                       placeholder="dQw4w9WgXcQ"
                     />
                     <p className="mt-1 text-xs text-gray-400">
@@ -877,7 +893,7 @@ export default function EditGatewayPage() {
                           content: { ...currentStep.content, downloadUrl: e.target.value },
                         })
                       }
-                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                       placeholder="https://example.com/download"
                     />
                   </div>
@@ -897,7 +913,7 @@ export default function EditGatewayPage() {
                           content: { ...currentStep.content, customHtml: e.target.value },
                         })
                       }
-                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                       rows={4}
                       placeholder="<div>Your custom HTML content here</div>"
                     />
@@ -923,7 +939,7 @@ export default function EditGatewayPage() {
                   <button
                     type="button"
                     onClick={saveStep}
-                    className="interactive-element flex-1 rounded bg-[#ff3e3e] px-4 py-2 font-medium text-white transition-all hover:bg-[#ff0000]"
+                    className="interactive-element flex-1 rounded bg-[#ff3e3e] px-4 py-2 font-medium text-white transition-all hover:bg-[#ff0000] hover:scale-105 transform duration-200"
                   >
                     {editingStepIndex !== null ? "Update Step" : "Add Step"}
                   </button>
@@ -933,7 +949,7 @@ export default function EditGatewayPage() {
                       setCurrentStep(null)
                       setEditingStepIndex(null)
                     }}
-                    className="interactive-element rounded border border-white/10 bg-[#050505] px-4 py-2 font-medium text-white transition-all hover:bg-[#0a0a0a]"
+                    className="interactive-element rounded border border-white/10 bg-[#050505] px-4 py-2 font-medium text-white transition-all hover:bg-[#0a0a0a] hover:scale-105 transform duration-200"
                   >
                     Cancel
                   </button>
@@ -951,7 +967,7 @@ export default function EditGatewayPage() {
                 <button
                   type="button"
                   onClick={() => setRewardType("url")}
-                  className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all ${
+                  className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
                     rewardType === "url" ? "bg-[#ff3e3e] text-white" : "bg-[#050505] text-white border border-white/10"
                   }`}
                 >
@@ -965,7 +981,7 @@ export default function EditGatewayPage() {
                 <button
                   type="button"
                   onClick={() => setRewardType("paste")}
-                  className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all ${
+                  className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
                     rewardType === "paste"
                       ? "bg-[#ff3e3e] text-white"
                       : "bg-[#050505] text-white border border-white/10"
@@ -990,7 +1006,7 @@ export default function EditGatewayPage() {
                   id="rewardUrl"
                   value={rewardUrl}
                   onChange={(e) => setRewardUrl(e.target.value)}
-                  className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                  className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                   placeholder="https://example.com/reward"
                 />
                 <p className="mt-1 text-xs text-gray-400">
@@ -1006,7 +1022,7 @@ export default function EditGatewayPage() {
                   id="rewardPaste"
                   value={rewardPaste}
                   onChange={(e) => setRewardPaste(e.target.value)}
-                  className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                  className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                   rows={5}
                   placeholder="Enter the content users will receive after completing all steps"
                 />
@@ -1045,43 +1061,133 @@ export default function EditGatewayPage() {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showSubscriptionOptions}
-                  onChange={(e) => setShowSubscriptionOptions(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
-                />
-                <span className="text-white">Show subscription options to skip ads</span>
-              </label>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showSubscriptionOptions}
+                      onChange={(e) => setShowSubscriptionOptions(e.target.checked)}
+                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                    />
+                    <span className="text-white">Show subscription options to skip ads</span>
+                  </label>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showOperaGxOffer}
-                  onChange={(e) => setShowOperaGxOffer(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
-                />
-                <span className="text-white">Show Opera GX offer</span>
-              </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showOperaGxOffer}
+                      onChange={(e) => setShowOperaGxOffer(e.target.checked)}
+                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                    />
+                    <span className="text-white">Show Opera GX offer</span>
+                  </label>
+                </div>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={adultAds}
-                  onChange={(e) => setAdultAds(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
-                />
-                <span className="text-white">Allow adult ads (18+)</span>
-              </label>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={blockVpnUsers}
+                      onChange={(e) => setBlockVpnUsers(e.target.checked)}
+                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                    />
+                    <span className="text-white">Block VPN Users</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-lg border border-white/10 bg-[#0a0a0a]">
+                <h3 className="text-lg font-medium text-white mb-4">Rate Limit Settings</h3>
+
+                <div className="flex items-center gap-2 mb-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={rateLimitEnabled}
+                      onChange={(e) => setRateLimitEnabled(e.target.checked)}
+                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                    />
+                    <span className="text-white">Rate Limit Per User</span>
+                  </label>
+                </div>
+
+                {rateLimitEnabled && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="rateLimitCount" className="mb-2 block text-sm font-medium text-[#ff3e3e]">
+                        Max Completions
+                      </label>
+                      <input
+                        type="number"
+                        id="rateLimitCount"
+                        min="1"
+                        max="60"
+                        value={rateLimitCount}
+                        onChange={(e) =>
+                          setRateLimitCount(Math.max(1, Math.min(60, Number.parseInt(e.target.value) || 1)))
+                        }
+                        className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="rateLimitPeriod" className="mb-2 block text-sm font-medium text-[#ff3e3e]">
+                        Time Period
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {(["hour", "day", "week", "month"] as const).map((period) => (
+                          <button
+                            key={period}
+                            type="button"
+                            onClick={() => setRateLimitPeriod(period)}
+                            className={`relative overflow-hidden rounded-lg px-3 py-1 font-medium transition-all duration-300 ${
+                              rateLimitPeriod === period
+                                ? "bg-gradient-to-r from-[#1a1a1a] to-[#000000] text-white border-2 border-[#ff3e3e] shadow-lg shadow-[#ff3e3e]/20"
+                                : "bg-[#0a0a0a] text-gray-400 border border-white/10"
+                            }`}
+                          >
+                            {/* Galaxy-themed background for selected period */}
+                            {rateLimitPeriod === period && (
+                              <div className="absolute inset-0 opacity-30 pointer-events-none">
+                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/30 via-black/0 to-transparent"></div>
+                              </div>
+                            )}
+
+                            {/* Shiny effect for selected period */}
+                            {rateLimitPeriod === period && (
+                              <div className="absolute inset-0 overflow-hidden">
+                                <div
+                                  className="absolute -inset-[100%] animate-[spin_3s_linear_infinite] opacity-30"
+                                  style={{
+                                    background:
+                                      "conic-gradient(transparent, rgba(255,255,255,0.5), transparent, transparent)",
+                                    clipPath: "polygon(50% 50%, 100% 0, 100% 100%, 0 100%, 0 0)",
+                                  }}
+                                ></div>
+                              </div>
+                            )}
+
+                            <span className="relative z-10 capitalize">{period}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-xs text-gray-400">
+                        Users can complete your gateways {rateLimitCount} time{rateLimitCount !== 1 ? "s" : ""} per{" "}
+                        {rateLimitPeriod}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="interactive-element button-glow button-3d w-full rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-4 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20 disabled:opacity-50"
+            className="interactive-element button-glow button-3d w-full rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-4 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20 hover:scale-105 transform duration-200 disabled:opacity-50"
           >
             {isSubmitting ? (
               <div className="flex items-center justify-center gap-2">

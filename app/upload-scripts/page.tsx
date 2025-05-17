@@ -336,12 +336,38 @@ export default function UploadScriptsPage() {
 
   if (!user) return null
 
+  // If user is admin, redirect to script manager
+  if (userIsAdmin && adminCheckComplete) {
+    router.push("/admin-dashboard/scripts")
+    return null
+  }
+
   return (
     <div className="container mx-auto px-5 py-16">
       <div className="mx-auto max-w-2xl">
         <h1 className="mb-8 text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]">
           Upload Script
         </h1>
+
+        {/* Banner Ad - Top */}
+        <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
+          <div className="flex justify-center">
+            <div
+              dangerouslySetInnerHTML={{
+                __html: `<script type="text/javascript">
+                atOptions = {
+                  'key' : 'fd9b1c1a9efee5e08a1818fb900a7d69',
+                  'format' : 'iframe',
+                  'height' : 90,
+                  'width' : 728,
+                  'params' : {}
+                };
+                document.write('<scr' + 'ipt type="text/javascript" src="//www.highperformanceformat.com/fd9b1c1a9efee5e08a1818fb900a7d69/invoke.js"></scr' + 'ipt>');
+              </script>`,
+              }}
+            />
+          </div>
+        </div>
 
         {message.text && (
           <div
@@ -547,6 +573,26 @@ export default function UploadScriptsPage() {
             )}
           </div>
 
+          {/* Banner Ad - Middle */}
+          <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
+            <div className="flex justify-center">
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: `<script type="text/javascript">
+                  atOptions = {
+                    'key' : '6385f3f15fc29a03bca0a5ad55dd1114',
+                    'format' : 'iframe',
+                    'height' : 250,
+                    'width' : 300,
+                    'params' : {}
+                  };
+                  document.write('<scr' + 'ipt type="text/javascript" src="//www.highperformanceformat.com/6385f3f15fc29a03bca0a5ad55dd1114/invoke.js"></scr' + 'ipt>');
+                </script>`,
+                }}
+              />
+            </div>
+          </div>
+
           {gameDetails && (
             <div className="mb-6 rounded border border-white/10 bg-[#050505] p-4">
               <div className="flex items-center gap-4">
@@ -661,6 +707,26 @@ export default function UploadScriptsPage() {
             </p>
           </div>
 
+          {/* Banner Ad - Bottom */}
+          <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
+            <div className="flex justify-center">
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: `<script type="text/javascript">
+                  atOptions = {
+                    'key' : '4a9add6d697b3d780b065e7fe02c57ec',
+                    'format' : 'iframe',
+                    'height' : 300,
+                    'width' : 160,
+                    'params' : {}
+                  };
+                  document.write('<scr' + 'ipt type="text/javascript" src="//www.highperformanceformat.com/4a9add6d697b3d780b065e7fe02c57ec/invoke.js"></scr' + 'ipt>');
+                </script>`,
+                }}
+              />
+            </div>
+          </div>
+
           <div className="flex gap-4">
             <button
               type="submit"
@@ -684,6 +750,6 @@ export default function UploadScriptsPage() {
 
 async function isAdmin(username: string): Promise<boolean> {
   // Replace with your actual admin check logic (e.g., fetching from a database)
-  // This is just a placeholder
-  return username === "Nexus"
+  const adminUsernames = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"]
+  return adminUsernames.includes(username)
 }

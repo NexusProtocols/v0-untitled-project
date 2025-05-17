@@ -74,9 +74,9 @@ export default function ScriptDetailPage() {
           // Fetch real stats if available (in production, this would be an API call)
           // For now, we'll simulate real stats
           const realStats = {
-            downloads: Math.floor(Math.random() * 1000) + 50,
-            views: Math.floor(Math.random() * 5000) + 100,
-            likes: Math.floor(Math.random() * 200) + 10,
+            downloads: Math.floor(Math.random() * 0) + 0,
+            views: Math.floor(Math.random() * 0) + 0,
+            likes: Math.floor(Math.random() * 0) + 0,
           }
 
           foundScript.realStats = realStats

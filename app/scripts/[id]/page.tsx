@@ -46,7 +46,7 @@ export default function ScriptDetailPage() {
   const [hasLiked, setHasLiked] = useState(false)
   const [hasDisliked, setHasDisliked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
-  const [dislikeCount, setDislikeCount] = useState(0)
+  const [dislikeCount, setDislikeCount] = useState(0) // Declare setDislikeCount
   const [isMobile, setIsMobile] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [authorIsAdmin, setAuthorIsAdmin] = useState(false)
@@ -290,7 +290,7 @@ export default function ScriptDetailPage() {
             <div className="relative h-64 w-full">
               {!imageError ? (
                 <Image
-                  src={script.game?.imageUrl || getPlaceholderImage()}
+                  src={script.game?.imageUrl || "/placeholder.svg?height=256&width=800"}
                   alt={script.game?.name || script.title}
                   fill
                   className="object-cover"

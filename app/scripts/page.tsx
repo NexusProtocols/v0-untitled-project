@@ -408,7 +408,7 @@ export default function ScriptsPage() {
                 <div className="relative h-40 w-full">
                   {!imageLoadError[script.id] ? (
                     <Image
-                      src={script.game.imageUrl || getPlaceholderImage()}
+                      src={script.game.imageUrl || "/placeholder.svg?height=160&width=320"}
                       alt={script.game.name}
                       fill
                       className="object-cover"

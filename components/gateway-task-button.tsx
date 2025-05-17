@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { DIRECT_LINK } from "@/lib/ad-utils"
+import { SecureAd } from "./secure-ad"
 
 interface GatewayTaskButtonProps {
-  taskType: "redirect" | "article" | "operagx" | "youtube" | "direct"
+  taskType: string
   taskNumber: number
   onComplete: () => void
   creatorId: string
@@ -12,8 +12,6 @@ interface GatewayTaskButtonProps {
   content?: {
     url?: string
     videoId?: string
-    title?: string
-    description?: string
   }
 }
 
@@ -23,194 +21,349 @@ export function GatewayTaskButton({
   onComplete,
   creatorId,
   gatewayId,
-  content = {},
+  content,
 }: GatewayTaskButtonProps) {
-  const [isActive, setIsActive] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [loadingProgress, setLoadingProgress] = useState(0)
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [timeRemaining, setTimeRemaining] = useState(15) // 15 seconds countdown
 
-  // Handle loading animation
-  useEffect(() => {
-    if (isActive && !isCompleted && loadingProgress < 100) {
-      const interval = setInterval(() => {
-        setLoadingProgress((prev) => {
-          const newProgress = prev + 5
-          if (newProgress >= 100) {
-            clearInterval(interval)
-            // Don't call onComplete here - we'll do it in a separate useEffect
-            return 100
-          }
-          return newProgress
-        })
-      }, 300) // Adjust speed as needed
-      return () => clearInterval(interval)
-    }
-  }, [isActive, isCompleted, loadingProgress])
-
-  // Handle completion in a separate useEffect to avoid setState during render
-  useEffect(() => {
-    if (loadingProgress >= 100 && !isCompleted) {
-      setIsCompleted(true)
-      onComplete()
-    }
-  }, [loadingProgress, isCompleted, onComplete])
-
-  // Handle task activation
-  const handleActivate = async () => {
+  // Handle task completion
+  const handleComplete = async () => {
     if (isCompleted) return
 
-    setIsActive(true)
     setIsLoading(true)
 
     try {
-      // For direct link, get the encrypted link from the server
-      if (taskType === "direct") {
-        const response = await fetch(`/api/direct-link?gatewayId=${gatewayId}&creatorId=${creatorId}&token=valid`)
-        const data = await response.json()
+      // In a real implementation, send a request to the server
+      // For now, just simulate a delay
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        if (data.success) {
-          // Open the direct link in a new tab
-          window.open(DIRECT_LINK, "_blank")
-        }
-      } else if (taskType === "redirect") {
-        // Open the redirect URL in a new tab
-        if (content.url) {
-          window.open(content.url, "_blank")
-        }
-      } else if (taskType === "operagx") {
-        // Open the Opera GX download page
-        window.open("https://www.opera.com/gx", "_blank")
-      } else if (taskType === "youtube") {
-        // Open the YouTube video
-        if (content.videoId) {
-          window.open(`https://www.youtube.com/watch?v=${content.videoId}`, "_blank")
-        }
-      } else if (taskType === "article") {
-        // Open the article URL
-        if (content.url) {
-          window.open(content.url, "_blank")
-        }
+      // Track task completion
+      try {
+        // In a real implementation, send a request to the server
+        // For now, just log to console
+        console.log(`Task ${taskNumber} completed for gateway ${gatewayId} by creator ${creatorId}`)
+      } catch (error) {
+        console.error("Error tracking task completion:", error)
       }
+
+      setIsCompleted(true)
+      onComplete()
     } catch (error) {
-      console.error("Error activating task:", error)
+      console.error("Error completing task:", error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Get task icon
-  const getTaskIcon = () => {
-    switch (taskType) {
-      case "redirect":
-        return "fas fa-external-link-alt"
-      case "article":
-        return "fas fa-newspaper"
-      case "operagx":
-        return "fas fa-gamepad"
-      case "youtube":
-        return "fab fa-youtube"
-      case "direct":
-        return "fas fa-link"
-      default:
-        return "fas fa-check"
-    }
+  // Handle task expansion
+  const handleExpand = () => {
+    if (isCompleted) return
+    setIsExpanded(true)
+
+    // Start countdown
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    // Clean up interval
+    return () => clearInterval(interval)
   }
 
-  // Get task title
-  const getTaskTitle = () => {
-    switch (taskType) {
-      case "redirect":
-        return content.title || "Visit Website"
-      case "article":
-        return content.title || "Read Article"
-      case "operagx":
-        return "Download Opera GX"
-      case "youtube":
-        return content.title || "Watch Video"
-      case "direct":
-        return "Visit Sponsor"
-      default:
-        return "Complete Task"
+  // Auto-complete when countdown reaches 0
+  useEffect(() => {
+    if (timeRemaining === 0 && isExpanded && !isCompleted) {
+      handleComplete()
     }
-  }
+  }, [timeRemaining, isExpanded, isCompleted])
 
-  // Get task description
-  const getTaskDescription = () => {
+  // Render task content based on type
+  const renderTaskContent = () => {
+    if (!isExpanded) return null
+
     switch (taskType) {
       case "redirect":
-        return content.description || "Visit this website to continue"
+        return (
+          <div className="mt-4 rounded bg-[#0a0a0a] p-4">
+            <p className="mb-4 text-gray-400">
+              Please wait while we prepare your redirect. You will be able to complete this task in{" "}
+              <span className="font-bold text-white">{timeRemaining}</span> seconds.
+            </p>
+            <div className="mb-4">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[#1a1a1a]">
+                <div
+                  className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] transition-all duration-1000"
+                  style={{ width: `${((15 - timeRemaining) / 15) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <SecureAd adType="BANNER_300x250" creatorId={creatorId} />
+            </div>
+            {content?.url && (
+              <div className="mt-4 text-center">
+                <a
+                  href={content.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#ff3e3e] hover:underline"
+                  onClick={(e) => {
+                    // Prevent default if countdown is not complete
+                    if (timeRemaining > 0) {
+                      e.preventDefault()
+                    }
+                  }}
+                >
+                  {timeRemaining === 0 ? "Click here to visit the website" : "Please wait..."}
+                </a>
+              </div>
+            )}
+          </div>
+        )
+
       case "article":
-        return content.description || "Read this article to continue"
-      case "operagx":
-        return "Download Opera GX browser to continue"
+        return (
+          <div className="mt-4 rounded bg-[#0a0a0a] p-4">
+            <p className="mb-4 text-gray-400">
+              Please read the article below. You will be able to complete this task in{" "}
+              <span className="font-bold text-white">{timeRemaining}</span> seconds.
+            </p>
+            <div className="mb-4">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[#1a1a1a]">
+                <div
+                  className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] transition-all duration-1000"
+                  style={{ width: `${((15 - timeRemaining) / 15) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <div className="mb-4 rounded border border-white/10 bg-[#050505] p-4">
+              <h3 className="mb-2 text-lg font-bold text-white">Sample Article Title</h3>
+              <p className="text-gray-400">
+                This is a sample article content. In a real implementation, this would be actual content from the
+                creator. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam euismod, nisl eget aliquam
+                ultricies, nunc nisl aliquet nunc, quis aliquam nisl nunc quis nisl.
+              </p>
+            </div>
+            <div className="flex justify-center">
+              <SecureAd adType="BANNER_300x250" creatorId={creatorId} />
+            </div>
+          </div>
+        )
+
       case "youtube":
-        return content.description || "Watch this video to continue"
+        return (
+          <div className="mt-4 rounded bg-[#0a0a0a] p-4">
+            <p className="mb-4 text-gray-400">
+              Please watch the video below. You will be able to complete this task in{" "}
+              <span className="font-bold text-white">{timeRemaining}</span> seconds.
+            </p>
+            <div className="mb-4">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[#1a1a1a]">
+                <div
+                  className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] transition-all duration-1000"
+                  style={{ width: `${((15 - timeRemaining) / 15) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            {content?.videoId ? (
+              <div className="mb-4 aspect-video w-full overflow-hidden rounded">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={`https://www.youtube.com/embed/${content.videoId}`}
+                  title="YouTube video player"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            ) : (
+              <div className="mb-4 flex aspect-video w-full items-center justify-center rounded bg-[#050505]">
+                <p className="text-gray-500">Video not available</p>
+              </div>
+            )}
+            <div className="flex justify-center">
+              <SecureAd adType="BANNER_300x250" creatorId={creatorId} />
+            </div>
+          </div>
+        )
+
+      case "operagx":
+        return (
+          <div className="mt-4 rounded bg-[#0a0a0a] p-4">
+            <p className="mb-4 text-gray-400">
+              Please complete the Opera GX offer. You will be able to complete this task in{" "}
+              <span className="font-bold text-white">{timeRemaining}</span> seconds.
+            </p>
+            <div className="mb-4">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[#1a1a1a]">
+                <div
+                  className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] transition-all duration-1000"
+                  style={{ width: `${((15 - timeRemaining) / 15) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <div className="mb-4 rounded border border-[#ff3e3e]/20 bg-[#050505] p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="mr-4 h-12 w-12 rounded bg-[#ff3e3e]">
+                    <img
+                      src="/placeholder.svg?height=48&width=48"
+                      alt="Opera GX"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Opera GX</h3>
+                    <p className="text-sm text-gray-400">Gaming Browser</p>
+                  </div>
+                </div>
+                <a
+                  href="#"
+                  className="rounded bg-[#ff3e3e] px-4 py-2 font-medium text-white transition-all hover:bg-[#ff0000]"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    // In a real implementation, this would open the Opera GX offer
+                    alert("This would open the Opera GX offer in a real implementation")
+                  }}
+                >
+                  Download
+                </a>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <SecureAd adType="BANNER_300x250" creatorId={creatorId} />
+            </div>
+          </div>
+        )
+
       case "direct":
-        return "Visit our sponsor to continue"
       default:
-        return "Complete this task to continue"
+        return (
+          <div className="mt-4 rounded bg-[#0a0a0a] p-4">
+            <p className="mb-4 text-gray-400">
+              Please wait while we prepare your task. You will be able to complete this task in{" "}
+              <span className="font-bold text-white">{timeRemaining}</span> seconds.
+            </p>
+            <div className="mb-4">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[#1a1a1a]">
+                <div
+                  className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] transition-all duration-1000"
+                  style={{ width: `${((15 - timeRemaining) / 15) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <SecureAd adType="BANNER_300x250" creatorId={creatorId} />
+            </div>
+          </div>
+        )
     }
   }
 
   return (
-    <div
-      className={`rounded-lg border ${
-        isCompleted
-          ? "border-green-500/30 bg-[#050505]"
-          : isActive
-            ? "border-[#ff3e3e] bg-[#0a0a0a]"
-            : "border-white/10 bg-[#050505]"
-      } p-4 transition-all hover:bg-[#0a0a0a] ${isCompleted ? "" : "hover:scale-[1.02]"}`}
-    >
-      <div className="flex items-center gap-4">
-        <div
-          className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full ${
-            isCompleted ? "bg-green-500/20" : isActive ? "bg-[#ff3e3e]/20" : "bg-[#1a1a1a]"
-          }`}
-        >
-          <i
-            className={`${getTaskIcon()} ${
-              isCompleted ? "text-green-400" : isActive ? "text-[#ff3e3e]" : "text-gray-400"
-            } text-xl`}
-          ></i>
-        </div>
-        <div className="flex-1">
-          <h4 className="font-medium text-white">
-            Task {taskNumber}: {getTaskTitle()}
-          </h4>
-          <p className="text-sm text-gray-400">{getTaskDescription()}</p>
-        </div>
-        {isCompleted ? (
-          <div className="rounded bg-green-500/20 px-3 py-1 text-sm text-green-400">
-            <i className="fas fa-check mr-1"></i> Completed
+    <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-4 transition-all hover:border-[#ff3e3e]/20">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <div
+            className={`mr-4 flex h-10 w-10 items-center justify-center rounded-full ${
+              isCompleted
+                ? "bg-green-500 text-white"
+                : isExpanded
+                  ? "bg-[#ff3e3e] text-white"
+                  : "bg-[#0a0a0a] text-gray-400"
+            }`}
+          >
+            {isCompleted ? <i className="fas fa-check"></i> : <span className="text-sm font-medium">{taskNumber}</span>}
           </div>
-        ) : isActive ? (
-          <div className="text-center">
-            <div className="w-24 h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]"
-                style={{ width: `${loadingProgress}%` }}
-              ></div>
-            </div>
+          <div>
+            <h3 className="text-lg font-medium text-white">
+              {getTaskTitle(taskType)} {isCompleted && <span className="text-green-500">(Completed)</span>}
+            </h3>
+            <p className="text-sm text-gray-400">{getTaskDescription(taskType)}</p>
           </div>
+        </div>
+        {!isExpanded ? (
+          <button
+            onClick={handleExpand}
+            disabled={isCompleted}
+            className={`rounded px-4 py-2 font-medium transition-all ${
+              isCompleted ? "cursor-not-allowed bg-green-500 text-white" : "bg-[#ff3e3e] text-white hover:bg-[#ff0000]"
+            }`}
+          >
+            {isCompleted ? "Completed" : "Start Task"}
+          </button>
         ) : (
           <button
-            onClick={handleActivate}
-            disabled={isLoading}
-            className="interactive-element rounded bg-[#1a1a1a] px-3 py-1 text-sm text-white hover:bg-[#ff3e3e]/80"
+            onClick={handleComplete}
+            disabled={isCompleted || timeRemaining > 0 || isLoading}
+            className={`rounded px-4 py-2 font-medium transition-all ${
+              isCompleted
+                ? "cursor-not-allowed bg-green-500 text-white"
+                : timeRemaining > 0
+                  ? "cursor-not-allowed bg-gray-700 text-gray-300"
+                  : isLoading
+                    ? "cursor-not-allowed bg-[#ff3e3e] text-white"
+                    : "bg-[#ff3e3e] text-white hover:bg-[#ff0000]"
+            }`}
           >
-            {isLoading ? (
-              <div className="flex items-center gap-1">
-                <div className="h-3 w-3 animate-spin rounded-full border border-white/20 border-t-white"></div>
-                <span>Loading...</span>
-              </div>
+            {isCompleted ? (
+              "Completed"
+            ) : isLoading ? (
+              <span className="flex items-center">
+                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                Processing...
+              </span>
+            ) : timeRemaining > 0 ? (
+              `Wait ${timeRemaining}s`
             ) : (
-              "Start"
+              "Complete Task"
             )}
           </button>
         )}
       </div>
+
+      {renderTaskContent()}
     </div>
   )
+}
+
+// Helper functions to get task title and description
+function getTaskTitle(taskType: string): string {
+  switch (taskType) {
+    case "redirect":
+      return "Visit Website"
+    case "article":
+      return "Read Article"
+    case "operagx":
+      return "Opera GX Offer"
+    case "youtube":
+      return "Watch Video"
+    case "direct":
+    default:
+      return "Complete Task"
+  }
+}
+
+function getTaskDescription(taskType: string): string {
+  switch (taskType) {
+    case "redirect":
+      return "Visit a website to complete this task"
+    case "article":
+      return "Read an article to complete this task"
+    case "operagx":
+      return "Complete an Opera GX offer to proceed"
+    case "youtube":
+      return "Watch a YouTube video to complete this task"
+    case "direct":
+    default:
+      return "Complete this task to proceed"
+  }
 }

@@ -80,6 +80,11 @@ export default function GatewayPage() {
           return
         }
 
+        // Ensure gateway has steps array
+        if (!currentGateway.steps) {
+          currentGateway.steps = []
+        }
+
         setGateway(currentGateway)
 
         // Check if user has a valid CAPTCHA token
@@ -107,7 +112,7 @@ export default function GatewayPage() {
 
   // Check if all tasks are completed
   useEffect(() => {
-    if (gateway && completedTasks.length === gateway.steps.length && showTasks) {
+    if (gateway && gateway.steps && completedTasks.length === gateway.steps.length && showTasks) {
       setAllTasksCompleted(true)
       // Mark current stage as completed
       stagesCompleted[currentStage] = true
@@ -125,6 +130,11 @@ export default function GatewayPage() {
       const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
       const updatedGateways = allGateways.map((g: any) => {
         if (g.id === gatewayId) {
+          // Initialize stats if not present
+          if (!g.stats) {
+            g.stats = { visits: 0, completions: 0, conversionRate: 0, revenue: 0 }
+          }
+
           // Increment visits
           const visits = (g.stats?.visits || 0) + 1
           return {
@@ -152,6 +162,11 @@ export default function GatewayPage() {
       const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
       const updatedGateways = allGateways.map((g: any) => {
         if (g.id === gatewayId) {
+          // Initialize stats if not present
+          if (!g.stats) {
+            g.stats = { visits: 1, completions: 0, conversionRate: 0, revenue: 0 }
+          }
+
           // Increment completions
           const completions = (g.stats?.completions || 0) + 1
           const visits = g.stats?.visits || 1
@@ -291,6 +306,9 @@ export default function GatewayPage() {
     )
   }
 
+  // Ensure gateway has steps array
+  const steps = gateway?.steps || []
+
   return (
     <div className="min-h-screen bg-[#050505] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1a1a1a] to-[#050505]">
       {/* Top banner ad */}
@@ -338,7 +356,7 @@ export default function GatewayPage() {
                       <i className="fas fa-user mr-1"></i> {gateway?.creatorName || "Unknown"}
                     </span>
                     <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
-                      <i className="fas fa-tasks mr-1"></i> {gateway?.steps?.length || 0} Tasks
+                      <i className="fas fa-tasks mr-1"></i> {steps.length} Tasks
                     </span>
                   </div>
                 </div>
@@ -406,23 +424,23 @@ export default function GatewayPage() {
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-sm text-white font-medium">
-                      {completedTasks.length} of {gateway?.steps?.length} Tasks Completed
+                      {completedTasks.length} of {steps.length} Tasks Completed
                     </div>
                     <div className="text-sm text-gray-400">
-                      {Math.round((completedTasks.length / (gateway?.steps?.length || 1)) * 100)}% Complete
+                      {steps.length > 0 ? Math.round((completedTasks.length / steps.length) * 100) : 0}% Complete
                     </div>
                   </div>
                   <div className="h-2 w-full bg-[#111] rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]"
-                      style={{ width: `${(completedTasks.length / (gateway?.steps?.length || 1)) * 100}%` }}
+                      style={{ width: `${steps.length > 0 ? (completedTasks.length / steps.length) * 100 : 0}%` }}
                     ></div>
                   </div>
                 </div>
 
                 {/* Tasks */}
                 <div className="mb-8 space-y-4">
-                  {gateway?.steps?.map((step: GatewayStep, index: number) => (
+                  {steps.map((step: GatewayStep, index: number) => (
                     <GatewayTaskButton
                       key={step.id}
                       taskType={step.type}
@@ -482,7 +500,7 @@ export default function GatewayPage() {
                       </div>
                       <div className="relative">
                         <pre className="whitespace-pre-wrap break-all text-sm text-gray-300 font-mono bg-[#0a0a0a] p-4 rounded-lg max-h-96 overflow-y-auto">
-                          {gateway?.reward?.content}
+                          {gateway?.reward?.content || "No content available"}
                         </pre>
                         <div className="absolute inset-0 pointer-events-none"></div>
                       </div>

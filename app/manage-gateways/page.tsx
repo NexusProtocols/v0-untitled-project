@@ -12,8 +12,8 @@ type Gateway = {
   imageUrl: string
   creatorId: string
   isActive: boolean
-  steps: any[]
-  stats: {
+  steps?: any[] // Make steps optional
+  stats?: {
     visits: number
     completions: number
     conversionRate: number
@@ -45,19 +45,28 @@ export default function ManageGatewaysPage() {
     if (user) {
       const loadGateways = () => {
         try {
-          const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
+          // Initialize with empty array if localStorage item doesn't exist
+          const storedGateways = localStorage.getItem("nexus_gateways")
+          const allGateways = storedGateways ? JSON.parse(storedGateways) : []
+
           // If admin, show all gateways, otherwise filter by creator
           const filteredGateways = isAdmin
             ? allGateways
             : allGateways.filter((gateway: Gateway) => gateway.creatorId === user.id)
 
-          // Ensure all gateways have proper stats
+          // Ensure all gateways have proper stats and steps
           const gatewaysWithStats = filteredGateways.map((gateway: Gateway) => {
+            // Ensure gateway has steps array
+            const gatewayWithSteps = {
+              ...gateway,
+              steps: gateway.steps || [],
+            }
+
             // If gateway doesn't have stats, add them
-            if (!gateway.stats) {
+            if (!gatewayWithSteps.stats) {
               // Generate realistic stats based on gateway age and activity
               const creationDate =
-                new Date(gateway.id).getTime() || Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
+                new Date(gatewayWithSteps.id).getTime() || Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
               const daysSinceCreation = Math.max(1, Math.floor((Date.now() - creationDate) / (24 * 60 * 60 * 1000)))
 
               const baseVisits = Math.floor(Math.random() * 50) + 10 // Base visits per day
@@ -67,14 +76,14 @@ export default function ManageGatewaysPage() {
               const totalCompletions = Math.floor(totalVisits * conversionRate)
 
               // Calculate revenue
-              const adLevel = gateway.settings?.adLevel || 3
+              const adLevel = gatewayWithSteps.settings?.adLevel || 3
               const baseCPM = 2.5 // Base CPM rate ($ per 1000 visits)
               const adLevelMultiplier = 0.8 + adLevel * 0.2
               const completionMultiplier = 1 + conversionRate * 0.5
               const revenue = (totalVisits / 1000) * baseCPM * adLevelMultiplier * completionMultiplier
 
               return {
-                ...gateway,
+                ...gatewayWithSteps,
                 stats: {
                   visits: totalVisits,
                   completions: totalCompletions,
@@ -84,14 +93,14 @@ export default function ManageGatewaysPage() {
               }
             } else {
               // Ensure conversion rate is calculated correctly
-              const visits = gateway.stats.visits || 0
-              const completions = gateway.stats.completions || 0
+              const visits = gatewayWithSteps.stats.visits || 0
+              const completions = gatewayWithSteps.stats.completions || 0
               const conversionRate = visits > 0 ? (completions / visits) * 100 : 0
 
               // Calculate revenue if not present
-              let revenue = gateway.stats.revenue
+              let revenue = gatewayWithSteps.stats.revenue
               if (revenue === undefined) {
-                const adLevel = gateway.settings?.adLevel || 3
+                const adLevel = gatewayWithSteps.settings?.adLevel || 3
                 const baseCPM = 2.5 // Base CPM rate ($ per 1000 visits)
                 const adLevelMultiplier = 0.8 + adLevel * 0.2
                 const completionRate = visits > 0 ? completions / visits : 0
@@ -101,9 +110,9 @@ export default function ManageGatewaysPage() {
               }
 
               return {
-                ...gateway,
+                ...gatewayWithSteps,
                 stats: {
-                  ...gateway.stats,
+                  ...gatewayWithSteps.stats,
                   conversionRate,
                   revenue,
                 },
@@ -114,6 +123,8 @@ export default function ManageGatewaysPage() {
           setGateways(gatewaysWithStats)
         } catch (error) {
           console.error("Error loading gateways:", error)
+          // Set empty array on error
+          setGateways([])
         } finally {
           setIsLoadingGateways(false)
         }
@@ -182,11 +193,11 @@ export default function ManageGatewaysPage() {
               <div className="relative h-40 w-full overflow-hidden">
                 <img
                   src={gateway.imageUrl || "/placeholder.svg?height=200&width=400"}
-                  alt={gateway.title}
+                  alt={gateway.title || "Gateway"}
                   className="h-full w-full object-cover"
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                  <h3 className="text-lg font-bold text-white">{gateway.title}</h3>
+                  <h3 className="text-lg font-bold text-white">{gateway.title || "Untitled Gateway"}</h3>
                 </div>
                 {gateway.isActive ? (
                   <div className="absolute top-2 right-2 rounded bg-green-500 px-2 py-1 text-xs font-bold text-white">
@@ -199,10 +210,10 @@ export default function ManageGatewaysPage() {
                 )}
               </div>
               <div className="p-4">
-                <p className="mb-3 text-sm text-gray-400 line-clamp-2">{gateway.description}</p>
+                <p className="mb-3 text-sm text-gray-400 line-clamp-2">{gateway.description || "No description"}</p>
                 <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
                   <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
-                    <i className="fas fa-door-open mr-1"></i> {gateway.steps.length} Steps
+                    <i className="fas fa-door-open mr-1"></i> {gateway.steps?.length || 0} Steps
                   </span>
                   <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
                     <i className="fas fa-users mr-1"></i> {gateway.stats?.visits || 0} Visits

@@ -1,68 +1,39 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const gatewayId = searchParams.get("gatewayId")
-
-    if (!gatewayId) {
-      return NextResponse.json({ success: false, error: "Gateway ID is required" }, { status: 400 })
-    }
-
-    // In a real implementation, this would fetch data from a database
-    // For now, we'll return mock data
-    const mockStats = {
-      visits: Math.floor(Math.random() * 1000) + 100,
-      completions: Math.floor(Math.random() * 500) + 50,
-      conversionRate: Math.random() * 0.5 + 0.1, // 10-60%
-      revenue: (Math.random() * 100 + 10).toFixed(2),
-      stepData: [
-        {
-          stepId: "step-1",
-          views: Math.floor(Math.random() * 1000) + 100,
-          completions: Math.floor(Math.random() * 500) + 50,
-          skips: Math.floor(Math.random() * 100),
-        },
-        {
-          stepId: "step-2",
-          views: Math.floor(Math.random() * 800) + 80,
-          completions: Math.floor(Math.random() * 400) + 40,
-          skips: Math.floor(Math.random() * 80),
-        },
-      ],
-    }
-
-    return NextResponse.json({ success: true, data: mockStats })
-  } catch (error) {
-    console.error("Error fetching gateway stats:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch gateway stats" }, { status: 500 })
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { gatewayId, stepId, action, validationToken, userData } = body
+    // Get tracking data from the request body
+    const { gatewayId, creatorId, action, taskId } = await request.json()
 
-    if (!gatewayId) {
-      return NextResponse.json({ success: false, error: "Gateway ID is required" }, { status: 400 })
+    if (!gatewayId || !creatorId || !action) {
+      return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
     }
 
-    if (!action) {
-      return NextResponse.json({ success: false, error: "Action is required" }, { status: 400 })
+    // Validate action type
+    const validActions = ["visit", "task_complete", "gateway_complete"]
+    if (!validActions.includes(action)) {
+      return NextResponse.json({ success: false, message: "Invalid action type" }, { status: 400 })
     }
 
-    // In a real implementation, this would validate the token and store the tracking data
-    console.log(`Tracking gateway ${gatewayId}, action: ${action}`, {
-      stepId,
-      validationToken,
-      userData,
+    // If action is task_complete, taskId is required
+    if (action === "task_complete" && !taskId) {
+      return NextResponse.json(
+        { success: false, message: "taskId is required for task_complete action" },
+        { status: 400 },
+      )
+    }
+
+    // In a real implementation, you would store this data in a database
+    // For now, we'll just log it
+    console.log(`Gateway tracking: ${action} for gateway ${gatewayId} by creator ${creatorId}`)
+
+    // Return success response
+    return NextResponse.json({
+      success: true,
+      message: "Tracking data recorded successfully",
     })
-
-    // Return success
-    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error tracking gateway action:", error)
-    return NextResponse.json({ success: false, error: "Failed to track gateway action" }, { status: 500 })
+    console.error("Error tracking gateway:", error)
+    return NextResponse.json({ success: false, message: "An error occurred while tracking gateway" }, { status: 500 })
   }
 }

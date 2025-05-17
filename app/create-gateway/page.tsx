@@ -24,7 +24,7 @@ export default function CreateGatewayPage() {
   const [showOperaGxOffer, setShowOperaGxOffer] = useState(true)
   const [blockVpnUsers, setBlockVpnUsers] = useState(true)
   const [rateLimitEnabled, setRateLimitEnabled] = useState(true)
-  const [rateLimitCount, setRateLimitCount] = useState(1)
+  const [rateLimitCount, setRateLimitCount] = useState(5)
   const [rateLimitPeriod, setRateLimitPeriod] = useState<"hour" | "day" | "week" | "month">("day")
 
   // Multi-stage gateway

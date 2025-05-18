@@ -6,7 +6,6 @@ import { useEffect, useState, useRef } from "react"
 import { usePathname } from "next/navigation"
 
 // Add Font Awesome CDN for icons (for client-side rendering)
-// In Next.js, also ensure this <link> is present in your main _app.tsx/_document.tsx if not already.
 if (typeof window !== "undefined") {
   const id = "font-awesome-cdn"
   if (!document.getElementById(id)) {
@@ -235,7 +234,7 @@ export default function Header() {
                       : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
                   }`}
               >
-                <i className="fas fa-upload mr-2"></i> Script-Manager
+                <i className="fas fa-cog mr-2"></i> Script-Manager
                 <span
                   className={`absolute bottom-0 left-0 h-0.5 w-0 bg-[#ff3e3e] transition-all duration-300 ${isActive("/submit-script") ? "w-full" : "group-hover:w-full"}`}
                 ></span>
@@ -285,7 +284,7 @@ export default function Header() {
                       : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
                   }`}
               >
-                <i className="fas fa-question-circle mr-2"></i> Support
+                Support
                 <span
                   className={`absolute bottom-0 left-0 h-0.5 w-0 bg-[#ff3e3e] transition-all duration-300 ${isActive("/support") ? "w-full" : "group-hover:w-full"}`}
                 ></span>
@@ -307,22 +306,7 @@ export default function Header() {
                 ></span>
               </Link>
             </li>
-            <li>
-              <Link
-                href="/create-gateway"
-                className={`nav-item flex items-center rounded px-5 py-2.5 text-sm font-medium transition-all relative group
-                  ${
-                    isActive("/create-gateway")
-                      ? "text-[#ff3e3e]"
-                      : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
-                  }`}
-              >
-                <i className="fas fa-plus-circle mr-2"></i> Create Gateway
-                <span
-                  className={`absolute bottom-0 left-0 h-0.5 w-0 bg-[#ff3e3e] transition-all duration-300 ${isActive("/create-gateway") ? "w-full" : "group-hover:w-full"}`}
-                ></span>
-              </Link>
-            </li>
+            {/* Removed Create Gateway */}
             {user ? (
               <li
                 ref={dropdownRef}
@@ -503,7 +487,7 @@ export default function Header() {
                         : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
                     }`}
                   >
-                    <i className="fas fa-upload mr-3 w-5 text-center"></i> Submit Script
+                    <i className="fas fa-cog mr-3 w-5 text-center"></i> Script-Manager
                   </Link>
                 </li>
                 <li>
@@ -541,7 +525,7 @@ export default function Header() {
                         : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
                     }`}
                   >
-                    <i className=""></i> Support
+                    Support
                   </Link>
                 </li>
                 <li>
@@ -553,22 +537,10 @@ export default function Header() {
                         : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
                     }`}
                   >
-                    <i className=""></i> Manage Gateways
+                    <i className="fas fa-cog mr-3 w-5 text-center"></i> Manage Gateways
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    href="/create-gateway"
-                    className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-all transform hover:scale-105 ${
-                      isActive("/create-gateway")
-                        ? "bg-[rgba(255,62,62,0.15)] text-[#ff3e3e]"
-                        : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
-                    }`}
-                  >
-                    <i className=""></i> Create Gateway
-                  </Link>
-                </li>
-
+                {/* Removed Create Gateway */}
                 {user ? (
                   <>
                     <li className="border-t border-white/10 pt-2 mt-2">

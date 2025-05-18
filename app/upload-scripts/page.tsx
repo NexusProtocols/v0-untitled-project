@@ -355,17 +355,17 @@ export default function UploadScriptsPage() {
             <div
               dangerouslySetInnerHTML={{
                 __html: `
-        <script type="text/javascript">
-          atOptions = {
-            'key' : 'fd9b1c1a9efee5e08a1818fb900a7d69',
-            'format' : 'iframe',
-            'height' : 90,
-            'width' : 728,
-            'params' : {}
-          };
-        </script>
-        <script type="text/javascript" src="//geometrydoomeddrone.com/fd9b1c1a9efee5e08a1818fb900a7d69/invoke.js"></script>
-      `,
+<script type="text/javascript">
+atOptions = {
+  'key' : 'fd9b1c1a9efee5e08a1818fb900a7d69',
+  'format' : 'iframe',
+  'height' : 90,
+  'width' : 728,
+  'params' : {}
+};
+document.write('<scr' + 'ipt type="text/javascript" src="//geometrydoomeddrone.com/fd9b1c1a9efee5e08a1818fb900a7d69/invoke.js"></scr' + 'ipt>');
+</script>
+        `,
               }}
             />
           </div>
@@ -581,17 +581,17 @@ export default function UploadScriptsPage() {
               <div
                 dangerouslySetInnerHTML={{
                   __html: `
-        <script type="text/javascript">
-          atOptions = {
-            'key': '7179942e65b874388da42494a8139abc',
-            'format': 'iframe',
-            'height': 50,
-            'width': 320,
-            'params': {}
-          };
-        </script>
-        <script type="text/javascript" src="//geometrydoomeddrone.com/7179942e65b874388da42494a8139abc/invoke.js"></script>
-      `,
+<script type="text/javascript">
+atOptions = {
+  'key': '7179942e65b874388da42494a8139abc',
+  'format': 'iframe',
+  'height': 50,
+  'width': 320,
+  'params': {}
+};
+document.write('<scr' + 'ipt type="text/javascript" src="//geometrydoomeddrone.com/7179942e65b874388da42494a8139abc/invoke.js"></scr' + 'ipt>');
+</script>
+        `,
                 }}
               />
             </div>
@@ -706,6 +706,7 @@ export default function UploadScriptsPage() {
               rows={10}
               placeholder="-- Paste your Lua script here"
             />
+                                                         1000 Lines Limit
             <p className="mt-1 text-xs text-gray-400"></p>
           </div>
 
@@ -715,17 +716,17 @@ export default function UploadScriptsPage() {
               <div
                 dangerouslySetInnerHTML={{
                   __html: `
-        <script type="text/javascript">
-          atOptions = {
-            'key' : '26399d5117f28dad5c8e0a5f7fa6a967',
-            'format' : 'iframe',
-            'height' : 90,
-            'width' : 728,
-            'params' : {}
-          };
-        </script>
-        <script type="text/javascript" src="//geometrydoomeddrone.com/26399d5117f28dad5c8e0a5f7fa6a967/invoke.js"></script>
-      `,
+<script type="text/javascript">
+atOptions = {
+  'key' : '26399d5117f28dad5c8e0a5f7fa6a967',
+  'format' : 'iframe',
+  'height' : 90,
+  'width' : 728,
+  'params' : {}
+};
+document.write('<scr' + 'ipt type="text/javascript" src="//geometrydoomeddrone.com/26399d5117f28dad5c8e0a5f7fa6a967/invoke.js"></scr' + 'ipt>');
+</script>
+        `,
                 }}
               />
             </div>

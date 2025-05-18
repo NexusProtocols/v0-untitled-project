@@ -29,6 +29,28 @@ type Script = {
   isPremium?: boolean
   isNexusTeam?: boolean
   isHidden?: boolean
+  updatedAt?: string
+  isVerified?: boolean
+  isUniversal?: boolean
+  isPatched?: boolean
+  keySystem?: boolean
+  scriptType?: string
+}
+
+type FilterOptions = {
+  verified: boolean
+  universal: boolean
+  patched: boolean
+  keySystem: boolean
+  scriptType: boolean
+  free: boolean
+  paid: boolean
+  [key: string]: boolean
+}
+
+type SortOptions = {
+  sortBy: 'views' | 'likes' | 'dislikes' | 'createdAt' | 'updatedAt' | ''
+  sortOrder: 'ascending' | 'descending'
 }
 
 export default function ScriptsPage() {
@@ -43,6 +65,20 @@ export default function ScriptsPage() {
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [selectedGame, setSelectedGame] = useState<number | null>(null)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [filters, setFilters] = useState<FilterOptions>({
+    verified: false,
+    universal: false,
+    patched: false,
+    keySystem: false,
+    scriptType: false,
+    free: false,
+    paid: false
+  })
+  const [sortOptions, setSortOptions] = useState<SortOptions>({
+    sortBy: '',
+    sortOrder: 'descending'
+  })
 
   const handleImageError = (scriptId: string) => {
     setImageErrors((prev) => ({
@@ -51,25 +87,105 @@ export default function ScriptsPage() {
     }))
   }
 
+  const toggleFilter = (filterName: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: !prev[filterName]
+    }))
+  }
+
+  const handleSortChange = (sortBy: SortOptions['sortBy']) => {
+    setSortOptions(prev => ({
+      ...prev,
+      sortBy: prev.sortBy === sortBy ? '' : sortBy
+    }))
+  }
+
+  const toggleSortOrder = () => {
+    setSortOptions(prev => ({
+      ...prev,
+      sortOrder: prev.sortOrder === 'ascending' ? 'descending' : 'ascending'
+    }))
+  }
+
+  const resetFilters = () => {
+    setFilters({
+      verified: false,
+      universal: false,
+      patched: false,
+      keySystem: false,
+      scriptType: false,
+      free: false,
+      paid: false
+    })
+    setSortOptions({
+      sortBy: '',
+      sortOrder: 'descending'
+    })
+  }
+
+  const saveFilters = () => {
+    setShowAdvancedFilters(false)
+  }
+
   useEffect(() => {
     setIsLoading(true)
     try {
-      // Get scripts from localStorage
       let storedScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
 
-      // Ensure all scripts have valid image URLs
-      storedScripts = storedScripts.map((script: Script) => {
-        if (!script.game) {
-          script.game = {
-            id: 0,
-            name: "Unknown Game",
-            imageUrl: "/placeholder.svg?height=160&width=320",
+      // Apply filters
+      if (filters.verified) {
+        storedScripts = storedScripts.filter((script: Script) => script.isVerified)
+      }
+      if (filters.universal) {
+        storedScripts = storedScripts.filter((script: Script) => script.isUniversal)
+      }
+      if (filters.patched) {
+        storedScripts = storedScripts.filter((script: Script) => script.isPatched)
+      }
+      if (filters.keySystem) {
+        storedScripts = storedScripts.filter((script: Script) => script.keySystem)
+      }
+      if (filters.free) {
+        storedScripts = storedScripts.filter((script: Script) => !script.isPremium)
+      }
+      if (filters.paid) {
+        storedScripts = storedScripts.filter((script: Script) => script.isPremium)
+      }
+
+      // Apply sorting
+      if (sortOptions.sortBy) {
+        storedScripts.sort((a: Script, b: Script) => {
+          let aValue, bValue
+
+          switch (sortOptions.sortBy) {
+            case 'views':
+              aValue = a.views || 0
+              bValue = b.views || 0
+              break
+            case 'likes':
+              aValue = a.likes?.length || 0
+              bValue = b.likes?.length || 0
+              break
+            case 'dislikes':
+              aValue = a.dislikes?.length || 0
+              bValue = b.dislikes?.length || 0
+              break
+            case 'createdAt':
+              aValue = new Date(a.createdAt).getTime()
+              bValue = new Date(b.createdAt).getTime()
+              break
+            case 'updatedAt':
+              aValue = a.updatedAt ? new Date(a.updatedAt).getTime() : new Date(a.createdAt).getTime()
+              bValue = b.updatedAt ? new Date(b.updatedAt).getTime() : new Date(b.createdAt).getTime()
+              break
+            default:
+              return 0
           }
-        } else if (!script.game.imageUrl) {
-          script.game.imageUrl = "/placeholder.svg?height=160&width=320"
-        }
-        return script
-      })
+
+          return sortOptions.sortOrder === 'ascending' ? aValue - bValue : bValue - aValue
+        })
+      }
 
       // Apply search filter if search query exists
       if (searchQuery) {
@@ -126,7 +242,7 @@ export default function ScriptsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [searchQuery, selectedCategory, selectedGame])
+  }, [searchQuery, selectedCategory, selectedGame, filters, sortOptions])
 
   // Close categories dropdown when clicking outside
   useEffect(() => {
@@ -295,6 +411,174 @@ export default function ScriptsPage() {
         )}
       </div>
 
+      {/* Advanced Search Button */}
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          className="flex items-center gap-2 rounded border border-white/10 bg-[#050505] px-4 py-2 text-sm text-white transition-all hover:border-red-400 hover:bg-[#1a1a1a]"
+        >
+          <i className={`fas fa-${showAdvancedFilters ? 'times' : 'sliders-h'}`}></i>
+          {showAdvancedFilters ? 'Hide Filters' : 'Advanced Search'}
+        </button>
+      </div>
+
+      {/* Advanced Search Panel */}
+      {showAdvancedFilters && (
+        <div className="mb-8 rounded-lg border border-white/10 bg-[#1a1a1a] p-6">
+          <h3 className="mb-4 text-lg font-semibold text-white">Advanced Search</h3>
+          <p className="mb-6 text-sm text-gray-400">Use these settings to customize and fine-tune searches</p>
+          
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <h4 className="mb-3 text-sm font-medium text-red-400">Filter</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="verified"
+                    checked={filters.verified}
+                    onChange={() => toggleFilter('verified')}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
+                  />
+                  <label htmlFor="verified" className="text-sm text-white">Verified</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="universal"
+                    checked={filters.universal}
+                    onChange={() => toggleFilter('universal')}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
+                  />
+                  <label htmlFor="universal" className="text-sm text-white">Universal</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="patched"
+                    checked={filters.patched}
+                    onChange={() => toggleFilter('patched')}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
+                  />
+                  <label htmlFor="patched" className="text-sm text-white">Patched</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="keySystem"
+                    checked={filters.keySystem}
+                    onChange={() => toggleFilter('keySystem')}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
+                  />
+                  <label htmlFor="keySystem" className="text-sm text-white">Key system</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="free"
+                    checked={filters.free}
+                    onChange={() => toggleFilter('free')}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
+                  />
+                  <label htmlFor="free" className="text-sm text-white">Free</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="paid"
+                    checked={filters.paid}
+                    onChange={() => toggleFilter('paid')}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
+                  />
+                  <label htmlFor="paid" className="text-sm text-white">Paid</label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="mb-3 text-sm font-medium text-red-400">Sort</h4>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="sortViews"
+                    checked={sortOptions.sortBy === 'views'}
+                    onChange={() => handleSortChange('views')}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
+                  />
+                  <label htmlFor="sortViews" className="text-sm text-white">Views</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="sortLikes"
+                    checked={sortOptions.sortBy === 'likes'}
+                    onChange={() => handleSortChange('likes')}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
+                  />
+                  <label htmlFor="sortLikes" className="text-sm text-white">Likes</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="sortDislikes"
+                    checked={sortOptions.sortBy === 'dislikes'}
+                    onChange={() => handleSortChange('dislikes')}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
+                  />
+                  <label htmlFor="sortDislikes" className="text-sm text-white">Dislikes</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="sortCreated"
+                    checked={sortOptions.sortBy === 'createdAt'}
+                    onChange={() => handleSortChange('createdAt')}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
+                  />
+                  <label htmlFor="sortCreated" className="text-sm text-white">Upload date</label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="sortUpdated"
+                    checked={sortOptions.sortBy === 'updatedAt'}
+                    onChange={() => handleSortChange('updatedAt')}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
+                  />
+                  <label htmlFor="sortUpdated" className="text-sm text-white">Update date</label>
+                </div>
+
+                <div className="mt-4 flex items-center gap-3">
+                  <label htmlFor="sortOrder" className="text-sm text-white">Sort order:</label>
+                  <button
+                    onClick={toggleSortOrder}
+                    className="rounded bg-[#050505] px-3 py-1 text-sm text-white hover:bg-[#1a1a1a]"
+                  >
+                    {sortOptions.sortOrder === 'ascending' ? 'Ascending' : 'Descending'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={resetFilters}
+              className="rounded border border-white/10 bg-transparent px-4 py-2 text-sm text-white hover:bg-[#1a1a1a]"
+            >
+              Reset all
+            </button>
+            <button
+              onClick={saveFilters}
+              className="rounded bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
+            >
+              Save changes
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mb-8 grid gap-4 md:grid-cols-2">
         <div>
           <label htmlFor="search" className="mb-2 block text-sm font-medium text-red-400">
@@ -333,7 +617,7 @@ export default function ScriptsPage() {
               <span>
                 {selectedCategory ? scriptCategories.find((c) => c.id === selectedCategory)?.name : "All Categories"}
               </span>
-              <i className={`fas fa-chevron-${showCategories ? "up" : "down"} text-gray-400`}></i>
+              <i className={`fas fa-chevron-${showCategories ? 'up' : 'down'} text-gray-400`}></i>
             </button>
 
             {showCategories && (

@@ -20,6 +20,7 @@ export default function CreateGatewayPage() {
   const [rewardPaste, setRewardPaste] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState({ type: "", text: "" })
+  const [showStages, setShowStages] = useState(false)
   const [showSubscriptionOptions, setShowSubscriptionOptions] = useState(true)
   const [showOperaGxOffer, setShowOperaGxOffer] = useState(true)
   const [blockVpnUsers, setBlockVpnUsers] = useState(true)
@@ -492,141 +493,116 @@ export default function CreateGatewayPage() {
                 <div
                   key={stage.id}
                   className="rounded-lg border border-white/10 bg-[#000000] p-4 hover:border-[#ff3e3e]/30 transition-all duration-200"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-medium text-white">Stage {stage.id}</h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="mb-2 block font-medium text-[#ff3e3e]">Ad Level</label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {[1, 2, 3, 4, 5].map((level) => (
-                          <button
-                            key={level}
-                            type="button"
-                            onClick={() => updateStageLevel(stage.id, level)}
-                            className={`relative overflow-hidden rounded-lg px-4 py-2 font-medium transition-all duration-300 ${
-                              stage.level === level
-                                ? "bg-gradient-to-r from-[#1a1a1a] to-[#000000] text-white border-2 border-[#ff3e3e] shadow-lg shadow-[#ff3e3e]/20"
-                                : "bg-[#0a0a0a] text-gray-400 border border-white/10"
-                            }`}
-                          >
-                            {/* Galaxy-themed background for selected level */}
-                            {stage.level === level && (
-                              <div className="absolute inset-0 opacity-30 pointer-events-none">
-                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/30 via-black/0 to-transparent"></div>
-                                <div className="absolute top-0 left-0 w-1 h-1 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"></div>
-                                <div
-                                  className="absolute top-1/4 right-1/4 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"
-                                  style={{ animationDelay: "0.5s" }}
-                                ></div>
-                                <div
-                                  className="absolute bottom-1/3 left-1/3 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"
-                                  style={{ animationDelay: "1.2s" }}
-                                ></div>
-                              </div>
-                            )}
-
-                            {/* Shiny effect for selected level */}
-                            {stage.level === level && (
-                              <div className="absolute inset-0 overflow-hidden">
-                                <div
-                                  className="absolute -inset-[100%] animate-[spin_3s_linear_infinite] opacity-30"
-                                  style={{
-                                    background:
-                                      "conic-gradient(transparent, rgba(255,255,255,0.5), transparent, transparent)",
-                                    clipPath: "polygon(50% 50%, 100% 0, 100% 100%, 0 100%, 0 0)",
-                                  }}
-                                ></div>
-                              </div>
-                            )}
-
-                            <span className="relative z-10">Level {level}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="mb-2 block font-medium text-[#ff3e3e]">Task Count</label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {[1, 2, 3, 4, 5].map((count) => (
-                          <button
-                            key={count}
-                            type="button"
-                            onClick={() => updateStageTaskCount(stage.id, count)}
-                            className={`relative overflow-hidden rounded-lg px-4 py-2 font-medium transition-all duration-300 ${
-                              stage.taskCount === count
-                                ? "bg-gradient-to-r from-[#1a1a1a] to-[#000000] text-white border-2 border-[#ff3e3e] shadow-lg shadow-[#ff3e3e]/20"
-                                : "bg-[#0a0a0a] text-gray-400 border border-white/10"
-                            }`}
-                          >
-                            {/* Galaxy-themed background for selected count */}
-                            {stage.taskCount === count && (
-                              <div className="absolute inset-0 opacity-30 pointer-events-none">
-                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/30 via-black/0 to-transparent"></div>
-                                <div className="absolute top-0 left-0 w-1 h-1 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"></div>
-                                <div
-                                  className="absolute top-1/4 right-1/4 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"
-                                  style={{ animationDelay: "0.5s" }}
-                                ></div>
-                                <div
-                                  className="absolute bottom-1/3 left-1/3 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"
-                                  style={{ animationDelay: "1.2s" }}
-                                ></div>
-                              </div>
-                            )}
-
-                            {/* Shiny effect for selected count */}
-                            {stage.taskCount === count && (
-                              <div className="absolute inset-0 overflow-hidden">
-                                <div
-                                  className="absolute -inset-[100%] animate-[spin_3s_linear_infinite] opacity-30"
-                                  style={{
-                                    background:
-                                      "conic-gradient(transparent, rgba(255,255,255,0.5), transparent, transparent)",
-                                    clipPath: "polygon(50% 50%, 100% 0, 100% 100%, 0 100%, 0 0)",
-                                  }}
-                                ></div>
-                              </div>
-                            )}
-
-                            <span className="relative z-10">
-                              {count} {count === 1 ? "Task" : "Tasks"}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="mb-6">
-            <h2 className="mb-4 text-xl font-bold text-white">Gateway Settings</h2>
+            <h2 className="mb-4 text-xl font-bold text-white">Multi-Stage Gateway</h2>
+            <p className="mb-4 text-sm text-gray-400">
+              Configure each stage of your gateway with different task counts and ad levels
+            </p>
 
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={showSubscriptionOptions}
-                      onChange={(e) => setShowSubscriptionOptions(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#000000] text-[#ff3e3e]"
-                    />
-                    <span className="text-white">Show subscription options to skip ads</span>
-                  </label>
+            {!showStages && (
+              <button
+                onClick={() => setShowStages(true)}
+                className="interactive-element relative overflow-hidden w-full rounded-lg bg-gradient-to-r from-purple-900/50 to-blue-900/50 p-6 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20 transform"
+              >
+                {/* Galaxy background effect */}
+                <div className="absolute inset-0 opacity-30 pointer-events-none">
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/30 via-black/0 to-transparent"></div>
+                  <div className="absolute top-1/4 left-1/4 w-1 h-1 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"></div>
+                  <div className="absolute top-1/3 right-1/3 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse" style={{ animationDelay: "0.5s" }}></div>
+                  <div className="absolute bottom-1/4 left-1/2 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse" style={{ animationDelay: "1s" }}></div>
+                  <div className="absolute bottom-1/3 right-1/4 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse" style={{ animationDelay: "1.5s" }}></div>
+                </div>
+                
+                {/* Shiny stars */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="absolute rounded-full bg-white animate-pulse"
+                      style={{
+                        width: `${Math.random() * 2 + 1}px`,
+                        height: `${Math.random() * 2 + 1}px`,
+                        top: `${Math.random() * 100}%`,
+                        left: `${Math.random() * 100}%`,
+                        animationDelay: `${Math.random() * 2}s`,
+                        opacity: 0.7
+                      }}
+                    ></div>
+                  ))}
+                </div>
+                
+                <div className="relative z-10">
+                  <i className="fas fa-plus-circle text-3xl mb-2 text-purple-400"></i>
+                  <h3 className="text-xl font-bold text-white mb-1">Add Stage</h3>
+                  <p className="text-sm text-purple-200">Click to configure gateway stages (max 5)</p>
+                </div>
+              </button>
+            )}
 
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={showOperaGxOffer}
-                      onChange={(e) => setShowOperaGxOffer(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#000000] text-[#ff3e3e]"
+            {showStages && (
+              <div className="space-y-4 mb-4">
+                {stages.map((stage) => (
+                  <div
+                    key={stage.id}
+                    className="rounded-lg border border-white/10 bg-[#000000] p-4 hover:border-[#ff3e3e]/30 transition-all duration-200"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-medium text-white">Stage {stage.id}</h3>
+                      <span className="text-sm text-gray-400">Ad Level {stage.level} - {stage.taskCount} tasks</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="mb-2 block font-medium text-[#ff3e3e]">Ad Level</label>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {[1, 2, 3, 4, 5].map((level) => (
+                            <button
+                              key={level}
+                              type="button"
+                              onClick={() => updateStageLevel(stage.id, level)}
+                              className={`relative overflow-hidden rounded-lg px-4 py-2 font-medium transition-all duration-300 ${
+                                stage.level === level
+                                  ? "bg-gradient-to-r from-[#1a1a1a] to-[#000000] text-white border-2 border-[#ff3e3e] shadow-lg shadow-[#ff3e3e]/20"
+                                  : "bg-[#0a0a0a] text-gray-400 border border-white/10"
+                              }`}
+                            >
+                              {stage.level === level && (
+                                <div className="absolute inset-0 opacity-30 pointer-events-none">
+                                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/30 via-black/0 to-transparent"></div>
+                                  <div className="absolute top-0 left-0 w-1 h-1 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"></div>
+                                  <div
+                                    className="absolute top-1/4 right-1/4 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"
+                                    style={{ animationDelay: "0.5s" }}
+                                  ></div>
+                                  <div
+                                    className="absolute bottom-1/3 left-1/3 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"
+                                    style={{ animationDelay: "1.2s" }}
+                                  ></div>
+                                </div>
+                              )}
+                              {stage.level === level && (
+                                <div className="absolute inset-0 overflow-hidden">
+                                  <div
+                                    className="absolute -inset-[100%] animate-[spin_3s_linear_infinite] opacity-30"
+                                    style={{
+                                      background:
+                                        "conic-gradient(transparent, rgba(255,255,255,0.5), transparent, transparent)",
+                                      clipPath: "polygon(50% 50%, 100% 0, 100% 100%, 0 100%, 0 0)",
+                                    }}
+                                  ></div>
+                                </div>
+                              )}
+                              <span className="relative z-10">Level {level}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
                     />
                     <span className="text-white">Show Opera GX offer</span>
                   </label>

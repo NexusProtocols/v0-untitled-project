@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { useAuth } from "@/hooks/use-auth"
-import { scriptCategories } from "@/lib/categories"
 
 type Game = {
   id: number
@@ -388,7 +387,7 @@ export default function ScriptDetailPage() {
                   </div>
                 )}
               </div>
-              
+
               {/* Script Code - ScriptBlox Style */}
               <div className="mb-6">
                 <div className="flex items-center justify-between border-b border-[#1a1a1a] pb-2 mb-2">

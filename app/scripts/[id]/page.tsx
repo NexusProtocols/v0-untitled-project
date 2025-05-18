@@ -397,23 +397,23 @@ export default function ScriptDetailPage() {
                     <div className="flex gap-2 ml-4">
                       <button
                         onClick={handleCopyCode}
-                        className="flex items-center rounded bg-[#1a1a1a] px-3 py-1 text-xs font-medium text-white transition-all hover:bg-[#252525]"
+                        className="flex items-center rounded-lg bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white transition-all hover:bg-[#252525]"
                       >
                         {copied ? (
                           <>
-                            <i className="fas fa-check mr-1"></i> Copied
+                            <i className="fas fa-check mr-2"></i> Copied!
                           </>
                         ) : (
                           <>
-                            <i className="fas fa-copy mr-1"></i> Copy Script
+                            <i className="fas fa-copy mr-2"></i> Copy Script
                           </>
                         )}
                       </button>
                       <button
                         onClick={handleDownload}
-                        className="flex items-center rounded bg-[#6366f1] px-3 py-1 text-xs font-medium text-white transition-all hover:bg-[#4f46e5]"
+                        className="flex items-center rounded-lg bg-[#6366f1] px-4 py-2 text-sm font-medium text-white transition-all hover:bg-[#4f46e5]"
                       >
-                        <i className="fas fa-download mr-1"></i> Download
+                        <i className="fas fa-download mr-2"></i> Download
                       </button>
                     </div>
                   </div>
@@ -427,21 +427,21 @@ export default function ScriptDetailPage() {
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleLike}
-                  className={`flex items-center gap-2 rounded-full px-4 py-2 transition-all ${
+                  className={`flex items-center gap-2 rounded-full px-5 py-2.5 transition-all ${
                     hasLiked ? "bg-green-500/20 text-green-400" : "bg-[#1a1a1a] text-white hover:bg-[#252525]"
                   }`}
                 >
-                  <i className={`${hasLiked ? "fas" : "far"} fa-thumbs-up`}></i>
-                  <span>{script.realStats?.likes || likeCount}</span>
+                  <span className="text-lg">👍</span>
+                  <span className="font-medium">{script.realStats?.likes || likeCount}</span>
                 </button>
                 <button
                   onClick={handleDislike}
-                  className={`flex items-center gap-2 rounded-full px-4 py-2 transition-all ${
+                  className={`flex items-center gap-2 rounded-full px-5 py-2.5 transition-all ${
                     hasDisliked ? "bg-red-500/20 text-red-400" : "bg-[#1a1a1a] text-white hover:bg-[#252525]"
                   }`}
                 >
-                  <i className={`${hasDisliked ? "fas" : "far"} fa-thumbs-down`}></i>
-                  <span>{dislikeCount}</span>
+                  <span className="text-lg">👎</span>
+                  <span className="font-medium">{dislikeCount}</span>
                 </button>
               </div>
             </div>

@@ -352,22 +352,7 @@ export default function UploadScriptsPage() {
         {/* Banner Ad - Top */}
         <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
           <div className="flex justify-center">
-            <div
-              dangerouslySetInnerHTML={{
-                __html: `
-<script type="text/javascript">
-atOptions = {
-  'key' : 'fd9b1c1a9efee5e08a1818fb900a7d69',
-  'format' : 'iframe',
-  'height' : 90,
-  'width' : 728,
-  'params' : {}
-};
-document.write('<scr' + 'ipt type="text/javascript" src="//geometrydoomeddrone.com/fd9b1c1a9efee5e08a1818fb900a7d69/invoke.js"></scr' + 'ipt>');
-</script>
-        `,
-              }}
-            />
+<div dangerouslySetInnerHTML={{ __html: `<script type="text/javascript"> atOptions = { 'key' : 'fd9b1c1a9efee5e08a1818fb900a7d69', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} }; document.write('<scr' + 'ipt type="text/javascript" src="//geometrydoomeddrone.com/fd9b1c1a9efee5e08a1818fb900a7d69/invoke.js"></scr' + 'ipt>'); </script>` }} />
           </div>
         </div>
 

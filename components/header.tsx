@@ -5,6 +5,19 @@ import { useAuth } from "@/hooks/use-auth"
 import { useEffect, useState, useRef } from "react"
 import { usePathname } from "next/navigation"
 
+// Add Font Awesome CDN for icons (for client-side rendering)
+// In Next.js, also ensure this <link> is present in your main _app.tsx/_document.tsx if not already.
+if (typeof window !== "undefined") {
+  const id = "font-awesome-cdn"
+  if (!document.getElementById(id)) {
+    const link = document.createElement("link")
+    link.id = id
+    link.rel = "stylesheet"
+    link.href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    document.head.appendChild(link)
+  }
+}
+
 export default function Header() {
   const { user, logout } = useAuth()
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
@@ -81,10 +94,9 @@ export default function Header() {
   const handleMouseLeave = () => {
     dropdownTimeoutRef.current = setTimeout(() => {
       setDropdownOpen(false)
-    }, 300) // 300ms delay before closing
+    }, 300)
   }
 
-  // Clean up timeout on unmount
   useEffect(() => {
     return () => {
       if (dropdownTimeoutRef.current) {
@@ -223,7 +235,7 @@ export default function Header() {
                       : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
                   }`}
               >
-                <i className="fas fa-upload mr-2"></i> Submit Script
+                <i className="fas fa-upload mr-2"></i> Script-Manager
                 <span
                   className={`absolute bottom-0 left-0 h-0.5 w-0 bg-[#ff3e3e] transition-all duration-300 ${isActive("/submit-script") ? "w-full" : "group-hover:w-full"}`}
                 ></span>
@@ -529,7 +541,7 @@ export default function Header() {
                         : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
                     }`}
                   >
-                    <i className="fas fa-question-circle mr-3 w-5 text-center"></i> Support
+                    <i className=""></i> Support
                   </Link>
                 </li>
                 <li>
@@ -541,7 +553,7 @@ export default function Header() {
                         : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
                     }`}
                   >
-                    <i className="fas fa-cog mr-3 w-5 text-center"></i> Manage Gateways
+                    <i className=""></i> Manage Gateways
                   </Link>
                 </li>
                 <li>
@@ -553,7 +565,7 @@ export default function Header() {
                         : "text-white hover:bg-[rgba(255,62,62,0.1)] hover:text-[#ff3e3e]"
                     }`}
                   >
-                    <i className="fas fa-plus-circle mr-3 w-5 text-center"></i> Create Gateway
+                    <i className=""></i> Create Gateway
                   </Link>
                 </li>
 

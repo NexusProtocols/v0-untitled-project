@@ -1,11 +1,11 @@
 "use client"
 
-import { useRef } from "react"
-import { useEffect, useState } from "react"
+import { useRef, useEffect, useState } from "react"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
 import Image from "next/image"
 import { scriptCategories } from "@/lib/categories"
+import { motion, AnimatePresence } from "framer-motion"
 
 type Game = {
   id: number
@@ -24,34 +24,98 @@ type Script = {
   game: Game
   categories?: string[]
   likes?: string[]
-  dislikes?: string[]
   views?: number
   isPremium?: boolean
   isNexusTeam?: boolean
   isHidden?: boolean
   updatedAt?: string
   isVerified?: boolean
-  isUniversal?: boolean
-  isPatched?: boolean
   keySystem?: boolean
-  scriptType?: string
 }
 
 type FilterOptions = {
   verified: boolean
-  universal: boolean
-  patched: boolean
   keySystem: boolean
-  scriptType: boolean
   free: boolean
   paid: boolean
-  [key: string]: boolean
 }
 
 type SortOptions = {
-  sortBy: 'views' | 'likes' | 'dislikes' | 'createdAt' | 'updatedAt' | ''
+  sortBy: 'views' | 'likes' | 'createdAt' | 'updatedAt' | ''
   sortOrder: 'ascending' | 'descending'
 }
+
+const FilterToggle = ({ 
+  label, 
+  checked, 
+  onChange,
+  icon
+}: {
+  label: string
+  checked: boolean
+  onChange: () => void
+  icon: string
+}) => (
+  <motion.label 
+    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
+      ${checked ? 'bg-red-500/10 border-red-500/50' : 'bg-white/5 border-white/10'} border`}
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+  >
+    <div className="relative flex items-center">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="sr-only"
+      />
+      <div className={`w-5 h-5 rounded flex items-center justify-center transition-all
+        ${checked ? 'bg-red-500' : 'bg-white/10 border border-white/20'}`}>
+        {checked && <i className="fas fa-check text-xs text-white"></i>}
+      </div>
+    </div>
+    <div className="flex items-center gap-2">
+      <i className={`fas ${icon} ${checked ? 'text-red-400' : 'text-gray-400'}`}></i>
+      <span className={`text-sm ${checked ? 'text-white' : 'text-gray-300'}`}>{label}</span>
+    </div>
+  </motion.label>
+)
+
+const SortOption = ({ 
+  label, 
+  selected, 
+  onChange,
+  icon
+}: {
+  label: string
+  selected: boolean
+  onChange: () => void
+  icon: string
+}) => (
+  <motion.label 
+    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
+      ${selected ? 'bg-red-500/10 border-red-500/50' : 'bg-white/5 border-white/10'} border`}
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+  >
+    <div className="relative flex items-center">
+      <input
+        type="radio"
+        checked={selected}
+        onChange={onChange}
+        className="sr-only"
+      />
+      <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all
+        ${selected ? 'border-red-500' : 'border-white/20'} border`}>
+        {selected && <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>}
+      </div>
+    </div>
+    <div className="flex items-center gap-2">
+      <i className={`fas ${icon} ${selected ? 'text-red-400' : 'text-gray-400'}`}></i>
+      <span className={`text-sm ${selected ? 'text-white' : 'text-gray-300'}`}>{label}</span>
+    </div>
+  </motion.label>
+)
 
 export default function ScriptsPage() {
   const { user } = useAuth()
@@ -60,18 +124,16 @@ export default function ScriptsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [showCategories, setShowCategories] = useState(false)
-  const [userIsAdmin, setUserIsAdmin] = useState(false)
   const categoriesRef = useRef<HTMLDivElement>(null)
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [selectedGame, setSelectedGame] = useState<number | null>(null)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [showFilterSection, setShowFilterSection] = useState(true)
+  const [showSortSection, setShowSortSection] = useState(true)
   const [filters, setFilters] = useState<FilterOptions>({
     verified: false,
-    universal: false,
-    patched: false,
     keySystem: false,
-    scriptType: false,
     free: false,
     paid: false
   })
@@ -87,7 +149,7 @@ export default function ScriptsPage() {
     }))
   }
 
-  const toggleFilter = (filterName: string) => {
+  const toggleFilter = (filterName: keyof FilterOptions) => {
     setFilters(prev => ({
       ...prev,
       [filterName]: !prev[filterName]
@@ -111,10 +173,7 @@ export default function ScriptsPage() {
   const resetFilters = () => {
     setFilters({
       verified: false,
-      universal: false,
-      patched: false,
       keySystem: false,
-      scriptType: false,
       free: false,
       paid: false
     })
@@ -136,12 +195,6 @@ export default function ScriptsPage() {
       // Apply filters
       if (filters.verified) {
         storedScripts = storedScripts.filter((script: Script) => script.isVerified)
-      }
-      if (filters.universal) {
-        storedScripts = storedScripts.filter((script: Script) => script.isUniversal)
-      }
-      if (filters.patched) {
-        storedScripts = storedScripts.filter((script: Script) => script.isPatched)
       }
       if (filters.keySystem) {
         storedScripts = storedScripts.filter((script: Script) => script.keySystem)
@@ -166,10 +219,6 @@ export default function ScriptsPage() {
             case 'likes':
               aValue = a.likes?.length || 0
               bValue = b.likes?.length || 0
-              break
-            case 'dislikes':
-              aValue = a.dislikes?.length || 0
-              bValue = b.dislikes?.length || 0
               break
             case 'createdAt':
               aValue = new Date(a.createdAt).getTime()
@@ -282,7 +331,7 @@ export default function ScriptsPage() {
   // Calculate like ratio for each script
   const scriptsWithRatios = filteredScripts.map((script) => {
     const likes = script.likes?.length || 0
-    const dislikes = script.dislikes?.length || 0
+    const dislikes = 0 // Removed dislikes as per requirements
     const total = likes + dislikes
     const ratio = total > 0 ? likes / total : 0
     return { ...script, likeRatio: ratio }
@@ -404,180 +453,188 @@ export default function ScriptsPage() {
         {user && (
           <Link
             href="/upload-scripts"
-            className="inline-flex items-center rounded bg-gradient-to-r from-red-500 to-red-700 px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-red-500/20 hover:scale-105 transform duration-300"
+            className="inline-flex items-center rounded bg-gradient-to-r from-red-500 to-red-700 px-4 py-2 font-semibold text-white transition-all hover:shadow-lg hover:shadow-red-500/20 hover:scale-105"
           >
             <i className="fas fa-upload mr-2"></i> Upload Script
           </Link>
         )}
       </div>
 
-      {/* Advanced Search Button */}
+      {/* Compact Advanced Search Toggle */}
       <div className="mb-4 flex justify-end">
-        <button
+        <motion.button
           onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          className="flex items-center gap-2 rounded border border-white/10 bg-[#050505] px-4 py-2 text-sm text-white transition-all hover:border-red-400 hover:bg-[#1a1a1a]"
+          className="flex items-center gap-2 rounded-full border border-red-500/30 bg-[#0a0a15] px-4 py-2 text-sm text-white"
+          whileHover={{ scale: 1.05, backgroundColor: "#1a1a1a" }}
+          whileTap={{ scale: 0.95 }}
         >
           <i className={`fas fa-${showAdvancedFilters ? 'times' : 'sliders-h'}`}></i>
-          {showAdvancedFilters ? 'Hide Filters' : 'Advanced Search'}
-        </button>
+          {showAdvancedFilters ? 'Hide' : 'Filters'}
+          {Object.values(filters).some(Boolean) && (
+            <span className="ml-1 h-2 w-2 rounded-full bg-red-500"></span>
+          )}
+        </motion.button>
       </div>
 
       {/* Advanced Search Panel */}
-      {showAdvancedFilters && (
-        <div className="mb-8 rounded-lg border border-white/10 bg-[#1a1a1a] p-6">
-          <h3 className="mb-4 text-lg font-semibold text-white">Advanced Search</h3>
-          <p className="mb-6 text-sm text-gray-400">Use these settings to customize and fine-tune searches</p>
-          
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div>
-              <h4 className="mb-3 text-sm font-medium text-red-400">Filter</h4>
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="verified"
-                    checked={filters.verified}
-                    onChange={() => toggleFilter('verified')}
-                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
-                  />
-                  <label htmlFor="verified" className="text-sm text-white">Verified</label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="universal"
-                    checked={filters.universal}
-                    onChange={() => toggleFilter('universal')}
-                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
-                  />
-                  <label htmlFor="universal" className="text-sm text-white">Universal</label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="patched"
-                    checked={filters.patched}
-                    onChange={() => toggleFilter('patched')}
-                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
-                  />
-                  <label htmlFor="patched" className="text-sm text-white">Patched</label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="keySystem"
-                    checked={filters.keySystem}
-                    onChange={() => toggleFilter('keySystem')}
-                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
-                  />
-                  <label htmlFor="keySystem" className="text-sm text-white">Key system</label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="free"
-                    checked={filters.free}
-                    onChange={() => toggleFilter('free')}
-                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
-                  />
-                  <label htmlFor="free" className="text-sm text-white">Free</label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="paid"
-                    checked={filters.paid}
-                    onChange={() => toggleFilter('paid')}
-                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
-                  />
-                  <label htmlFor="paid" className="text-sm text-white">Paid</label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="mb-3 text-sm font-medium text-red-400">Sort</h4>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="sortViews"
-                    checked={sortOptions.sortBy === 'views'}
-                    onChange={() => handleSortChange('views')}
-                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
-                  />
-                  <label htmlFor="sortViews" className="text-sm text-white">Views</label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="sortLikes"
-                    checked={sortOptions.sortBy === 'likes'}
-                    onChange={() => handleSortChange('likes')}
-                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
-                  />
-                  <label htmlFor="sortLikes" className="text-sm text-white">Likes</label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="sortDislikes"
-                    checked={sortOptions.sortBy === 'dislikes'}
-                    onChange={() => handleSortChange('dislikes')}
-                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
-                  />
-                  <label htmlFor="sortDislikes" className="text-sm text-white">Dislikes</label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="sortCreated"
-                    checked={sortOptions.sortBy === 'createdAt'}
-                    onChange={() => handleSortChange('createdAt')}
-                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
-                  />
-                  <label htmlFor="sortCreated" className="text-sm text-white">Upload date</label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="sortUpdated"
-                    checked={sortOptions.sortBy === 'updatedAt'}
-                    onChange={() => handleSortChange('updatedAt')}
-                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-red-500 focus:ring-red-500"
-                  />
-                  <label htmlFor="sortUpdated" className="text-sm text-white">Update date</label>
-                </div>
-
-                <div className="mt-4 flex items-center gap-3">
-                  <label htmlFor="sortOrder" className="text-sm text-white">Sort order:</label>
-                  <button
-                    onClick={toggleSortOrder}
-                    className="rounded bg-[#050505] px-3 py-1 text-sm text-white hover:bg-[#1a1a1a]"
+      <AnimatePresence>
+        {showAdvancedFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mb-8 rounded-xl border border-red-500/20 bg-[#0a0a15] overflow-hidden"
+          >
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-sm font-bold text-red-400 uppercase tracking-wider">Search Settings</h3>
+                <div className="flex gap-2">
+                  <motion.button
+                    onClick={() => setShowFilterSection(!showFilterSection)}
+                    className="text-xs px-3 py-1 rounded-full bg-white/5 border border-white/10"
+                    whileHover={{ backgroundColor: "#1a1a1a" }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    {sortOptions.sortOrder === 'ascending' ? 'Ascending' : 'Descending'}
-                  </button>
+                    <i className={`fas fa-${showFilterSection ? 'minus' : 'plus'} mr-1`}></i>
+                    Filters
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setShowSortSection(!showSortSection)}
+                    className="text-xs px-3 py-1 rounded-full bg-white/5 border border-white/10"
+                    whileHover={{ backgroundColor: "#1a1a1a" }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <i className={`fas fa-${showSortSection ? 'minus' : 'plus'} mr-1`}></i>
+                    Sort
+                  </motion.button>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              onClick={resetFilters}
-              className="rounded border border-white/10 bg-transparent px-4 py-2 text-sm text-white hover:bg-[#1a1a1a]"
-            >
-              Reset all
-            </button>
-            <button
-              onClick={saveFilters}
-              className="rounded bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
-            >
-              Save changes
-            </button>
-          </div>
-        </div>
-      )}
+              <div className="space-y-4">
+                {/* Filter Section */}
+                <AnimatePresence>
+                  {showFilterSection && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="grid grid-cols-2 gap-2">
+                        <FilterToggle 
+                          label="Verified" 
+                          checked={filters.verified} 
+                          onChange={() => toggleFilter('verified')}
+                          icon="fa-check-circle"
+                        />
+                        <FilterToggle 
+                          label="Key System" 
+                          checked={filters.keySystem} 
+                          onChange={() => toggleFilter('keySystem')}
+                          icon="fa-key"
+                        />
+                        <FilterToggle 
+                          label="Free" 
+                          checked={filters.free} 
+                          onChange={() => toggleFilter('free')}
+                          icon="fa-gem"
+                        />
+                        <FilterToggle 
+                          label="Paid" 
+                          checked={filters.paid} 
+                          onChange={() => toggleFilter('paid')}
+                          icon="fa-crown"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Sort Section */}
+                <AnimatePresence>
+                  {showSortSection && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-3"
+                    >
+                      <div className="grid grid-cols-2 gap-2">
+                        <SortOption 
+                          label="Views" 
+                          selected={sortOptions.sortBy === 'views'} 
+                          onChange={() => handleSortChange('views')}
+                          icon="fa-eye"
+                        />
+                        <SortOption 
+                          label="Likes" 
+                          selected={sortOptions.sortBy === 'likes'} 
+                          onChange={() => handleSortChange('likes')}
+                          icon="fa-thumbs-up"
+                        />
+                        <SortOption 
+                          label="Upload Date" 
+                          selected={sortOptions.sortBy === 'createdAt'} 
+                          onChange={() => handleSortChange('createdAt')}
+                          icon="fa-calendar-plus"
+                        />
+                        <SortOption 
+                          label="Update Date" 
+                          selected={sortOptions.sortBy === 'updatedAt'} 
+                          onChange={() => handleSortChange('updatedAt')}
+                          icon="fa-calendar-check"
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <motion.button
+                          onClick={() => setSortOptions({...sortOptions, sortOrder: 'ascending'})}
+                          className={`flex-1 text-xs px-3 py-2 rounded-lg border flex items-center justify-center gap-2
+                            ${sortOptions.sortOrder === 'ascending' ? 'bg-red-500/20 border-red-500 text-white' : 'bg-white/5 border-white/10 text-gray-300'}`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <i className="fas fa-arrow-up"></i> Ascending
+                        </motion.button>
+                        <motion.button
+                          onClick={() => setSortOptions({...sortOptions, sortOrder: 'descending'})}
+                          className={`flex-1 text-xs px-3 py-2 rounded-lg border flex items-center justify-center gap-2
+                            ${sortOptions.sortOrder === 'descending' ? 'bg-red-500/20 border-red-500 text-white' : 'bg-white/5 border-white/10 text-gray-300'}`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <i className="fas fa-arrow-down"></i> Descending
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="mt-4 flex justify-between items-center">
+                <motion.button
+                  onClick={resetFilters}
+                  className="text-xs px-4 py-2 rounded-lg border border-white/10 bg-transparent text-gray-300 flex items-center gap-2"
+                  whileHover={{ backgroundColor: "#1a1a1a" }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <i className="fas fa-undo"></i> Reset
+                </motion.button>
+                <motion.button
+                  onClick={saveFilters}
+                  className="text-xs px-4 py-2 rounded-lg bg-gradient-to-r from-red-500 to-red-700 text-white flex items-center gap-2"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <i className="fas fa-check"></i> Apply
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="mb-8 grid gap-4 md:grid-cols-2">
         <div>
@@ -691,9 +748,12 @@ export default function ScriptsPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {organizedScripts.map((script) => (
-            <div
+            <motion.div
               key={script.id}
-              className={`rounded-lg border overflow-hidden transition-all hover:shadow-lg hover:scale-105 transform duration-300 ${
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className={`rounded-lg border overflow-hidden transition-all hover:shadow-lg hover:scale-[1.02] ${
                 script.isNexusTeam
                   ? "border-red-500 bg-[#1a1a1a]/90 hover:shadow-red-500/20"
                   : script.isPremium
@@ -782,7 +842,7 @@ export default function ScriptsPage() {
                   View Details <i className="fas fa-arrow-right ml-2"></i>
                 </Link>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}

@@ -703,7 +703,6 @@ export default function UploadScriptsPage() {
               placeholder="-- Paste your Lua script here"
             />
             <p className="mt-1 text-xs text-gray-400">
-              Script must be under 1000 lines and contain at least one of these keywords: loadstring, local, or luarmor.
             </p>
           </div>
 

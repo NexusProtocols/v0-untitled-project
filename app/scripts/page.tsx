@@ -40,15 +40,36 @@ export default function ScriptsPage() {
   const [showCategories, setShowCategories] = useState(false)
   const [userIsAdmin, setUserIsAdmin] = useState(false)
   const categoriesRef = useRef<HTMLDivElement>(null)
-  const [imageLoadError, setImageLoadError] = useState<Record<string, boolean>>({})
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [selectedGame, setSelectedGame] = useState<number | null>(null)
+
+  const handleImageError = (scriptId: string) => {
+    setImageErrors((prev) => ({
+      ...prev,
+      [scriptId]: true,
+    }))
+  }
 
   useEffect(() => {
     setIsLoading(true)
     try {
       // Get scripts from localStorage
       let storedScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
+
+      // Ensure all scripts have valid image URLs
+      storedScripts = storedScripts.map((script: Script) => {
+        if (!script.game) {
+          script.game = {
+            id: 0,
+            name: "Unknown Game",
+            imageUrl: "/placeholder.svg?height=160&width=320",
+          }
+        } else if (!script.game.imageUrl) {
+          script.game.imageUrl = "/placeholder.svg?height=160&width=320"
+        }
+        return script
+      })
 
       // Apply search filter if search query exists
       if (searchQuery) {
@@ -231,14 +252,6 @@ export default function ScriptsPage() {
 
   const organizedScripts = organizeScriptsIntoRows(sortedScripts)
 
-  // Handle image error
-  const handleImageError = (scriptId: string) => {
-    setImageLoadError((prev) => ({
-      ...prev,
-      [scriptId]: true,
-    }))
-  }
-
   // Get placeholder image
   const getPlaceholderImage = () => {
     return "/placeholder.svg?height=160&width=320"
@@ -406,10 +419,10 @@ export default function ScriptsPage() {
             >
               {script.game && (
                 <div className="relative h-40 w-full">
-                  {!imageLoadError[script.id] ? (
+                  {!imageErrors[script.id] ? (
                     <Image
-                      src={script.game.imageUrl || "/placeholder.svg?height=160&width=320"}
-                      alt={script.game.name}
+                      src={script.game?.imageUrl || "/placeholder.svg?height=160&width=320"}
+                      alt={script.game?.name || script.title}
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -423,7 +436,7 @@ export default function ScriptsPage() {
                     </div>
                   )}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#0a0a0a] to-transparent p-2">
-                    <span className="text-xs font-medium text-gray-300">{script.game.name}</span>
+                    <span className="text-xs font-medium text-gray-300">{script.game?.name}</span>
                   </div>
                   {script.isNexusTeam && (
                     <div className="absolute top-2 right-2 rounded bg-red-500 px-2 py-1 text-xs font-bold text-white">

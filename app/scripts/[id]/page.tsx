@@ -48,7 +48,7 @@ export default function ScriptDetailPage() {
   const [likeCount, setLikeCount] = useState(0)
   const [dislikeCount, setDislikeCount] = useState(0) // Declare setDislikeCount
   const [isMobile, setIsMobile] = useState(false)
-  const [imageError, setImageError] = useState(false)
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
   const [authorIsAdmin, setAuthorIsAdmin] = useState(false)
   const [showFullDescription, setShowFullDescription] = useState(false)
 
@@ -71,6 +71,17 @@ export default function ScriptDetailPage() {
         const foundScript = storedScripts.find((s: Script) => s.id === id)
 
         if (foundScript) {
+          // Ensure the game object and imageUrl exist
+          if (!foundScript.game) {
+            foundScript.game = {
+              id: 0,
+              name: "Unknown Game",
+              imageUrl: "/placeholder.svg?height=256&width=800",
+            }
+          } else if (!foundScript.game.imageUrl) {
+            foundScript.game.imageUrl = "/placeholder.svg?height=256&width=800"
+          }
+
           // Fetch real stats if available (in production, this would be an API call)
           // For now, we'll simulate real stats
           const realStats = {
@@ -247,8 +258,11 @@ export default function ScriptDetailPage() {
   }
 
   // Handle image error
-  const handleImageError = () => {
-    setImageError(true)
+  const handleImageError = (imageId: string) => {
+    setImageErrors((prev) => ({
+      ...prev,
+      [imageId]: true,
+    }))
   }
 
   if (isLoading) {
@@ -288,13 +302,13 @@ export default function ScriptDetailPage() {
           <div className="mb-8 overflow-hidden rounded-lg border border-[#2a2a2a] bg-[#0a0a0a]">
             {/* Script Header with Image */}
             <div className="relative h-64 w-full">
-              {!imageError ? (
+              {!imageErrors["main"] ? (
                 <Image
                   src={script.game?.imageUrl || "/placeholder.svg?height=256&width=800"}
                   alt={script.game?.name || script.title}
                   fill
                   className="object-cover"
-                  onError={handleImageError}
+                  onError={() => handleImageError("main")}
                   unoptimized
                 />
               ) : (
@@ -332,14 +346,14 @@ export default function ScriptDetailPage() {
               {/* Game Info */}
               <div className="mb-6 flex items-center gap-4">
                 <div className="h-12 w-12 overflow-hidden rounded">
-                  {!imageError ? (
+                  {!imageErrors["game"] ? (
                     <Image
-                      src={script.game?.imageUrl || getPlaceholderImage()}
+                      src={script.game?.imageUrl || "/placeholder.svg?height=48&width=48"}
                       alt={script.game?.name || "Game"}
                       width={48}
                       height={48}
                       className="h-full w-full object-cover"
-                      onError={handleImageError}
+                      onError={() => handleImageError("game")}
                       unoptimized
                     />
                   ) : (
@@ -499,14 +513,14 @@ export default function ScriptDetailPage() {
                     className="flex gap-3 rounded border border-[#2a2a2a] bg-[#0a0a0a] p-3 transition-all hover:border-[#ff3e3e]/30"
                   >
                     <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded">
-                      {!imageError ? (
+                      {!imageErrors[`related-${relatedScript.id}`] ? (
                         <Image
-                          src={relatedScript.game?.imageUrl || getPlaceholderImage()}
+                          src={relatedScript.game?.imageUrl || "/placeholder.svg?height=64&width=64"}
                           alt={relatedScript.title}
                           width={64}
                           height={64}
                           className="h-full w-full object-cover"
-                          onError={handleImageError}
+                          onError={() => handleImageError(`related-${relatedScript.id}`)}
                           unoptimized
                         />
                       ) : (

@@ -51,9 +51,10 @@ export default function HomePage() {
           </div>
         )}
 
-        <div className="grid gap-8 md:grid-cols-3">
+        {/* Modified grid: removed background behind icons */}
+        <div className="grid gap-8 md:grid-cols-3 mb-16">
           <div className="rounded-lg border border-white/5 bg-[#0a0a0a] p-8 transition-all hover:border-[#ff3e3e]/30 hover:shadow-lg hover:shadow-[#ff3e3e]/20 card-hover float-animation">
-            <i className="fas fa-code mb-4 text-5xl text-[#ff3e3e] pulse-effect"></i>
+            <i className="fas fa-code mb-4 text-5xl text-[#ff3e3e] pulse-effect" style={{ background: "none", boxShadow: "none", padding: 0, borderRadius: 0 }}></i>
             <h3 className="mb-2 text-xl font-bold text-white">Premium Scripts</h3>
             <p className="text-gray-400">Access high-quality scripts with our cyberpunk platform.</p>
             <div className="mt-4 w-1/3 h-1 bg-gradient-to-r from-[#ff3e3e] to-transparent rounded"></div>
@@ -63,7 +64,7 @@ export default function HomePage() {
             className="rounded-lg border border-white/5 bg-[#0a0a0a] p-8 transition-all hover:border-[#ff3e3e]/30 hover:shadow-lg hover:shadow-[#ff3e3e]/20 card-hover float-animation"
             style={{ animationDelay: "0.2s" }}
           >
-            <i className="fas fa-shield-alt mb-4 text-5xl text-[#ff3e3e] pulse-effect"></i>
+            <i className="fas fa-shield-alt mb-4 text-5xl text-[#ff3e3e] pulse-effect" style={{ background: "none", boxShadow: "none", padding: 0, borderRadius: 0 }}></i>
             <h3 className="mb-2 text-xl font-bold text-white">Secure Execution</h3>
             <p className="text-gray-400">Run scripts safely with our trusted execution environment.</p>
             <div className="mt-4 w-1/3 h-1 bg-gradient-to-r from-[#ff3e3e] to-transparent rounded"></div>
@@ -73,7 +74,7 @@ export default function HomePage() {
             className="rounded-lg border border-white/5 bg-[#0a0a0a] p-8 transition-all hover:border-[#ff3e3e]/30 hover:shadow-lg hover:shadow-[#ff3e3e]/20 card-hover float-animation"
             style={{ animationDelay: "0.4s" }}
           >
-            <i className="fas fa-users mb-4 text-5xl text-[#ff3e3e] pulse-effect"></i>
+            <i className="fas fa-users mb-4 text-5xl text-[#ff3e3e] pulse-effect" style={{ background: "none", boxShadow: "none", padding: 0, borderRadius: 0 }}></i>
             <h3 className="mb-2 text-xl font-bold text-white">Community</h3>
             <p className="text-gray-400">Join our growing community of developers and enthusiasts.</p>
             <div className="mt-4 w-1/3 h-1 bg-gradient-to-r from-[#ff3e3e] to-transparent rounded"></div>
@@ -97,6 +98,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="interactive-element rounded-lg border border-white/10 bg-[#1a1a1a] p-6 transition-all hover:border-[#ff3e3e]/50 hover:shadow-lg hover:shadow-[#ff3e3e]/5">
               <div className="mb-4 text-center">
+                {/* This icon already has a custom bg, not related to the cards above */}
                 <div className="inline-block rounded-full bg-[#ff3e3e]/20 p-4">
                   <i className="fas fa-door-open text-3xl text-[#ff3e3e]"></i>
                 </div>
@@ -157,6 +159,27 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Remove icon glowing bg behind the feature icons and add space between feature and gateway sections */}
+      <style jsx>{`
+        .card-hover .fa-code,
+        .card-hover .fa-shield-alt,
+        .card-hover .fa-users {
+          background: none !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          border-radius: 0 !important;
+          filter: none !important;
+        }
+        .mb-16 {
+          margin-bottom: 4rem !important;
+        }
+        @media (min-width: 768px) {
+          .mb-16 {
+            margin-bottom: 5rem !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

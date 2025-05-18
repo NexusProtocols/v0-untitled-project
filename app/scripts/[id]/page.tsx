@@ -388,44 +388,7 @@ export default function ScriptDetailPage() {
                   </div>
                 )}
               </div>
-
-              {/* Categories */}
-              {script.categories && script.categories.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="mb-2 text-lg font-medium text-white">Categories</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {script.categories.map((categoryId) => {
-                      const category = scriptCategories.find((c) => c.id === categoryId)
-                      return (
-                        category && (
-                          <span
-                            key={categoryId}
-                            className="rounded bg-[#ff3e3e]/10 px-2 py-1 text-xs font-medium text-[#ff3e3e]"
-                          >
-                            {category.name}
-                          </span>
-                        )
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Features */}
-              <div className="mb-6">
-                <h3 className="mb-2 text-lg font-medium text-white">Features</h3>
-                <ul className="list-inside list-disc space-y-1 text-gray-300">
-                  {script.description
-                    .split("\n")
-                    .filter((line) => line.trim().startsWith("-") || line.trim().startsWith("•"))
-                    .map((feature, index) => (
-                      <li key={index} className="ml-2">
-                        {feature.trim().substring(1).trim()}
-                      </li>
-                    ))}
-                </ul>
-              </div>
-
+              
               {/* Script Code - ScriptBlox Style */}
               <div className="mb-6">
                 <div className="flex items-center justify-between border-b border-[#1a1a1a] pb-2 mb-2">

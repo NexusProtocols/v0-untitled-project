@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
@@ -28,7 +27,6 @@ type GameDetails = {
   gameId: string
 }
 
-// List of popular game IDs that require Discord authentication
 const POPULAR_GAME_IDS = ["18668065416", "920587237", "2753915549"]
 
 export default function UploadScriptsPage() {
@@ -55,6 +53,7 @@ export default function UploadScriptsPage() {
   const [adminCheckComplete, setAdminCheckComplete] = useState(false)
   const [requiresDiscord, setRequiresDiscord] = useState(false)
   const [hasDiscord, setHasDiscord] = useState(false)
+  const [lineCount, setLineCount] = useState(0)
   const categoriesRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -63,7 +62,6 @@ export default function UploadScriptsPage() {
     if (!user) {
       router.push("/login")
     } else {
-      // Check if user is banned
       const userData = JSON.parse(localStorage.getItem(`nexus_user_${user.username}`) || "{}")
       if (userData.isBanned) {
         setMessage({
@@ -72,29 +70,28 @@ export default function UploadScriptsPage() {
         })
         return
       }
-
-      // Check if user has Discord linked
       setHasDiscord(!!userData.discord_id)
-
-      // Check if user is admin
       const checkAdminStatus = async () => {
         try {
           const adminStatus = await isAdmin(user.username)
           setUserIsAdmin(adminStatus)
           setIsNexusTeamMember(adminStatus)
         } catch (error) {
-          console.error("Error checking admin status:", error)
           setUserIsAdmin(false)
         } finally {
           setAdminCheckComplete(true)
         }
       }
-
       checkAdminStatus()
     }
   }, [user, isLoading, router])
 
-  // Check if game requires Discord when game ID changes
+  // Count lines of code in textarea
+  useEffect(() => {
+    // Count non-empty lines, but allow empty lines to be counted as lines (like a real editor)
+    setLineCount(scriptCode.split(/\r\n|\r|\n/).length || 0)
+  }, [scriptCode])
+
   useEffect(() => {
     if (gameId) {
       setRequiresDiscord(POPULAR_GAME_IDS.includes(gameId))
@@ -103,14 +100,12 @@ export default function UploadScriptsPage() {
     }
   }, [gameId])
 
-  // Close categories dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (categoriesRef.current && !categoriesRef.current.contains(event.target as Node)) {
         setShowCategories(false)
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside)
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
@@ -122,26 +117,20 @@ export default function UploadScriptsPage() {
       setGameError("Please enter a game ID")
       return
     }
-
     setIsLoadingGame(true)
     setGameError("")
     setGameDetails(null)
     setShowSearchResults(false)
-
     try {
       const result = await fetchGameDetailsById(gameId)
-
       if (result.success) {
         setGameDetails(result.data)
-        // Update the game name field
         setGameName(result.data.name)
-        // Check if this game requires Discord
         setRequiresDiscord(POPULAR_GAME_IDS.includes(gameId))
       } else {
         setGameError(result.error)
       }
     } catch (error) {
-      console.error("Error fetching game details:", error)
       setGameError("An unexpected error occurred. Please try again.")
     } finally {
       setIsLoadingGame(false)
@@ -153,15 +142,12 @@ export default function UploadScriptsPage() {
       setGameError("Please enter a game name")
       return
     }
-
     setIsLoadingGame(true)
     setGameError("")
     setGameDetails(null)
     setGameSearchResults([])
-
     try {
       const result = await fetchGameDetailsByName(gameName)
-
       if (result.success) {
         setGameSearchResults(result.data)
         setShowSearchResults(true)
@@ -169,7 +155,6 @@ export default function UploadScriptsPage() {
         setGameError(result.error)
       }
     } catch (error) {
-      console.error("Error searching games:", error)
       setGameError("An unexpected error occurred. Please try again.")
     } finally {
       setIsLoadingGame(false)
@@ -183,27 +168,19 @@ export default function UploadScriptsPage() {
       gameId: game.gameId,
     })
     setGameId(game.gameId)
-    // Check if this game requires Discord
     setRequiresDiscord(POPULAR_GAME_IDS.includes(game.gameId))
     setShowSearchResults(false)
   }
 
   const handleCategoryToggle = (categoryId: string) => {
-    setSelectedCategories((prev) => {
-      if (prev.includes(categoryId)) {
-        return prev.filter((id) => id !== categoryId)
-      } else {
-        return [...prev, categoryId]
-      }
-    })
+    setSelectedCategories((prev) =>
+      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]
+    )
   }
 
   const checkDiscordRequirement = (gameId: string) => {
-    // List of popular games that require Discord connection
     const popularGames = ["18668065416", "920587237", "2753915549"]
-
     if (popularGames.includes(gameId)) {
-      // Check if user has Discord connected
       if (!user?.discord_id) {
         return {
           required: true,
@@ -211,7 +188,6 @@ export default function UploadScriptsPage() {
         }
       }
     }
-
     return { required: false }
   }
 
@@ -220,7 +196,6 @@ export default function UploadScriptsPage() {
     setMessage({ type: "", text: "" })
     setValidationErrors([])
 
-    // Check if user is banned
     if (user) {
       const userData = JSON.parse(localStorage.getItem(`nexus_user_${user.username}`) || "{}")
       if (userData.isBanned) {
@@ -231,23 +206,18 @@ export default function UploadScriptsPage() {
         return
       }
     }
-
     if (!scriptTitle || !scriptDescription || !scriptCode) {
       setMessage({ type: "error", text: "Script title, description, and code are required" })
       return
     }
-
     if (!gameDetails) {
       setMessage({ type: "error", text: "Please fetch valid game details before submitting" })
       return
     }
-
     if (selectedCategories.length === 0) {
       setMessage({ type: "error", text: "Please select at least one category" })
       return
     }
-
-    // Check if Discord is required but not linked
     if (requiresDiscord && !hasDiscord) {
       setMessage({
         type: "error",
@@ -255,22 +225,21 @@ export default function UploadScriptsPage() {
       })
       return
     }
-
-    // Validate script
+    // 1000 line limit
+    if (lineCount > 1000) {
+      setMessage({ type: "error", text: "Script code exceeds the 1000 line limit." })
+      return
+    }
     const errors = validateScript(scriptCode)
     if (errors.length > 0) {
       setValidationErrors(errors)
       return
     }
-
-    // Check if Discord is required for this game
     const discordCheck = checkDiscordRequirement(gameDetails?.gameId || "")
     if (discordCheck.required) {
       setMessage({ type: "error", text: discordCheck.message || "Discord connection required" })
       return
     }
-
-    // Create a script object
     const script = {
       id: Date.now().toString(),
       title: scriptTitle,
@@ -285,25 +254,15 @@ export default function UploadScriptsPage() {
         imageUrl: gameDetails.imageUrl,
       },
       categories: selectedCategories,
-      likes: [], // Initialize empty likes array
-      dislikes: [], // Initialize empty dislikes array
-      views: 0, // Initialize views counter
+      likes: [],
+      dislikes: [],
+      views: 0,
       isNexusTeam: uploadAsTeam && isNexusTeamMember,
     }
-
-    // Get existing scripts from localStorage or initialize empty array
     const existingScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
-
-    // Add new script
     existingScripts.push(script)
-
-    // Save back to localStorage
     localStorage.setItem("nexus_scripts", JSON.stringify(existingScripts))
-
-    // Show success message
     setMessage({ type: "success", text: "Script uploaded successfully!" })
-
-    // Reset form
     setScriptTitle("")
     setScriptDescription("")
     setScriptCode("")
@@ -315,8 +274,6 @@ export default function UploadScriptsPage() {
     setGameSearchResults([])
     setShowSearchResults(false)
     setUploadAsTeam(false)
-
-    // Redirect to scripts page after a delay
     setTimeout(() => {
       router.push("/scripts")
     }, 2000)
@@ -335,11 +292,58 @@ export default function UploadScriptsPage() {
   }
 
   if (!user) return null
-
-  // If user is admin, redirect to script manager
   if (userIsAdmin && adminCheckComplete) {
     router.push("/admin-dashboard/scripts")
     return null
+  }
+
+  // Helper for ad slots
+  function AdSlot({ slot }: { slot: "top" | "middle" | "bottom" }) {
+    // These are the ad keys and sizes
+    let ad: { key: string; height: number; width: number }
+    if (slot === "top") {
+      ad = { key: "fd9b1c1a9efee5e08a1818fb900a7d69", width: 728, height: 90 }
+    } else if (slot === "middle") {
+      ad = { key: "3e8a77126905eb1bf6906ca144e2e0dd", width: 320, height: 50 }
+    } else {
+      ad = { key: "26399d5117f28dad5c8e0a5f7fa6a967", width: 728, height: 90 }
+    }
+    const ref = useRef<HTMLDivElement>(null)
+    useEffect(() => {
+      // Remove previous ad iframe
+      if (ref.current) ref.current.innerHTML = ""
+      const script = document.createElement("script")
+      script.type = "text/javascript"
+      script.async = true
+      script.innerHTML = `
+        atOptions = {
+          'key': '${ad.key}',
+          'format': 'iframe',
+          'height': ${ad.height},
+          'width': ${ad.width},
+          'params': {}
+        };
+      `
+      const invoke = document.createElement("script")
+      invoke.type = "text/javascript"
+      invoke.async = true
+      invoke.src = `//geometrydoomeddrone.com/${ad.key}/invoke.js`
+      if (ref.current) {
+        ref.current.appendChild(script)
+        ref.current.appendChild(invoke)
+      }
+    }, [ad.key, ad.height, ad.width])
+    return (
+      <div
+        ref={ref}
+        style={{
+          minHeight: ad.height,
+          minWidth: ad.width,
+          display: "flex",
+          justifyContent: "center",
+        }}
+      />
+    )
   }
 
   return (
@@ -352,11 +356,7 @@ export default function UploadScriptsPage() {
         {/* Banner Ad - Top */}
         <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
           <div className="flex justify-center">
-            <div
-              dangerouslySetInnerHTML={{
-                __html: `<script type="text/javascript"> atOptions = { 'key' : 'fd9b1c1a9efee5e08a1818fb900a7d69', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} }; document.write('<scr' + 'ipt type="text/javascript" src="//geometrydoomeddrone.com/fd9b1c1a9efee5e08a1818fb900a7d69/invoke.js"></scr' + 'ipt>'); </script>`,
-              }}
-            />
+            <AdSlot slot="top" />
           </div>
         </div>
 
@@ -430,7 +430,6 @@ export default function UploadScriptsPage() {
 
           <div className="mb-6">
             <label className="mb-2 block font-medium text-[#ff3e3e]">Game Search</label>
-
             <div className="mb-4 flex gap-4">
               <button
                 type="button"
@@ -461,7 +460,6 @@ export default function UploadScriptsPage() {
                 Search by Name
               </button>
             </div>
-
             {searchMethod === "id" ? (
               <div className="mb-4">
                 <label htmlFor="gameId" className="mb-2 block text-sm font-medium text-gray-300">
@@ -567,11 +565,7 @@ export default function UploadScriptsPage() {
           {/* Banner Ad - Middle */}
           <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
             <div className="flex justify-center">
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: `<script type="text/javascript"> atOptions = { 'key': '7179942e65b874388da42494a8139abc', 'format': 'iframe', 'height': 50, 'width': 320, 'params': {} }; document.write('<scr' + 'ipt type="text/javascript" src="//geometrydoomeddrone.com/7179942e65b874388da42494a8139abc/invoke.js"></scr' + 'ipt>'); </script>`,
-                }}
-              />
+              <AdSlot slot="middle" />
             </div>
           </div>
 
@@ -627,7 +621,6 @@ export default function UploadScriptsPage() {
                 </span>
                 <i className={`fas fa-chevron-${showCategories ? "up" : "down"} text-gray-400`}></i>
               </button>
-
               {showCategories && (
                 <div className="absolute z-10 mt-1 w-full rounded border border-white/10 bg-[#050505] py-1 shadow-lg max-h-60 overflow-y-auto">
                   {scriptCategories.map((category) => (
@@ -683,18 +676,23 @@ export default function UploadScriptsPage() {
               className="font-mono w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:border-[#ff3e3e]/50"
               rows={10}
               placeholder="-- Paste your Lua script here"
+              maxLength={100000} // safeguard
             />
-            <p className="mt-1 text-xs text-gray-400">1000 Lines Limit</p>
+            <div className="flex justify-between mt-1 text-xs text-gray-400">
+              <span>1000 Lines Limit</span>
+              <span>
+                {lineCount}/1000 lines
+                {lineCount > 1000 && (
+                  <span className="ml-2 text-[#ff3e3e] font-bold"> (Over Limit!)</span>
+                )}
+              </span>
+            </div>
           </div>
 
           {/* Banner Ad - Bottom */}
           <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
             <div className="flex justify-center">
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: `<script type="text/javascript"> atOptions = { 'key' : '26399d5117f28dad5c8e0a5f7fa6a967', 'format' : 'iframe', 'height' : 90, 'width' : 728, 'params' : {} }; document.write('<scr' + 'ipt type="text/javascript" src="//geometrydoomeddrone.com/26399d5117f28dad5c8e0a5f7fa6a967/invoke.js"></scr' + 'ipt>'); </script>`,
-                }}
-              />
+              <AdSlot slot="bottom" />
             </div>
           </div>
 
@@ -720,7 +718,6 @@ export default function UploadScriptsPage() {
 }
 
 async function isAdmin(username: string): Promise<boolean> {
-  // Replace with your actual admin check logic (e.g., fetching from a database)
   const adminUsernames = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"]
   return adminUsernames.includes(username)
 }

@@ -9,7 +9,7 @@ import { fetchGameDetailsById, fetchGameDetailsByName } from "@/app/actions/fetc
 import { scriptCategories } from "@/lib/categories"
 import { validateScript } from "@/lib/script-validation"
 import { DiscordLoginButton } from "@/components/discord-login-button"
-import { AdScript } from "@/components/AdScript";
+import { AdScript } from "@/components/AdScript"
 
 type GameSearchResult = {
   gameId: string

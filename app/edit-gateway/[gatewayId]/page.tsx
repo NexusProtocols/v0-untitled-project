@@ -33,7 +33,6 @@ export default function EditGatewayPage() {
   const [rateLimitEnabled, setRateLimitEnabled] = useState(true)
   const [rateLimitCount, setRateLimitCount] = useState(1)
   const [rateLimitPeriod, setRateLimitPeriod] = useState<"hour" | "day" | "week" | "month">("day")
-  const [adLevel, setAdLevel] = useState(3)
   const [gateway, setGateway] = useState<any | null>(null)
   const [gatewayStats, setGatewayStats] = useState<any | null>(null)
 
@@ -43,7 +42,6 @@ export default function EditGatewayPage() {
   ])
 
   useEffect(() => {
-    // Redirect if not logged in
     if (!isLoading && !user) {
       router.push("/login?redirect=/edit-gateway/" + params.gatewayId)
       return
@@ -58,13 +56,11 @@ export default function EditGatewayPage() {
           setGatewayTitle(foundGateway.title)
           setGatewayDescription(foundGateway.description)
           setGatewayImage(foundGateway.imageUrl)
-
           if (foundGateway.reward) {
             setRewardType(foundGateway.reward.type || "url")
             setRewardUrl(foundGateway.reward.url || "")
             setRewardPaste(foundGateway.reward.content || "")
           }
-
           if (foundGateway.stages && Array.isArray(foundGateway.stages) && foundGateway.stages.length > 0) {
             setStages(foundGateway.stages.map((stage: any, i: number) => ({
               id: i + 1,
@@ -72,11 +68,9 @@ export default function EditGatewayPage() {
               taskCount: stage.taskCount ?? 2,
             })))
           }
-
           if (foundGateway.settings) {
             setShowSubscriptionOptions(foundGateway.settings.showSubscriptionOptions !== false)
             setShowOperaGxOffer(foundGateway.settings.showOperaGxOffer !== false)
-            setAdLevel(foundGateway.settings.adLevel || 3)
             setBlockVpnUsers(foundGateway.settings.blockVpnUsers !== false)
             if (foundGateway.settings.rateLimit) {
               setRateLimitEnabled(foundGateway.settings.rateLimit.enabled !== false)
@@ -84,8 +78,6 @@ export default function EditGatewayPage() {
               setRateLimitPeriod(foundGateway.settings.rateLimit.period || "day")
             }
           }
-
-          // Fetch gateway stats (simulate API)
           try {
             const response = await fetch(`/api/gateway/track?gatewayId=${params.gatewayId}`)
             if (response.ok) {
@@ -106,7 +98,6 @@ export default function EditGatewayPage() {
         setIsLoading2(false)
       }
     }
-
     if (!isLoading && user) fetchGateway()
   }, [user, isLoading, params.gatewayId, router])
 
@@ -168,7 +159,6 @@ export default function EditGatewayPage() {
         settings: {
           showSubscriptionOptions,
           showOperaGxOffer,
-          adLevel,
           blockVpnUsers,
           rateLimit: {
             enabled: rateLimitEnabled,
@@ -480,33 +470,10 @@ export default function EditGatewayPage() {
             )}
           </div>
 
-          {/* --- Settings (unchanged from original) --- */}
+          {/* --- Settings --- */}
           <div className="mb-6">
             <h2 className="mb-4 text-xl font-bold text-white">Gateway Settings</h2>
-            <div className="mb-4">
-              <label htmlFor="adLevel" className="mb-2 block font-medium text-[#ff3e3e]">
-                Ad Level (1-5)
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="range"
-                  id="adLevel"
-                  min="1"
-                  max="5"
-                  value={adLevel}
-                  onChange={(e) => setAdLevel(Number.parseInt(e.target.value))}
-                  className="w-full h-2 bg-[#1a1a1a] rounded-lg appearance-none cursor-pointer"
-                />
-                <span className="text-white font-bold min-w-[30px] text-center">{adLevel}</span>
-              </div>
-              <div className="mt-2 text-xs text-gray-400">
-                {adLevel === 1 && "Level 1: 5 native ads around the page"}
-                {adLevel === 2 && "Level 2: 10 native ads + direct link ads with popup"}
-                {adLevel === 3 && "Level 3: Level 2 + additional popups and redirects"}
-                {adLevel === 4 && "Level 4: Level 3 + Opera GX offerwall"}
-                {adLevel === 5 && "Level 5: Maximum monetization (adult ads allowed)"}
-              </div>
-            </div>
+            {/* AD LEVEL SETTINGS LINE REMOVED */}
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
@@ -515,7 +482,7 @@ export default function EditGatewayPage() {
                       type="checkbox"
                       checked={showSubscriptionOptions}
                       onChange={(e) => setShowSubscriptionOptions(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#191c21] text-[#ff3e3e] accent-[#3498ff]"
                     />
                     <span className="text-white">Show subscription options to skip ads</span>
                   </label>
@@ -524,7 +491,7 @@ export default function EditGatewayPage() {
                       type="checkbox"
                       checked={showOperaGxOffer}
                       onChange={(e) => setShowOperaGxOffer(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#191c21] text-[#ff3e3e] accent-[#3498ff]"
                     />
                     <span className="text-white">Show Opera GX offer</span>
                   </label>
@@ -535,7 +502,7 @@ export default function EditGatewayPage() {
                       type="checkbox"
                       checked={blockVpnUsers}
                       onChange={(e) => setBlockVpnUsers(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#191c21] text-[#ff3e3e] accent-[#3498ff]"
                     />
                     <span className="text-white">Block VPN Users</span>
                   </label>
@@ -549,7 +516,7 @@ export default function EditGatewayPage() {
                       type="checkbox"
                       checked={rateLimitEnabled}
                       onChange={(e) => setRateLimitEnabled(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#191c21] text-[#ff3e3e] accent-[#3498ff]"
                     />
                     <span className="text-white">Rate Limit Per User</span>
                   </label>
@@ -569,7 +536,7 @@ export default function EditGatewayPage() {
                         onChange={(e) =>
                           setRateLimitCount(Math.max(1, Math.min(60, Number.parseInt(e.target.value) || 1)))
                         }
-                        className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                        className="input-focus-effect w-full rounded border border-white/10 bg-[#191c21] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                       />
                     </div>
                     <div>
@@ -582,12 +549,18 @@ export default function EditGatewayPage() {
                             key={period}
                             type="button"
                             onClick={() => setRateLimitPeriod(period)}
-                            className={`relative overflow-hidden rounded-lg px-3 py-1 font-medium transition-all duration-300 ${
-                              rateLimitPeriod === period
-                                ? "bg-gradient-to-r from-[#1a1a1a] to-[#000000] text-white border-2 border-[#ff3e3e] shadow-lg shadow-[#ff3e3e]/20"
-                                : "bg-[#0a0a0a] text-gray-400 border border-white/10"
-                            }`}
+                            className={`relative flex items-center gap-2 overflow-hidden rounded-lg px-3 py-1 font-medium transition-all duration-300 border
+                              ${
+                                rateLimitPeriod === period
+                                  ? "bg-[#0f2537] border-[#3498ff] text-white"
+                                  : "bg-[#191c21] border-white/10 text-gray-400"
+                              }`}
                           >
+                            {rateLimitPeriod === period && (
+                              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#3498ff] mr-1">
+                                <i className="fas fa-check text-xs text-white"></i>
+                              </span>
+                            )}
                             <span className="relative z-10 capitalize">{period}</span>
                           </button>
                         ))}

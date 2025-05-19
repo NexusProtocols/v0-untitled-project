@@ -6,27 +6,8 @@ import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
 
-// Gateway Step type (unchanged)
-interface GatewayStep {
-  id: string
-  title: string
-  description: string
-  imageUrl: string
-  type: "offerwall" | "article" | "video" | "download" | "custom" | "link"
-  waitTime: number
-  content: {
-    url?: string
-    text?: string
-    videoId?: string
-    downloadUrl?: string
-    customHtml?: string
-    platform?: string
-    buttonText?: string
-  }
-  skipAllowed: boolean
-}
-
 type StageConfig = {
+  id: number
   adLevel: number
   taskCount: number
 }
@@ -56,56 +37,13 @@ export default function EditGatewayPage() {
   const [gateway, setGateway] = useState<any | null>(null)
   const [gatewayStats, setGatewayStats] = useState<any | null>(null)
 
-  // Multi-Stage Gateway
+  // Multi-stage (stages) state
   const [stages, setStages] = useState<StageConfig[]>([
-    { adLevel: 3, taskCount: 2 }
+    { id: 1, adLevel: 3, taskCount: 2 }
   ])
 
-  // Add a new stage (max 5)
-  const addStage = () => {
-    if (stages.length < MAX_STAGES) {
-      setStages([...stages, { adLevel: 3, taskCount: 2 }])
-    }
-  }
-
-  // Remove a stage
-  const removeStage = (index: number) => {
-    if (stages.length > 1) {
-      setStages(stages.filter((_, i) => i !== index))
-    }
-  }
-
-  // Update stage config
-  const updateStage = (index: number, key: keyof StageConfig, value: number) => {
-    const updated = [...stages]
-    updated[index][key] = value
-    setStages(updated)
-  }
-
-  // Image upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (file.size > 10 * 1024 * 1024) {
-      setMessage({ type: "error", text: "Image size must be less than 10MB" })
-      return
-    }
-    if (!file.type.startsWith("image/")) {
-      setMessage({ type: "error", text: "File must be an image" })
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setGatewayImage(event.target.result as string)
-      }
-    }
-    reader.readAsDataURL(file)
-  }
-
-  // Fetch gateway and initialize form values
   useEffect(() => {
+    // Redirect if not logged in
     if (!isLoading && !user) {
       router.push("/login?redirect=/edit-gateway/" + params.gatewayId)
       return
@@ -115,7 +53,6 @@ export default function EditGatewayPage() {
       try {
         const gateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
         const foundGateway = gateways.find((g: any) => g.id === params.gatewayId)
-
         if (foundGateway) {
           setGateway(foundGateway)
           setGatewayTitle(foundGateway.title)
@@ -127,8 +64,13 @@ export default function EditGatewayPage() {
             setRewardUrl(foundGateway.reward.url || "")
             setRewardPaste(foundGateway.reward.content || "")
           }
+
           if (foundGateway.stages && Array.isArray(foundGateway.stages) && foundGateway.stages.length > 0) {
-            setStages(foundGateway.stages)
+            setStages(foundGateway.stages.map((stage: any, i: number) => ({
+              id: i + 1,
+              adLevel: stage.adLevel ?? 3,
+              taskCount: stage.taskCount ?? 2,
+            })))
           }
 
           if (foundGateway.settings) {
@@ -148,18 +90,14 @@ export default function EditGatewayPage() {
             const response = await fetch(`/api/gateway/track?gatewayId=${params.gatewayId}`)
             if (response.ok) {
               const data = await response.json()
-              if (data.success) {
-                setGatewayStats(data.data)
-              }
+              if (data.success) setGatewayStats(data.data)
             }
           } catch (error) {
             console.error("Error fetching gateway stats:", error)
           }
         } else {
           setMessage({ type: "error", text: "Gateway not found" })
-          setTimeout(() => {
-            router.push("/manage-gateways")
-          }, 2000)
+          setTimeout(() => { router.push("/manage-gateways") }, 2000)
         }
       } catch (error) {
         console.error("Error fetching gateway:", error)
@@ -169,45 +107,52 @@ export default function EditGatewayPage() {
       }
     }
 
-    if (!isLoading && user) {
-      fetchGateway()
-    }
+    if (!isLoading && user) fetchGateway()
   }, [user, isLoading, params.gatewayId, router])
 
-  // Submit: save stages config as well
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) {
+      setMessage({ type: "error", text: "Image size must be less than 10MB" })
+      return
+    }
+    if (!file.type.startsWith("image/")) {
+      setMessage({ type: "error", text: "File must be an image" })
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      if (event.target?.result) setGatewayImage(event.target.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Multi-stage logic
+  const addStage = () => {
+    if (stages.length < MAX_STAGES)
+      setStages([...stages, { id: stages.length + 1, adLevel: 3, taskCount: 2 }])
+  }
+  const removeStage = (id: number) => {
+    if (stages.length > 1)
+      setStages(stages.filter((s) => s.id !== id).map((s, i) => ({ ...s, id: i + 1 })))
+  }
+  const updateStageAdLevel = (id: number, adLevel: number) =>
+    setStages(stages.map((s) => (s.id === id ? { ...s, adLevel } : s)))
+  const updateStageTaskCount = (id: number, taskCount: number) =>
+    setStages(stages.map((s) => (s.id === id ? { ...s, taskCount } : s)))
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage({ type: "", text: "" })
-
-    if (!gatewayTitle) {
-      setMessage({ type: "error", text: "Gateway title is required" })
-      return
-    }
-    if (!gatewayDescription) {
-      setMessage({ type: "error", text: "Gateway description is required" })
-      return
-    }
-    if (!gatewayImage) {
-      setMessage({ type: "error", text: "Gateway image is required" })
-      return
-    }
-    if (stages.length === 0) {
-      setMessage({ type: "error", text: "At least one stage is required" })
-      return
-    }
-    if (rewardType === "url" && !rewardUrl) {
-      setMessage({ type: "error", text: "Reward URL is required" })
-      return
-    }
-    if (rewardType === "paste" && !rewardPaste) {
-      setMessage({ type: "error", text: "Reward content is required" })
-      return
-    }
-
+    if (!gatewayTitle) { setMessage({ type: "error", text: "Gateway title is required" }); return }
+    if (!gatewayDescription) { setMessage({ type: "error", text: "Gateway description is required" }); return }
+    if (!gatewayImage) { setMessage({ type: "error", text: "Gateway image is required" }); return }
+    if (stages.length === 0) { setMessage({ type: "error", text: "At least one stage is required" }); return }
+    if (rewardType === "url" && !rewardUrl) { setMessage({ type: "error", text: "Reward URL is required" }); return }
+    if (rewardType === "paste" && !rewardPaste) { setMessage({ type: "error", text: "Reward content is required" }); return }
     try {
       setIsSubmitting(true)
-
-      // Update the gateway object
       const updatedGateway = {
         ...gateway,
         title: gatewayTitle,
@@ -232,10 +177,7 @@ export default function EditGatewayPage() {
           },
         },
       }
-
-      // Get existing gateways from localStorage
       const gateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
-      // Update the gateway in the array
       const updatedGateways = gateways.map((g: any) => (g.id === gateway.id ? updatedGateway : g))
       localStorage.setItem("nexus_gateways", JSON.stringify(updatedGateways))
       setMessage({ type: "success", text: "Gateway updated successfully! Redirecting..." })
@@ -310,7 +252,7 @@ export default function EditGatewayPage() {
         )}
 
         <form onSubmit={handleSubmit} className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-8">
-          {/* ... Gateway Info ... */}
+          {/* Gateway Info */}
           <div className="mb-6">
             <h2 className="mb-4 text-xl font-bold text-white">Gateway Information</h2>
             <div className="mb-4">
@@ -380,31 +322,23 @@ export default function EditGatewayPage() {
 
           {/* Multi-Stage Gateway Section */}
           <div className="mb-6">
-            <h2 className="mb-4 text-2xl font-bold text-white galaxy-heading">Multi-Stage Gateway</h2>
-            <p className="mb-6 text-md text-gray-300">
-              Configure each stage of your gateway with different task counts and ad levels.
+            <h2 className="mb-4 text-xl font-bold text-white">Multi-Stage Gateway</h2>
+            <p className="mb-4 text-sm text-gray-400">
+              Configure each stage of your gateway with different task counts and ad levels
             </p>
-            <div className="space-y-6">
-              {stages.map((stage, idx) => (
+            <div className="space-y-4 mb-4">
+              {stages.map((stage) => (
                 <div
-                  key={idx}
-                  className="rounded-xl border border-white/10 bg-[#10111a] p-6 shadow-lg galaxy-stage-card relative"
-                  style={{
-                    boxShadow:
-                      "0 0 36px 8px rgba(80,0,255,0.18), 0 0 0 2px #2d2250 inset",
-                    background:
-                      "radial-gradient(ellipse at 60% 40%,rgba(80,0,255,0.08) 0%,rgba(20,22,38,1) 100%)",
-                  }}
+                  key={stage.id}
+                  className="rounded-lg border border-white/10 bg-[#000000] p-4 hover:border-[#ff3e3e]/30 transition-all duration-200"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-semibold text-white galaxy-text-glow">Stage {idx + 1}</span>
-                    </div>
+                    <h3 className="font-medium text-white">Stage {stage.id}</h3>
                     <button
                       type="button"
-                      onClick={() => removeStage(idx)}
+                      onClick={() => removeStage(stage.id)}
                       disabled={stages.length <= 1}
-                      className={`ml-auto px-3 py-1 rounded transition-all font-semibold text-xs ${
+                      className={`ml-auto px-3 py-1 rounded font-semibold text-xs transition-all ${
                         stages.length <= 1
                           ? "opacity-40 cursor-not-allowed"
                           : "bg-red-900/30 text-red-300 hover:bg-red-400/20 hover:text-white"
@@ -413,43 +347,43 @@ export default function EditGatewayPage() {
                       <i className="fas fa-times"></i>
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Ad Level */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <div className="mb-3 font-semibold text-[#ff3e3e] galaxy-label">Ad Level</div>
-                      <div className="flex flex-wrap gap-3">
+                      <label className="mb-2 block font-medium text-[#ff3e3e]">Ad Level</label>
+                      <div className="flex flex-wrap gap-2 mt-2">
                         {[1, 2, 3, 4, 5].map((level) => (
                           <button
                             key={level}
                             type="button"
-                            onClick={() => updateStage(idx, "adLevel", level)}
-                            className={`galaxy-btn px-4 py-2 rounded-lg transition-all font-medium shadow-lg ${
+                            onClick={() => updateStageAdLevel(stage.id, level)}
+                            className={`relative overflow-hidden rounded-lg px-4 py-2 font-medium transition-all duration-300 ${
                               stage.adLevel === level
-                                ? "bg-[#2d2250] border-2 border-[#8a2be2] text-[#fff] galaxy-btn-selected"
-                                : "bg-[#18182c] border border-white/10 text-gray-300"
+                                ? "bg-gradient-to-r from-[#101010] to-[#232323] text-white border-2 border-[#ff3e3e] shadow-lg shadow-[#ff3e3e]/20"
+                                : "bg-[#0a0a0a] text-gray-400 border border-white/10"
                             }`}
                           >
-                            Level {level}
+                            <span className="relative z-10">Level {level}</span>
                           </button>
                         ))}
                       </div>
                     </div>
-                    {/* Task Count */}
                     <div>
-                      <div className="mb-3 font-semibold text-[#ff3e3e] galaxy-label">Task Count</div>
-                      <div className="flex flex-wrap gap-3">
+                      <label className="mb-2 block font-medium text-[#ff3e3e]">Task Count</label>
+                      <div className="flex flex-wrap gap-2 mt-2">
                         {[1, 2, 3, 4, 5].map((count) => (
                           <button
                             key={count}
                             type="button"
-                            onClick={() => updateStage(idx, "taskCount", count)}
-                            className={`galaxy-btn px-4 py-2 rounded-lg transition-all font-medium shadow-lg ${
+                            onClick={() => updateStageTaskCount(stage.id, count)}
+                            className={`relative overflow-hidden rounded-lg px-4 py-2 font-medium transition-all duration-300 ${
                               stage.taskCount === count
-                                ? "bg-[#2d2250] border-2 border-[#8a2be2] text-[#fff] galaxy-btn-selected"
-                                : "bg-[#18182c] border border-white/10 text-gray-300"
+                                ? "bg-gradient-to-r from-[#101010] to-[#232323] text-white border-2 border-[#ff3e3e] shadow-lg shadow-[#ff3e3e]/20"
+                                : "bg-[#0a0a0a] text-gray-400 border border-white/10"
                             }`}
                           >
-                            {count} Task{count > 1 ? "s" : ""}
+                            <span className="relative z-10">
+                              {count} {count === 1 ? "Task" : "Tasks"}
+                            </span>
                           </button>
                         ))}
                       </div>
@@ -458,13 +392,12 @@ export default function EditGatewayPage() {
                 </div>
               ))}
             </div>
-            {/* Add Stage Button */}
             <div className="mt-6 text-center">
               <button
                 type="button"
                 onClick={addStage}
                 disabled={stages.length >= MAX_STAGES}
-                className="galaxy-add-stage-btn px-7 py-3 rounded-xl mt-2 text-lg font-bold bg-gradient-to-r from-[#8a2be2] to-[#3b1c6b] text-white shadow-xl transition-all hover:scale-105 hover:from-[#a161ff] hover:to-[#4d2a8a] disabled:opacity-40"
+                className="px-7 py-3 rounded-xl mt-2 text-lg font-bold bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] text-white shadow-xl transition-all hover:scale-105 disabled:opacity-40"
               >
                 <i className="fas fa-plus mr-2"></i> Add Stage
               </button>
@@ -474,7 +407,7 @@ export default function EditGatewayPage() {
             </div>
           </div>
 
-          {/* Gateway Reward */}
+          {/* --- Reward Section --- */}
           <div className="mb-6">
             <h2 className="mb-4 text-xl font-bold text-white">Gateway Reward</h2>
             <div className="mb-4">
@@ -547,7 +480,7 @@ export default function EditGatewayPage() {
             )}
           </div>
 
-          {/* Gateway Settings */}
+          {/* --- Settings (unchanged from original) --- */}
           <div className="mb-6">
             <h2 className="mb-4 text-xl font-bold text-white">Gateway Settings</h2>
             <div className="mb-4">
@@ -655,23 +588,6 @@ export default function EditGatewayPage() {
                                 : "bg-[#0a0a0a] text-gray-400 border border-white/10"
                             }`}
                           >
-                            {rateLimitPeriod === period && (
-                              <div className="absolute inset-0 opacity-30 pointer-events-none">
-                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/30 via-black/0 to-transparent"></div>
-                              </div>
-                            )}
-                            {rateLimitPeriod === period && (
-                              <div className="absolute inset-0 overflow-hidden">
-                                <div
-                                  className="absolute -inset-[100%] animate-[spin_3s_linear_infinite] opacity-30"
-                                  style={{
-                                    background:
-                                      "conic-gradient(transparent, rgba(255,255,255,0.5), transparent, transparent)",
-                                    clipPath: "polygon(50% 50%, 100% 0, 100% 100%, 0 100%, 0 0)",
-                                  }}
-                                ></div>
-                              </div>
-                            )}
                             <span className="relative z-10 capitalize">{period}</span>
                           </button>
                         ))}
@@ -686,7 +602,6 @@ export default function EditGatewayPage() {
               </div>
             </div>
           </div>
-
           <button
             type="submit"
             disabled={isSubmitting}
@@ -705,38 +620,6 @@ export default function EditGatewayPage() {
           </button>
         </form>
       </div>
-      {/* Galaxy Theme CSS */}
-      <style jsx>{`
-        .galaxy-stage-card {
-          background: radial-gradient(ellipse at 50% 30%, #2d2250 0%, #18182c 100%);
-          border: 1.5px solid #3d2964;
-          box-shadow: 0 0 32px 8px #4a23b4a8, 0 0 0 2px #2d2250 inset;
-          position: relative;
-          overflow: hidden;
-        }
-        .galaxy-btn-selected {
-          box-shadow: 0 0 12px 3px #8a2be2cc, 0 0 0 2px #fff1 inset !important;
-          text-shadow: 0 0 6px #fff3;
-        }
-        .galaxy-btn {
-          position: relative;
-          z-index: 1;
-        }
-        .galaxy-label {
-          letter-spacing: 1px;
-          text-shadow: 0 0 8px #a161ff44;
-        }
-        .galaxy-heading {
-          text-shadow: 0 0 18px #a161ff88, 0 0 8px #fff2;
-        }
-        .galaxy-text-glow {
-          text-shadow: 0 0 10px #a161ff99, 0 0 6px #fff2;
-        }
-        .galaxy-add-stage-btn {
-          background: linear-gradient(90deg, #8a2be2 0%, #3b1c6b 100%);
-          box-shadow: 0 0 24px 4px #8a2be277, 0 0 0 2px #3b1c6b99 inset;
-        }
-      `}</style>
     </div>
   )
 }

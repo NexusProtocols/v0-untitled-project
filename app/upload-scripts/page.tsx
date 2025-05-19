@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
@@ -10,6 +9,7 @@ import { fetchGameDetailsById, fetchGameDetailsByName } from "@/app/actions/fetc
 import { scriptCategories } from "@/lib/categories"
 import { validateScript } from "@/lib/script-validation"
 import { DiscordLoginButton } from "@/components/discord-login-button"
+import { AdUnit } from "@/components/AdUnit"
 
 type GameSearchResult = {
   gameId: string
@@ -28,7 +28,6 @@ type GameDetails = {
   gameId: string
 }
 
-// List of popular game IDs that require Discord authentication
 const POPULAR_GAME_IDS = ["18668065416", "920587237", "2753915549"]
 
 export default function UploadScriptsPage() {
@@ -63,7 +62,6 @@ export default function UploadScriptsPage() {
     if (!user) {
       router.push("/login")
     } else {
-      // Check if user is banned
       const userData = JSON.parse(localStorage.getItem(`nexus_user_${user.username}`) || "{}")
       if (userData.isBanned) {
         setMessage({
@@ -72,29 +70,22 @@ export default function UploadScriptsPage() {
         })
         return
       }
-
-      // Check if user has Discord linked
       setHasDiscord(!!userData.discord_id)
-
-      // Check if user is admin
       const checkAdminStatus = async () => {
         try {
           const adminStatus = await isAdmin(user.username)
           setUserIsAdmin(adminStatus)
           setIsNexusTeamMember(adminStatus)
         } catch (error) {
-          console.error("Error checking admin status:", error)
           setUserIsAdmin(false)
         } finally {
           setAdminCheckComplete(true)
         }
       }
-
       checkAdminStatus()
     }
   }, [user, isLoading, router])
 
-  // Check if game requires Discord when game ID changes
   useEffect(() => {
     if (gameId) {
       setRequiresDiscord(POPULAR_GAME_IDS.includes(gameId))
@@ -103,57 +94,29 @@ export default function UploadScriptsPage() {
     }
   }, [gameId])
 
-  // Close categories dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (categoriesRef.current && !categoriesRef.current.contains(event.target as Node)) {
         setShowCategories(false)
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside)
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [categoriesRef])
 
-  // --- AD: load JS after mount for each ad block ---
-  function AdScript({ id, atOptions, src }: { id: string; atOptions: any; src: string }) {
-    const ref = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-      if (!ref.current) return
-      // Clean up previous ad
-      ref.current.innerHTML = ""
-      const script = document.createElement("script")
-      script.type = "text/javascript"
-      script.innerHTML =
-        "atOptions = " + JSON.stringify(atOptions) + ";"
-      ref.current.appendChild(script)
-
-      const invoke = document.createElement("script")
-      invoke.type = "text/javascript"
-      invoke.src = src
-      ref.current.appendChild(invoke)
-    }, [id, atOptions, src])
-
-    return <div ref={ref} style={{ width: atOptions["width"], height: atOptions["height"] }} />
-  }
-
   const handleFetchGameDetailsById = async () => {
     if (!gameId) {
       setGameError("Please enter a game ID")
       return
     }
-
     setIsLoadingGame(true)
     setGameError("")
     setGameDetails(null)
     setShowSearchResults(false)
-
     try {
       const result = await fetchGameDetailsById(gameId)
-
       if (result.success) {
         setGameDetails(result.data)
         setGameName(result.data.name)
@@ -162,7 +125,6 @@ export default function UploadScriptsPage() {
         setGameError(result.error)
       }
     } catch (error) {
-      console.error("Error fetching game details:", error)
       setGameError("An unexpected error occurred. Please try again.")
     } finally {
       setIsLoadingGame(false)
@@ -174,15 +136,12 @@ export default function UploadScriptsPage() {
       setGameError("Please enter a game name")
       return
     }
-
     setIsLoadingGame(true)
     setGameError("")
     setGameDetails(null)
     setGameSearchResults([])
-
     try {
       const result = await fetchGameDetailsByName(gameName)
-
       if (result.success) {
         setGameSearchResults(result.data)
         setShowSearchResults(true)
@@ -190,7 +149,6 @@ export default function UploadScriptsPage() {
         setGameError(result.error)
       }
     } catch (error) {
-      console.error("Error searching games:", error)
       setGameError("An unexpected error occurred. Please try again.")
     } finally {
       setIsLoadingGame(false)
@@ -246,22 +204,18 @@ export default function UploadScriptsPage() {
         return
       }
     }
-
     if (!scriptTitle || !scriptDescription || !scriptCode) {
       setMessage({ type: "error", text: "Script title, description, and code are required" })
       return
     }
-
     if (!gameDetails) {
       setMessage({ type: "error", text: "Please fetch valid game details before submitting" })
       return
     }
-
     if (selectedCategories.length === 0) {
       setMessage({ type: "error", text: "Please select at least one category" })
       return
     }
-
     if (requiresDiscord && !hasDiscord) {
       setMessage({
         type: "error",
@@ -269,19 +223,16 @@ export default function UploadScriptsPage() {
       })
       return
     }
-
     const errors = validateScript(scriptCode)
     if (errors.length > 0) {
       setValidationErrors(errors)
       return
     }
-
     const discordCheck = checkDiscordRequirement(gameDetails?.gameId || "")
     if (discordCheck.required) {
       setMessage({ type: "error", text: discordCheck.message || "Discord connection required" })
       return
     }
-
     const script = {
       id: Date.now().toString(),
       title: scriptTitle,
@@ -301,13 +252,10 @@ export default function UploadScriptsPage() {
       views: 0,
       isNexusTeam: uploadAsTeam && isNexusTeamMember,
     }
-
     const existingScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
     existingScripts.push(script)
     localStorage.setItem("nexus_scripts", JSON.stringify(existingScripts))
-
     setMessage({ type: "success", text: "Script uploaded successfully!" })
-
     setScriptTitle("")
     setScriptDescription("")
     setScriptCode("")
@@ -319,7 +267,6 @@ export default function UploadScriptsPage() {
     setGameSearchResults([])
     setShowSearchResults(false)
     setUploadAsTeam(false)
-
     setTimeout(() => {
       router.push("/scripts")
     }, 2000)
@@ -352,20 +299,8 @@ export default function UploadScriptsPage() {
         </h1>
 
         {/* Banner Ad - Top */}
-        <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
-          <div className="flex justify-center">
-            <AdScript
-              id="ad728top"
-              atOptions={{
-                key: "fd9b1c1a9efee5e08a1818fb900a7d69",
-                format: "iframe",
-                height: 90,
-                width: 728,
-                params: {},
-              }}
-              src="//geometrydoomeddrone.com/fd9b1c1a9efee5e08a1818fb900a7d69/invoke.js"
-            />
-          </div>
+        <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2 flex justify-center">
+          <AdUnit name="top728" />
         </div>
 
         {message.text && (
@@ -438,7 +373,6 @@ export default function UploadScriptsPage() {
 
           <div className="mb-6">
             <label className="mb-2 block font-medium text-[#ff3e3e]">Game Search</label>
-
             <div className="mb-4 flex gap-4">
               <button
                 type="button"
@@ -469,7 +403,6 @@ export default function UploadScriptsPage() {
                 Search by Name
               </button>
             </div>
-
             {searchMethod === "id" ? (
               <div className="mb-4">
                 <label htmlFor="gameId" className="mb-2 block text-sm font-medium text-gray-300">
@@ -533,10 +466,7 @@ export default function UploadScriptsPage() {
                 </div>
               </div>
             )}
-
             {gameError && <p className="mt-1 text-sm text-red-400">{gameError}</p>}
-
-            {/* Game search results */}
             {showSearchResults && gameSearchResults.length > 0 && (
               <div className="mt-4 max-h-80 overflow-y-auto rounded border border-white/10 bg-[#050505] p-2">
                 <h3 className="mb-2 px-2 text-sm font-medium text-gray-300">Search Results</h3>
@@ -573,20 +503,8 @@ export default function UploadScriptsPage() {
           </div>
 
           {/* Banner Ad - Middle */}
-          <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
-            <div className="flex justify-center">
-              <AdScript
-                id="ad320middle"
-                atOptions={{
-                  key: "3e8a77126905eb1bf6906ca144e2e0dd",
-                  format: "iframe",
-                  height: 50,
-                  width: 320,
-                  params: {},
-                }}
-                src="//geometrydoomeddrone.com/3e8a77126905eb1bf6906ca144e2e0dd/invoke.js"
-              />
-            </div>
+          <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2 flex justify-center">
+            <AdUnit name="middle320" />
           </div>
 
           {gameDetails && (
@@ -641,7 +559,6 @@ export default function UploadScriptsPage() {
                 </span>
                 <i className={`fas fa-chevron-${showCategories ? "up" : "down"} text-gray-400`}></i>
               </button>
-
               {showCategories && (
                 <div className="absolute z-10 mt-1 w-full rounded border border-white/10 bg-[#050505] py-1 shadow-lg max-h-60 overflow-y-auto">
                   {scriptCategories.map((category) => (
@@ -702,20 +619,8 @@ export default function UploadScriptsPage() {
           </div>
 
           {/* Banner Ad - Bottom */}
-          <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
-            <div className="flex justify-center">
-              <AdScript
-                id="ad728bottom"
-                atOptions={{
-                  key: "26399d5117f28dad5c8e0a5f7fa6a967",
-                  format: "iframe",
-                  height: 90,
-                  width: 728,
-                  params: {},
-                }}
-                src="//geometrydoomeddrone.com/26399d5117f28dad5c8e0a5f7fa6a967/invoke.js"
-              />
-            </div>
+          <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2 flex justify-center">
+            <AdUnit name="bottom728" />
           </div>
 
           <div className="flex gap-4">
@@ -740,7 +645,6 @@ export default function UploadScriptsPage() {
 }
 
 async function isAdmin(username: string): Promise<boolean> {
-  // Replace with your actual admin check logic (e.g., fetching from a database)
   const adminUsernames = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"]
   return adminUsernames.includes(username)
 }

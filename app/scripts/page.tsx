@@ -41,78 +41,72 @@ type FilterOptions = {
 }
 
 type SortOptions = {
-  sortBy: 'views' | 'likes' | 'createdAt' | 'updatedAt' | ''
-  sortOrder: 'ascending' | 'descending'
+  sortBy: "views" | "likes" | "createdAt" | "updatedAt" | ""
+  sortOrder: "ascending" | "descending"
 }
 
-const FilterToggle = ({ 
-  label, 
-  checked, 
+const FilterToggle = ({
+  label,
+  checked,
   onChange,
-  icon
+  icon,
 }: {
   label: string
   checked: boolean
   onChange: () => void
   icon: string
 }) => (
-  <motion.label 
+  <motion.label
     className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
-      ${checked ? 'bg-red-500/10 border-red-500/50' : 'bg-white/5 border-white/10'} border`}
+      ${checked ? "bg-red-500/10 border-red-500/50" : "bg-white/5 border-white/10"} border`}
     whileHover={{ scale: 1.02 }}
     whileTap={{ scale: 0.98 }}
   >
     <div className="relative flex items-center">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="sr-only"
-      />
-      <div className={`w-5 h-5 rounded flex items-center justify-center transition-all
-        ${checked ? 'bg-red-500' : 'bg-white/10 border border-white/20'}`}>
+      <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
+      <div
+        className={`w-5 h-5 rounded flex items-center justify-center transition-all
+        ${checked ? "bg-red-500" : "bg-white/10 border border-white/20"}`}
+      >
         {checked && <i className="fas fa-check text-xs text-white"></i>}
       </div>
     </div>
     <div className="flex items-center gap-2">
-      <i className={`fas ${icon} ${checked ? 'text-red-400' : 'text-gray-400'}`}></i>
-      <span className={`text-sm ${checked ? 'text-white' : 'text-gray-300'}`}>{label}</span>
+      <i className={`fas ${icon} ${checked ? "text-red-400" : "text-gray-400"}`}></i>
+      <span className={`text-sm ${checked ? "text-white" : "text-gray-300"}`}>{label}</span>
     </div>
   </motion.label>
 )
 
-const SortOption = ({ 
-  label, 
-  selected, 
+const SortOption = ({
+  label,
+  selected,
   onChange,
-  icon
+  icon,
 }: {
   label: string
   selected: boolean
   onChange: () => void
   icon: string
 }) => (
-  <motion.label 
+  <motion.label
     className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
-      ${selected ? 'bg-red-500/10 border-red-500/50' : 'bg-white/5 border-white/10'} border`}
+      ${selected ? "bg-red-500/10 border-red-500/50" : "bg-white/5 border-white/10"} border`}
     whileHover={{ scale: 1.02 }}
     whileTap={{ scale: 0.98 }}
   >
     <div className="relative flex items-center">
-      <input
-        type="radio"
-        checked={selected}
-        onChange={onChange}
-        className="sr-only"
-      />
-      <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all
-        ${selected ? 'border-red-500' : 'border-white/20'} border`}>
+      <input type="radio" checked={selected} onChange={onChange} className="sr-only" />
+      <div
+        className={`w-5 h-5 rounded-full flex items-center justify-center transition-all
+        ${selected ? "border-red-500" : "border-white/20"} border`}
+      >
         {selected && <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>}
       </div>
     </div>
     <div className="flex items-center gap-2">
-      <i className={`fas ${icon} ${selected ? 'text-red-400' : 'text-gray-400'}`}></i>
-      <span className={`text-sm ${selected ? 'text-white' : 'text-gray-300'}`}>{label}</span>
+      <i className={`fas ${icon} ${selected ? "text-red-400" : "text-gray-400"}`}></i>
+      <span className={`text-sm ${selected ? "text-white" : "text-gray-300"}`}>{label}</span>
     </div>
   </motion.label>
 )
@@ -135,38 +129,59 @@ export default function ScriptsPage() {
     verified: false,
     keySystem: false,
     free: false,
-    paid: false
+    paid: false,
   })
   const [sortOptions, setSortOptions] = useState<SortOptions>({
-    sortBy: '',
-    sortOrder: 'descending'
+    sortBy: "",
+    sortOrder: "descending",
   })
 
   const handleImageError = (scriptId: string) => {
+    console.log(`Image error for script: ${scriptId}`)
     setImageErrors((prev) => ({
       ...prev,
       [scriptId]: true,
     }))
+
+    // Update the script in localStorage to use placeholder image for future loads
+    try {
+      const storedScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
+      const updatedScripts = storedScripts.map((script: Script) => {
+        if (script.id === scriptId && script.game) {
+          return {
+            ...script,
+            game: {
+              ...script.game,
+              imageUrl: "/placeholder.svg?height=160&width=320",
+            },
+          }
+        }
+        return script
+      })
+      localStorage.setItem("nexus_scripts", JSON.stringify(updatedScripts))
+    } catch (error) {
+      console.error("Error updating script image:", error)
+    }
   }
 
   const toggleFilter = (filterName: keyof FilterOptions) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [filterName]: !prev[filterName]
+      [filterName]: !prev[filterName],
     }))
   }
 
-  const handleSortChange = (sortBy: SortOptions['sortBy']) => {
-    setSortOptions(prev => ({
+  const handleSortChange = (sortBy: SortOptions["sortBy"]) => {
+    setSortOptions((prev) => ({
       ...prev,
-      sortBy: prev.sortBy === sortBy ? '' : sortBy
+      sortBy: prev.sortBy === sortBy ? "" : sortBy,
     }))
   }
 
   const toggleSortOrder = () => {
-    setSortOptions(prev => ({
+    setSortOptions((prev) => ({
       ...prev,
-      sortOrder: prev.sortOrder === 'ascending' ? 'descending' : 'ascending'
+      sortOrder: prev.sortOrder === "ascending" ? "descending" : "ascending",
     }))
   }
 
@@ -175,11 +190,11 @@ export default function ScriptsPage() {
       verified: false,
       keySystem: false,
       free: false,
-      paid: false
+      paid: false,
     })
     setSortOptions({
-      sortBy: '',
-      sortOrder: 'descending'
+      sortBy: "",
+      sortOrder: "descending",
     })
   }
 
@@ -191,6 +206,20 @@ export default function ScriptsPage() {
     setIsLoading(true)
     try {
       let storedScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
+
+      // Sanitize image URLs
+      storedScripts = storedScripts.map((script: Script) => {
+        if (script.game && (!script.game.imageUrl || !script.game.imageUrl.startsWith("http"))) {
+          return {
+            ...script,
+            game: {
+              ...script.game,
+              imageUrl: "/placeholder.svg?height=160&width=320",
+            },
+          }
+        }
+        return script
+      })
 
       // Apply filters
       if (filters.verified) {
@@ -212,19 +241,19 @@ export default function ScriptsPage() {
           let aValue, bValue
 
           switch (sortOptions.sortBy) {
-            case 'views':
+            case "views":
               aValue = a.views || 0
               bValue = b.views || 0
               break
-            case 'likes':
+            case "likes":
               aValue = a.likes?.length || 0
               bValue = b.likes?.length || 0
               break
-            case 'createdAt':
+            case "createdAt":
               aValue = new Date(a.createdAt).getTime()
               bValue = new Date(b.createdAt).getTime()
               break
-            case 'updatedAt':
+            case "updatedAt":
               aValue = a.updatedAt ? new Date(a.updatedAt).getTime() : new Date(a.createdAt).getTime()
               bValue = b.updatedAt ? new Date(b.updatedAt).getTime() : new Date(b.createdAt).getTime()
               break
@@ -232,7 +261,7 @@ export default function ScriptsPage() {
               return 0
           }
 
-          return sortOptions.sortOrder === 'ascending' ? aValue - bValue : bValue - aValue
+          return sortOptions.sortOrder === "ascending" ? aValue - bValue : bValue - aValue
         })
       }
 
@@ -468,11 +497,9 @@ export default function ScriptsPage() {
           whileHover={{ scale: 1.05, backgroundColor: "#1a1a1a" }}
           whileTap={{ scale: 0.95 }}
         >
-          <i className={`fas fa-${showAdvancedFilters ? 'times' : 'sliders-h'}`}></i>
-          {showAdvancedFilters ? 'Hide' : 'Filters'}
-          {Object.values(filters).some(Boolean) && (
-            <span className="ml-1 h-2 w-2 rounded-full bg-red-500"></span>
-          )}
+          <i className={`fas fa-${showAdvancedFilters ? "times" : "sliders-h"}`}></i>
+          {showAdvancedFilters ? "Hide" : "Filters"}
+          {Object.values(filters).some(Boolean) && <span className="ml-1 h-2 w-2 rounded-full bg-red-500"></span>}
         </motion.button>
       </div>
 
@@ -481,7 +508,7 @@ export default function ScriptsPage() {
         {showAdvancedFilters && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
+            animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
             className="mb-8 rounded-xl border border-red-500/20 bg-[#0a0a15] overflow-hidden"
@@ -496,7 +523,7 @@ export default function ScriptsPage() {
                     whileHover={{ backgroundColor: "#1a1a1a" }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <i className={`fas fa-${showFilterSection ? 'minus' : 'plus'} mr-1`}></i>
+                    <i className={`fas fa-${showFilterSection ? "minus" : "plus"} mr-1`}></i>
                     Filters
                   </motion.button>
                   <motion.button
@@ -505,7 +532,7 @@ export default function ScriptsPage() {
                     whileHover={{ backgroundColor: "#1a1a1a" }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <i className={`fas fa-${showSortSection ? 'minus' : 'plus'} mr-1`}></i>
+                    <i className={`fas fa-${showSortSection ? "minus" : "plus"} mr-1`}></i>
                     Sort
                   </motion.button>
                 </div>
@@ -517,33 +544,33 @@ export default function ScriptsPage() {
                   {showFilterSection && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
+                      animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.2 }}
                     >
                       <div className="grid grid-cols-2 gap-2">
-                        <FilterToggle 
-                          label="Verified" 
-                          checked={filters.verified} 
-                          onChange={() => toggleFilter('verified')}
+                        <FilterToggle
+                          label="Verified"
+                          checked={filters.verified}
+                          onChange={() => toggleFilter("verified")}
                           icon="fa-check-circle"
                         />
-                        <FilterToggle 
-                          label="Key System" 
-                          checked={filters.keySystem} 
-                          onChange={() => toggleFilter('keySystem')}
+                        <FilterToggle
+                          label="Key System"
+                          checked={filters.keySystem}
+                          onChange={() => toggleFilter("keySystem")}
                           icon="fa-key"
                         />
-                        <FilterToggle 
-                          label="Free" 
-                          checked={filters.free} 
-                          onChange={() => toggleFilter('free')}
+                        <FilterToggle
+                          label="Free"
+                          checked={filters.free}
+                          onChange={() => toggleFilter("free")}
                           icon="fa-gem"
                         />
-                        <FilterToggle 
-                          label="Paid" 
-                          checked={filters.paid} 
-                          onChange={() => toggleFilter('paid')}
+                        <FilterToggle
+                          label="Paid"
+                          checked={filters.paid}
+                          onChange={() => toggleFilter("paid")}
                           icon="fa-crown"
                         />
                       </div>
@@ -556,52 +583,52 @@ export default function ScriptsPage() {
                   {showSortSection && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
+                      animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.2 }}
                       className="space-y-3"
                     >
                       <div className="grid grid-cols-2 gap-2">
-                        <SortOption 
-                          label="Views" 
-                          selected={sortOptions.sortBy === 'views'} 
-                          onChange={() => handleSortChange('views')}
+                        <SortOption
+                          label="Views"
+                          selected={sortOptions.sortBy === "views"}
+                          onChange={() => handleSortChange("views")}
                           icon="fa-eye"
                         />
-                        <SortOption 
-                          label="Likes" 
-                          selected={sortOptions.sortBy === 'likes'} 
-                          onChange={() => handleSortChange('likes')}
+                        <SortOption
+                          label="Likes"
+                          selected={sortOptions.sortBy === "likes"}
+                          onChange={() => handleSortChange("likes")}
                           icon="fa-thumbs-up"
                         />
-                        <SortOption 
-                          label="Upload Date" 
-                          selected={sortOptions.sortBy === 'createdAt'} 
-                          onChange={() => handleSortChange('createdAt')}
+                        <SortOption
+                          label="Upload Date"
+                          selected={sortOptions.sortBy === "createdAt"}
+                          onChange={() => handleSortChange("createdAt")}
                           icon="fa-calendar-plus"
                         />
-                        <SortOption 
-                          label="Update Date" 
-                          selected={sortOptions.sortBy === 'updatedAt'} 
-                          onChange={() => handleSortChange('updatedAt')}
+                        <SortOption
+                          label="Update Date"
+                          selected={sortOptions.sortBy === "updatedAt"}
+                          onChange={() => handleSortChange("updatedAt")}
                           icon="fa-calendar-check"
                         />
                       </div>
 
                       <div className="flex gap-2">
                         <motion.button
-                          onClick={() => setSortOptions({...sortOptions, sortOrder: 'ascending'})}
+                          onClick={() => setSortOptions({ ...sortOptions, sortOrder: "ascending" })}
                           className={`flex-1 text-xs px-3 py-2 rounded-lg border flex items-center justify-center gap-2
-                            ${sortOptions.sortOrder === 'ascending' ? 'bg-red-500/20 border-red-500 text-white' : 'bg-white/5 border-white/10 text-gray-300'}`}
+                            ${sortOptions.sortOrder === "ascending" ? "bg-red-500/20 border-red-500 text-white" : "bg-white/5 border-white/10 text-gray-300"}`}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
                           <i className="fas fa-arrow-up"></i> Ascending
                         </motion.button>
                         <motion.button
-                          onClick={() => setSortOptions({...sortOptions, sortOrder: 'descending'})}
+                          onClick={() => setSortOptions({ ...sortOptions, sortOrder: "descending" })}
                           className={`flex-1 text-xs px-3 py-2 rounded-lg border flex items-center justify-center gap-2
-                            ${sortOptions.sortOrder === 'descending' ? 'bg-red-500/20 border-red-500 text-white' : 'bg-white/5 border-white/10 text-gray-300'}`}
+                            ${sortOptions.sortOrder === "descending" ? "bg-red-500/20 border-red-500 text-white" : "bg-white/5 border-white/10 text-gray-300"}`}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -674,7 +701,7 @@ export default function ScriptsPage() {
               <span>
                 {selectedCategory ? scriptCategories.find((c) => c.id === selectedCategory)?.name : "All Categories"}
               </span>
-              <i className={`fas fa-chevron-${showCategories ? 'up' : 'down'} text-gray-400`}></i>
+              <i className={`fas fa-chevron-${showCategories ? "up" : "down"} text-gray-400`}></i>
             </button>
 
             {showCategories && (
@@ -764,16 +791,22 @@ export default function ScriptsPage() {
               {script.game && (
                 <div className="relative h-40 w-full">
                   {!imageErrors[script.id] ? (
-                    <Image
-                      src={script.game?.imageUrl || "/placeholder.svg?height=160&width=320"}
-                      alt={script.game?.name || script.title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      quality={80}
-                      onError={() => handleImageError(script.id)}
-                      unoptimized
-                    />
+                    <div className="h-full w-full relative">
+                      <Image
+                        src={
+                          script.game?.imageUrl && script.game.imageUrl.startsWith("http")
+                            ? script.game.imageUrl
+                            : "/placeholder.svg?height=160&width=320"
+                        }
+                        alt={script.game?.name || script.title}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        quality={80}
+                        onError={() => handleImageError(script.id)}
+                        unoptimized
+                      />
+                    </div>
                   ) : (
                     <div className="h-full w-full flex items-center justify-center bg-gray-900">
                       <i className="fas fa-gamepad text-4xl text-red-500"></i>

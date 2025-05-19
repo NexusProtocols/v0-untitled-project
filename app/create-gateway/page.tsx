@@ -9,6 +9,8 @@ import Link from "next/link"
 
 type StepType = "redirect" | "article" | "operagx" | "youtube" | "direct"
 
+const MAX_STAGES = 5
+
 export default function CreateGatewayPage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
@@ -27,13 +29,9 @@ export default function CreateGatewayPage() {
   const [rateLimitCount, setRateLimitCount] = useState(5)
   const [rateLimitPeriod, setRateLimitPeriod] = useState<"hour" | "day" | "week" | "month">("day")
 
-  // Multi-stage gateway
+  // Multi-stage gateway: Start with only Stage 1
   const [stages, setStages] = useState([
-    { id: 1, level: 3, taskCount: 2 },
-    { id: 2, level: 3, taskCount: 3 },
-    { id: 3, level: 4, taskCount: 3 },
-    { id: 4, level: 4, taskCount: 4 },
-    { id: 5, level: 5, taskCount: 5 },
+    { id: 1, level: 3, taskCount: 2 }
   ])
 
   useEffect(() => {
@@ -46,19 +44,14 @@ export default function CreateGatewayPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
-    // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       setMessage({ type: "error", text: "Image size must be less than 10MB" })
       return
     }
-
-    // Check file type
     if (!file.type.startsWith("image/")) {
       setMessage({ type: "error", text: "File must be an image" })
       return
     }
-
     const reader = new FileReader()
     reader.onload = (event) => {
       if (event.target?.result) {
@@ -76,43 +69,38 @@ export default function CreateGatewayPage() {
     setStages(stages.map((stage) => (stage.id === stageId ? { ...stage, taskCount } : stage)))
   }
 
-  // Generate steps for a stage
+  const addStage = () => {
+    if (stages.length < MAX_STAGES) {
+      setStages([
+        ...stages,
+        {
+          id: stages.length + 1,
+          level: 3,
+          taskCount: 2,
+        }
+      ])
+    }
+  }
+
+  const removeStage = (stageId: number) => {
+    if (stages.length > 1) {
+      setStages(stages.filter((stage) => stage.id !== stageId).map((s, idx) => ({ ...s, id: idx + 1 })))
+    }
+  }
+
+  // ... Step generation helpers ...
   const generateStepsForStage = (stage: { level: number; taskCount: number }) => {
     const steps = []
     const { level, taskCount } = stage
 
-    // Determine step types based on level and task count
-    const stepTypes: StepType[] = []
-
     // Always include at least one redirect
-    stepTypes.push("redirect")
-
-    // Add more steps based on level and task count
-    if (level >= 2) {
-      stepTypes.push("operagx")
-    }
-
-    if (level >= 3) {
-      stepTypes.push("article")
-    }
-
-    if (level >= 4) {
-      stepTypes.push("youtube")
-    }
-
-    if (level >= 5) {
-      stepTypes.push("direct")
-    }
-
-    // Fill remaining slots with redirects
-    while (stepTypes.length < taskCount) {
-      stepTypes.push("redirect")
-    }
-
-    // Trim if we have too many
+    const stepTypes: StepType[] = ["redirect"]
+    if (level >= 2) stepTypes.push("operagx")
+    if (level >= 3) stepTypes.push("article")
+    if (level >= 4) stepTypes.push("youtube")
+    if (level >= 5) stepTypes.push("direct")
+    while (stepTypes.length < taskCount) stepTypes.push("redirect")
     const finalStepTypes = stepTypes.slice(0, taskCount)
-
-    // Create steps
     for (let i = 0; i < finalStepTypes.length; i++) {
       const type = finalStepTypes[i]
       steps.push({
@@ -126,81 +114,48 @@ export default function CreateGatewayPage() {
         skipAllowed: false,
       })
     }
-
     return steps
   }
-
-  // Helper functions for step generation
-  const getStepTitle = (type: StepType, index: number) => {
+  function getStepTitle(type: StepType, index: number) {
     switch (type) {
-      case "redirect":
-        return `Visit Website ${index + 1}`
-      case "article":
-        return "Read Article"
-      case "operagx":
-        return "Download Opera GX"
-      case "youtube":
-        return "Watch Video"
-      case "direct":
-        return "Visit Sponsor"
-      default:
-        return "Complete Task"
+      case "redirect": return `Visit Website ${index + 1}`
+      case "article": return "Read Article"
+      case "operagx": return "Download Opera GX"
+      case "youtube": return "Watch Video"
+      case "direct": return "Visit Sponsor"
+      default: return "Complete Task"
+    }
+  }
+  function getStepDescription(type: StepType) {
+    switch (type) {
+      case "redirect": return "Visit this website to continue"
+      case "article": return "Read this article to continue"
+      case "operagx": return "Download Opera GX browser to continue"
+      case "youtube": return "Watch this video to continue"
+      case "direct": return "Visit our sponsor to continue"
+      default: return "Complete this task to continue"
+    }
+  }
+  function getStepWaitTime(type: StepType) {
+    switch (type) {
+      case "redirect": return 10
+      case "article": return 15
+      case "operagx": return 10
+      case "youtube": return 20
+      case "direct": return 10
+      default: return 10
+    }
+  }
+  function getStepContent(type: StepType) {
+    switch (type) {
+      case "redirect": return { url: "https://example.com", platform: "other", buttonText: "Visit Link" }
+      case "article": return { url: "https://example.com/article" }
+      case "youtube": return { videoId: "dQw4w9WgXcQ" }
+      default: return {}
     }
   }
 
-  const getStepDescription = (type: StepType) => {
-    switch (type) {
-      case "redirect":
-        return "Visit this website to continue"
-      case "article":
-        return "Read this article to continue"
-      case "operagx":
-        return "Download Opera GX browser to continue"
-      case "youtube":
-        return "Watch this video to continue"
-      case "direct":
-        return "Visit our sponsor to continue"
-      default:
-        return "Complete this task to continue"
-    }
-  }
-
-  const getStepWaitTime = (type: StepType) => {
-    switch (type) {
-      case "redirect":
-        return 10
-      case "article":
-        return 15
-      case "operagx":
-        return 10
-      case "youtube":
-        return 20
-      case "direct":
-        return 10
-      default:
-        return 10
-    }
-  }
-
-  const getStepContent = (type: StepType) => {
-    switch (type) {
-      case "redirect":
-        return {
-          url: "https://example.com",
-          platform: "other",
-          buttonText: "Visit Link",
-        }
-      case "article":
-        return { url: "https://example.com/article" }
-      case "youtube":
-        return { videoId: "dQw4w9WgXcQ" }
-      case "operagx":
-      case "direct":
-      default:
-        return {}
-    }
-  }
-
+  // Handle submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage({ type: "", text: "" })
@@ -209,22 +164,18 @@ export default function CreateGatewayPage() {
       setMessage({ type: "error", text: "Gateway title is required" })
       return
     }
-
     if (!gatewayDescription) {
       setMessage({ type: "error", text: "Gateway description is required" })
       return
     }
-
     if (!gatewayImage) {
       setMessage({ type: "error", text: "Gateway image is required" })
       return
     }
-
     if (rewardType === "url" && !rewardUrl) {
       setMessage({ type: "error", text: "Reward URL is required" })
       return
     }
-
     if (rewardType === "paste" && !rewardPaste) {
       setMessage({ type: "error", text: "Reward content is required" })
       return
@@ -232,10 +183,7 @@ export default function CreateGatewayPage() {
 
     try {
       setIsSubmitting(true)
-
-      // Create a single gateway with multiple stages
       const gatewayId = `gateway-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-
       const gatewayObject = {
         id: gatewayId,
         title: gatewayTitle,
@@ -273,19 +221,11 @@ export default function CreateGatewayPage() {
         },
       }
 
-      // Get existing gateways from localStorage or initialize empty array
+      // Save to localStorage
       const existingGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
-
-      // Add new gateway
       existingGateways.push(gatewayObject)
-
-      // Save back to localStorage
       localStorage.setItem("nexus_gateways", JSON.stringify(existingGateways))
-
-      // Show success message
       setMessage({ type: "success", text: "Gateway created successfully! Redirecting..." })
-
-      // Redirect to manage gateways page after a delay
       setTimeout(() => {
         router.push("/manage-gateways")
       }, 2000)
@@ -334,7 +274,7 @@ export default function CreateGatewayPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-8 shadow-lg shadow-[#ff3e3e]/10"
+          className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#0a0a10] p-8 shadow-lg shadow-[#ff3e3e]/10"
         >
           <div className="mb-6">
             <h2 className="mb-4 text-xl font-bold text-white">Gateway Information</h2>
@@ -347,11 +287,10 @@ export default function CreateGatewayPage() {
                 id="gatewayTitle"
                 value={gatewayTitle}
                 onChange={(e) => setGatewayTitle(e.target.value)}
-                className="input-focus-effect w-full rounded border border-white/10 bg-[#000000] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                className="input-focus-effect w-full rounded border border-white/10 bg-[#07071a] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                 placeholder="Enter a title for your gateway"
               />
             </div>
-
             <div className="mb-4">
               <label htmlFor="gatewayDescription" className="mb-2 block font-medium text-[#ff3e3e]">
                 Gateway Description
@@ -360,12 +299,11 @@ export default function CreateGatewayPage() {
                 id="gatewayDescription"
                 value={gatewayDescription}
                 onChange={(e) => setGatewayDescription(e.target.value)}
-                className="input-focus-effect w-full rounded border border-white/10 bg-[#000000] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                className="input-focus-effect w-full rounded border border-white/10 bg-[#07071a] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                 rows={3}
                 placeholder="Describe what users will get from this gateway"
               />
             </div>
-
             <div className="mb-4">
               <label htmlFor="gatewayImage" className="mb-2 block font-medium text-[#ff3e3e]">
                 Gateway Image
@@ -374,7 +312,7 @@ export default function CreateGatewayPage() {
                 <input type="file" id="gatewayImage" accept="image/*" onChange={handleImageUpload} className="hidden" />
                 <label
                   htmlFor="gatewayImage"
-                  className="interactive-element flex cursor-pointer items-center justify-center rounded border border-dashed border-white/20 bg-[#000000] p-4 transition-all hover:border-[#ff3e3e]/50 hover:shadow-md hover:scale-[1.01] transform duration-200"
+                  className="interactive-element flex cursor-pointer items-center justify-center rounded border border-dashed border-white/20 bg-[#07071a] p-4 transition-all hover:border-[#ff3e3e]/50 hover:shadow-md hover:scale-[1.01] transform duration-200"
                 >
                   <div className="text-center">
                     <i className="fas fa-upload mb-2 text-2xl text-[#ff3e3e]"></i>
@@ -382,9 +320,8 @@ export default function CreateGatewayPage() {
                   </div>
                 </label>
               </div>
-
               {gatewayImage && (
-                <div className="mt-4 rounded border border-white/10 bg-[#000000] p-2">
+                <div className="mt-4 rounded border border-white/10 bg-[#07071a] p-2">
                   <div className="relative h-40 w-full overflow-hidden rounded">
                     <img
                       src={gatewayImage || "/placeholder.svg"}
@@ -416,7 +353,7 @@ export default function CreateGatewayPage() {
                   type="button"
                   onClick={() => setRewardType("url")}
                   className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
-                    rewardType === "url" ? "bg-[#ff3e3e] text-white" : "bg-[#000000] text-white border border-white/10"
+                    rewardType === "url" ? "bg-[#ff3e3e] text-white" : "bg-[#07071a] text-white border border-white/10"
                   }`}
                 >
                   <i className="fas fa-external-link-alt"></i>
@@ -425,14 +362,13 @@ export default function CreateGatewayPage() {
                     <div className="text-xs opacity-80">Send users to another website</div>
                   </div>
                 </button>
-
                 <button
                   type="button"
                   onClick={() => setRewardType("paste")}
                   className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
                     rewardType === "paste"
                       ? "bg-[#ff3e3e] text-white"
-                      : "bg-[#000000] text-white border border-white/10"
+                      : "bg-[#07071a] text-white border border-white/10"
                   }`}
                 >
                   <i className="fas fa-copy"></i>
@@ -443,7 +379,6 @@ export default function CreateGatewayPage() {
                 </button>
               </div>
             </div>
-
             {rewardType === "url" ? (
               <div className="mb-4">
                 <label htmlFor="rewardUrl" className="mb-2 block font-medium text-[#ff3e3e]">
@@ -454,7 +389,7 @@ export default function CreateGatewayPage() {
                   id="rewardUrl"
                   value={rewardUrl}
                   onChange={(e) => setRewardUrl(e.target.value)}
-                  className="input-focus-effect w-full rounded border border-white/10 bg-[#000000] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                  className="input-focus-effect w-full rounded border border-white/10 bg-[#07071a] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                   placeholder="https://example.com/reward"
                 />
                 <p className="mt-1 text-xs text-gray-400">
@@ -470,7 +405,7 @@ export default function CreateGatewayPage() {
                   id="rewardPaste"
                   value={rewardPaste}
                   onChange={(e) => setRewardPaste(e.target.value)}
-                  className="input-focus-effect w-full rounded border border-white/10 bg-[#000000] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                  className="input-focus-effect w-full rounded border border-white/10 bg-[#07071a] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                   rows={5}
                   placeholder="Enter the content users will receive after completing all steps"
                 />
@@ -481,120 +416,77 @@ export default function CreateGatewayPage() {
             )}
           </div>
 
+          {/* Multi-Stage Gateway Section */}
           <div className="mb-6">
-            <h2 className="mb-4 text-xl font-bold text-white">Multi-Stage Gateway</h2>
+            <h2 className="mb-4 text-xl font-bold text-white galaxy-heading">Multi-Stage Gateway</h2>
             <p className="mb-4 text-sm text-gray-400">
-              Configure each stage of your gateway with different task counts and ad levels
+              Configure each stage of your gateway with different task counts and ad levels. You must press "Add Stage" to add another stage. Maximum 5 stages.
             </p>
 
-            <div className="space-y-4 mb-4">
+            <div className="space-y-6 mb-4">
               {stages.map((stage) => (
                 <div
                   key={stage.id}
-                  className="rounded-lg border border-white/10 bg-[#000000] p-4 hover:border-[#ff3e3e]/30 transition-all duration-200"
+                  className="rounded-xl border border-white/10 bg-[#141427] p-6 shadow-lg galaxy-stage-card relative"
+                  style={{
+                    boxShadow:
+                      "0 0 36px 8px rgba(80,0,255,0.18), 0 0 0 2px #2d2250 inset",
+                    background:
+                      "radial-gradient(ellipse at 60% 40%,rgba(80,0,255,0.08) 0%,rgba(20,22,38,1) 100%)",
+                  }}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-medium text-white">Stage {stage.id}</h3>
+                    <h3 className="font-medium text-white galaxy-text-glow">Stage {stage.id}</h3>
+                    <button
+                      type="button"
+                      onClick={() => removeStage(stage.id)}
+                      disabled={stages.length <= 1}
+                      className={`ml-auto px-3 py-1 rounded transition-all font-semibold text-xs ${
+                        stages.length <= 1
+                          ? "opacity-40 cursor-not-allowed"
+                          : "bg-red-900/30 text-red-300 hover:bg-red-400/20 hover:text-white"
+                      }`}
+                    >
+                      <i className="fas fa-times"></i>
+                    </button>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Ad Level */}
                     <div>
-                      <label className="mb-2 block font-medium text-[#ff3e3e]">Ad Level</label>
-                      <div className="flex flex-wrap gap-2 mt-2">
+                      <div className="mb-3 font-semibold text-[#ff3e3e] galaxy-label">Ad Level</div>
+                      <div className="flex flex-wrap gap-3">
                         {[1, 2, 3, 4, 5].map((level) => (
                           <button
                             key={level}
                             type="button"
                             onClick={() => updateStageLevel(stage.id, level)}
-                            className={`relative overflow-hidden rounded-lg px-4 py-2 font-medium transition-all duration-300 ${
+                            className={`galaxy-btn px-4 py-2 rounded-lg transition-all font-medium shadow-lg ${
                               stage.level === level
-                                ? "bg-gradient-to-r from-[#1a1a1a] to-[#000000] text-white border-2 border-[#ff3e3e] shadow-lg shadow-[#ff3e3e]/20"
-                                : "bg-[#0a0a0a] text-gray-400 border border-white/10"
+                                ? "bg-[#2d2250] border-2 border-[#8a2be2] text-[#fff] galaxy-btn-selected"
+                                : "bg-[#18182c] border border-white/10 text-gray-300"
                             }`}
                           >
-                            {/* Galaxy-themed background for selected level */}
-                            {stage.level === level && (
-                              <div className="absolute inset-0 opacity-30 pointer-events-none">
-                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/30 via-black/0 to-transparent"></div>
-                                <div className="absolute top-0 left-0 w-1 h-1 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"></div>
-                                <div
-                                  className="absolute top-1/4 right-1/4 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"
-                                  style={{ animationDelay: "0.5s" }}
-                                ></div>
-                                <div
-                                  className="absolute bottom-1/3 left-1/3 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"
-                                  style={{ animationDelay: "1.2s" }}
-                                ></div>
-                              </div>
-                            )}
-
-                            {/* Shiny effect for selected level */}
-                            {stage.level === level && (
-                              <div className="absolute inset-0 overflow-hidden">
-                                <div
-                                  className="absolute -inset-[100%] animate-[spin_3s_linear_infinite] opacity-30"
-                                  style={{
-                                    background:
-                                      "conic-gradient(transparent, rgba(255,255,255,0.5), transparent, transparent)",
-                                    clipPath: "polygon(50% 50%, 100% 0, 100% 100%, 0 100%, 0 0)",
-                                  }}
-                                ></div>
-                              </div>
-                            )}
-
-                            <span className="relative z-10">Level {level}</span>
+                            Level {level}
                           </button>
                         ))}
                       </div>
                     </div>
-
+                    {/* Task Count */}
                     <div>
-                      <label className="mb-2 block font-medium text-[#ff3e3e]">Task Count</label>
-                      <div className="flex flex-wrap gap-2 mt-2">
+                      <div className="mb-3 font-semibold text-[#ff3e3e] galaxy-label">Task Count</div>
+                      <div className="flex flex-wrap gap-3">
                         {[1, 2, 3, 4, 5].map((count) => (
                           <button
                             key={count}
                             type="button"
                             onClick={() => updateStageTaskCount(stage.id, count)}
-                            className={`relative overflow-hidden rounded-lg px-4 py-2 font-medium transition-all duration-300 ${
+                            className={`galaxy-btn px-4 py-2 rounded-lg transition-all font-medium shadow-lg ${
                               stage.taskCount === count
-                                ? "bg-gradient-to-r from-[#1a1a1a] to-[#000000] text-white border-2 border-[#ff3e3e] shadow-lg shadow-[#ff3e3e]/20"
-                                : "bg-[#0a0a0a] text-gray-400 border border-white/10"
+                                ? "bg-[#2d2250] border-2 border-[#8a2be2] text-[#fff] galaxy-btn-selected"
+                                : "bg-[#18182c] border border-white/10 text-gray-300"
                             }`}
                           >
-                            {/* Galaxy-themed background for selected count */}
-                            {stage.taskCount === count && (
-                              <div className="absolute inset-0 opacity-30 pointer-events-none">
-                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/30 via-black/0 to-transparent"></div>
-                                <div className="absolute top-0 left-0 w-1 h-1 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"></div>
-                                <div
-                                  className="absolute top-1/4 right-1/4 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"
-                                  style={{ animationDelay: "0.5s" }}
-                                ></div>
-                                <div
-                                  className="absolute bottom-1/3 left-1/3 w-0.5 h-0.5 rounded-full bg-white shadow-lg shadow-white/50 animate-pulse"
-                                  style={{ animationDelay: "1.2s" }}
-                                ></div>
-                              </div>
-                            )}
-
-                            {/* Shiny effect for selected count */}
-                            {stage.taskCount === count && (
-                              <div className="absolute inset-0 overflow-hidden">
-                                <div
-                                  className="absolute -inset-[100%] animate-[spin_3s_linear_infinite] opacity-30"
-                                  style={{
-                                    background:
-                                      "conic-gradient(transparent, rgba(255,255,255,0.5), transparent, transparent)",
-                                    clipPath: "polygon(50% 50%, 100% 0, 100% 100%, 0 100%, 0 0)",
-                                  }}
-                                ></div>
-                              </div>
-                            )}
-
-                            <span className="relative z-10">
-                              {count} {count === 1 ? "Task" : "Tasks"}
-                            </span>
+                            {count} Task{count > 1 ? "s" : ""}
                           </button>
                         ))}
                       </div>
@@ -602,6 +494,20 @@ export default function CreateGatewayPage() {
                   </div>
                 </div>
               ))}
+            </div>
+            {/* Add Stage Button */}
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={addStage}
+                disabled={stages.length >= MAX_STAGES}
+                className="galaxy-add-stage-btn px-7 py-3 rounded-xl mt-2 text-lg font-bold bg-gradient-to-r from-[#8a2be2] to-[#3b1c6b] text-white shadow-xl transition-all hover:scale-105 hover:from-[#a161ff] hover:to-[#4d2a8a] disabled:opacity-40"
+              >
+                <i className="fas fa-plus mr-2"></i> Add Stage
+              </button>
+              <div className="mt-2 text-sm text-gray-400">
+                {stages.length >= MAX_STAGES ? "Maximum of 5 stages reached." : ""}
+              </div>
             </div>
           </div>
 
@@ -616,50 +522,45 @@ export default function CreateGatewayPage() {
                       type="checkbox"
                       checked={showSubscriptionOptions}
                       onChange={(e) => setShowSubscriptionOptions(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#000000] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#07071a] text-[#ff3e3e]"
                     />
                     <span className="text-white">Show subscription options to skip ads</span>
                   </label>
-
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={showOperaGxOffer}
                       onChange={(e) => setShowOperaGxOffer(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#000000] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#07071a] text-[#ff3e3e]"
                     />
                     <span className="text-white">Show Opera GX offer</span>
                   </label>
                 </div>
-
                 <div className="space-y-3">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={blockVpnUsers}
                       onChange={(e) => setBlockVpnUsers(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#000000] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#07071a] text-[#ff3e3e]"
                     />
                     <span className="text-white">Block VPN Users</span>
                   </label>
                 </div>
               </div>
-
-              <div className="p-4 rounded-lg border border-white/10 bg-[#0a0a0a]">
+              <div className="p-4 rounded-lg border border-white/10 bg-[#191932]">
                 <h3 className="text-lg font-medium text-white mb-4">Rate Limit Settings</h3>
-
                 <div className="flex items-center gap-2 mb-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={rateLimitEnabled}
                       onChange={(e) => setRateLimitEnabled(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#000000] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#07071a] text-[#ff3e3e]"
                     />
                     <span className="text-white">Rate Limit Per User</span>
                   </label>
                 </div>
-
                 {rateLimitEnabled && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -675,10 +576,9 @@ export default function CreateGatewayPage() {
                         onChange={(e) =>
                           setRateLimitCount(Math.max(1, Math.min(60, Number.parseInt(e.target.value) || 1)))
                         }
-                        className="input-focus-effect w-full rounded border border-white/10 bg-[#000000] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                        className="input-focus-effect w-full rounded border border-white/10 bg-[#07071a] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
                       />
                     </div>
-
                     <div>
                       <label htmlFor="rateLimitPeriod" className="mb-2 block text-sm font-medium text-[#ff3e3e]">
                         Time Period
@@ -692,17 +592,14 @@ export default function CreateGatewayPage() {
                             className={`relative overflow-hidden rounded-lg px-3 py-1 font-medium transition-all duration-300 ${
                               rateLimitPeriod === period
                                 ? "bg-gradient-to-r from-[#1a1a1a] to-[#000000] text-white border-2 border-[#ff3e3e] shadow-lg shadow-[#ff3e3e]/20"
-                                : "bg-[#0a0a0a] text-gray-400 border border-white/10"
+                                : "bg-[#18182c] text-gray-400 border border-white/10"
                             }`}
                           >
-                            {/* Galaxy-themed background for selected period */}
                             {rateLimitPeriod === period && (
                               <div className="absolute inset-0 opacity-30 pointer-events-none">
                                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/30 via-black/0 to-transparent"></div>
                               </div>
                             )}
-
-                            {/* Shiny effect for selected period */}
                             {rateLimitPeriod === period && (
                               <div className="absolute inset-0 overflow-hidden">
                                 <div
@@ -715,7 +612,6 @@ export default function CreateGatewayPage() {
                                 ></div>
                               </div>
                             )}
-
                             <span className="relative z-10 capitalize">{period}</span>
                           </button>
                         ))}
@@ -749,6 +645,37 @@ export default function CreateGatewayPage() {
           </button>
         </form>
       </div>
+      {/* Galaxy Theme CSS */}
+      <style jsx>{`
+        .galaxy-stage-card {
+          border: 1.5px solid #3d2964;
+          box-shadow: 0 0 32px 8px #4a23b4a8, 0 0 0 2px #2d2250 inset;
+          position: relative;
+          overflow: hidden;
+        }
+        .galaxy-btn-selected {
+          box-shadow: 0 0 12px 3px #8a2be2cc, 0 0 0 2px #fff1 inset !important;
+          text-shadow: 0 0 6px #fff3;
+        }
+        .galaxy-btn {
+          position: relative;
+          z-index: 1;
+        }
+        .galaxy-label {
+          letter-spacing: 1px;
+          text-shadow: 0 0 8px #a161ff44;
+        }
+        .galaxy-heading {
+          text-shadow: 0 0 18px #a161ff88, 0 0 8px #fff2;
+        }
+        .galaxy-text-glow {
+          text-shadow: 0 0 10px #a161ff99, 0 0 6px #fff2;
+        }
+        .galaxy-add-stage-btn {
+          background: linear-gradient(90deg, #8a2be2 0%, #3b1c6b 100%);
+          box-shadow: 0 0 24px 4px #8a2be277, 0 0 0 2px #3b1c6b99 inset;
+        }
+      `}</style>
     </div>
   )
 }

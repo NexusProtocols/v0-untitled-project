@@ -2,7 +2,7 @@ import Link from "next/link"
 
 export default function NotFoundPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
+    <div className="min-h-screen flex justify-center pt-32 bg-black">
       <div className="mx-auto max-w-lg rounded-lg border-l-4 border-red-500 bg-[#1a1a1a] p-8 text-center">
         <div className="mb-4 text-6xl text-red-400">
           <i className="fas fa-exclamation-triangle"></i>

@@ -430,7 +430,7 @@ export default function CreateGatewayPage() {
                 type="button"
                 onClick={addStage}
                 disabled={stages.length >= MAX_STAGES}
-                className="px-7 py-3 rounded-xl mt-2 text-lg font-bold bg-gradient-to-r from-[#232323] to-[#101010] text-white shadow-xl transition-all hover:scale-105 hover:from-[#353535] hover:to-[#161616] disabled:opacity-40"
+                className="px-7 py-3 rounded-xl mt-2 text-lg font-bold bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] text-white shadow-xl transition-all hover:scale-105 disabled:opacity-40"
               >
                 <i className="fas fa-plus mr-2"></i> Add Stage
               </button>

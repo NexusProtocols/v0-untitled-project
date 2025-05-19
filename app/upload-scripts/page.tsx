@@ -31,6 +31,47 @@ type GameDetails = {
 // List of popular game IDs that require Discord authentication
 const POPULAR_GAME_IDS = ["18668065416", "920587237", "2753915549"]
 
+// Universal ad loader for Next.js/React (reloads script on every mount/change)
+function AdScript({ id, atOptions, src }: { id: string; atOptions: any; src: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!ref.current) return
+    ref.current.innerHTML = ""
+    // Assign atOptions to window with a unique variable per ad
+    const win = window as any
+    const uniqueKey = `atOptions_${id}`
+    win[uniqueKey] = atOptions
+
+    // Set window.atOptions for compatibility with ad network
+    Object.defineProperty(window, "atOptions", {
+      get() {
+        return win[uniqueKey]
+      },
+      configurable: true,
+    })
+
+    // Ad script
+    const script = document.createElement("script")
+    script.type = "text/javascript"
+    script.async = false
+    script.src = src
+    ref.current.appendChild(script)
+
+    // Clean up: remove property and script
+    return () => {
+      delete win[uniqueKey]
+      try {
+        delete (window as any).atOptions
+      } catch {}
+      if (ref.current) ref.current.innerHTML = ""
+    }
+    // eslint-disable-next-line
+  }, [id, atOptions, src])
+
+  return <div ref={ref} style={{ width: atOptions.width, height: atOptions.height, minHeight: atOptions.height }} />
+}
+
 export default function UploadScriptsPage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
@@ -116,29 +157,6 @@ export default function UploadScriptsPage() {
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [categoriesRef])
-
-  // --- AD: load JS after mount for each ad block ---
-  function AdScript({ id, atOptions, src }: { id: string; atOptions: any; src: string }) {
-    const ref = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-      if (!ref.current) return
-      // Clean up previous ad
-      ref.current.innerHTML = ""
-      const script = document.createElement("script")
-      script.type = "text/javascript"
-      script.innerHTML =
-        "atOptions = " + JSON.stringify(atOptions) + ";"
-      ref.current.appendChild(script)
-
-      const invoke = document.createElement("script")
-      invoke.type = "text/javascript"
-      invoke.src = src
-      ref.current.appendChild(invoke)
-    }, [id, atOptions, src])
-
-    return <div ref={ref} style={{ width: atOptions["width"], height: atOptions["height"] }} />
-  }
 
   const handleFetchGameDetailsById = async () => {
     if (!gameId) {
@@ -352,20 +370,18 @@ export default function UploadScriptsPage() {
         </h1>
 
         {/* Banner Ad - Top */}
-        <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
-          <div className="flex justify-center">
-            <AdScript
-              id="ad728top"
-              atOptions={{
-                key: "fd9b1c1a9efee5e08a1818fb900a7d69",
-                format: "iframe",
-                height: 90,
-                width: 728,
-                params: {},
-              }}
-              src="//geometrydoomeddrone.com/fd9b1c1a9efee5e08a1818fb900a7d69/invoke.js"
-            />
-          </div>
+        <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2 flex justify-center">
+          <AdScript
+            id="ad728top"
+            atOptions={{
+              key: "fd9b1c1a9efee5e08a1818fb900a7d69",
+              format: "iframe",
+              height: 90,
+              width: 728,
+              params: {},
+            }}
+            src="//geometrydoomeddrone.com/fd9b1c1a9efee5e08a1818fb900a7d69/invoke.js"
+          />
         </div>
 
         {message.text && (
@@ -573,20 +589,18 @@ export default function UploadScriptsPage() {
           </div>
 
           {/* Banner Ad - Middle */}
-          <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
-            <div className="flex justify-center">
-              <AdScript
-                id="ad320middle"
-                atOptions={{
-                  key: "3e8a77126905eb1bf6906ca144e2e0dd",
-                  format: "iframe",
-                  height: 50,
-                  width: 320,
-                  params: {},
-                }}
-                src="//geometrydoomeddrone.com/3e8a77126905eb1bf6906ca144e2e0dd/invoke.js"
-              />
-            </div>
+          <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2 flex justify-center">
+            <AdScript
+              id="ad320middle"
+              atOptions={{
+                key: "3e8a77126905eb1bf6906ca144e2e0dd",
+                format: "iframe",
+                height: 50,
+                width: 320,
+                params: {},
+              }}
+              src="//geometrydoomeddrone.com/3e8a77126905eb1bf6906ca144e2e0dd/invoke.js"
+            />
           </div>
 
           {gameDetails && (
@@ -702,20 +716,18 @@ export default function UploadScriptsPage() {
           </div>
 
           {/* Banner Ad - Bottom */}
-          <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
-            <div className="flex justify-center">
-              <AdScript
-                id="ad728bottom"
-                atOptions={{
-                  key: "26399d5117f28dad5c8e0a5f7fa6a967",
-                  format: "iframe",
-                  height: 90,
-                  width: 728,
-                  params: {},
-                }}
-                src="//geometrydoomeddrone.com/26399d5117f28dad5c8e0a5f7fa6a967/invoke.js"
-              />
-            </div>
+          <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2 flex justify-center">
+            <AdScript
+              id="ad728bottom"
+              atOptions={{
+                key: "26399d5117f28dad5c8e0a5f7fa6a967",
+                format: "iframe",
+                height: 90,
+                width: 728,
+                params: {},
+              }}
+              src="//geometrydoomeddrone.com/26399d5117f28dad5c8e0a5f7fa6a967/invoke.js"
+            />
           </div>
 
           <div className="flex gap-4">
@@ -740,7 +752,6 @@ export default function UploadScriptsPage() {
 }
 
 async function isAdmin(username: string): Promise<boolean> {
-  // Replace with your actual admin check logic (e.g., fetching from a database)
   const adminUsernames = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"]
   return adminUsernames.includes(username)
 }

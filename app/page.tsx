@@ -160,7 +160,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Remove icon glowing bg behind the feature icons and add space between feature and gateway sections */}
+      {/**/}
       <style jsx>{`
         .card-hover .fa-code,
         .card-hover .fa-shield-alt,

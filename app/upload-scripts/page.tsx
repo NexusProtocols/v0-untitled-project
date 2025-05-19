@@ -117,8 +117,8 @@ export default function UploadScriptsPage() {
     }
   }, [categoriesRef])
 
-  // ---- AD: load JS after mount for each ad block ----
-  function AdScript({ id, atOptions, src }: { id: string; atOptions: object; src: string }) {
+  // --- AD: load JS after mount for each ad block ---
+  function AdScript({ id, atOptions, src }: { id: string; atOptions: any; src: string }) {
     const ref = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
@@ -219,9 +219,7 @@ export default function UploadScriptsPage() {
   }
 
   const checkDiscordRequirement = (gameId: string) => {
-    // List of popular games that require Discord connection
     const popularGames = ["18668065416", "920587237", "2753915549"]
-
     if (popularGames.includes(gameId)) {
       if (!user?.discord_id) {
         return {
@@ -230,7 +228,6 @@ export default function UploadScriptsPage() {
         }
       }
     }
-
     return { required: false }
   }
 
@@ -405,7 +402,176 @@ export default function UploadScriptsPage() {
         )}
 
         <form onSubmit={handleSubmit} className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-8">
-          {/* ... (form code unchanged for brevity) ... */}
+          <div className="mb-6">
+            <label htmlFor="scriptTitle" className="mb-2 block font-medium text-[#ff3e3e]">
+              Script Title
+            </label>
+            <input
+              type="text"
+              id="scriptTitle"
+              value={scriptTitle}
+              onChange={(e) => setScriptTitle(e.target.value)}
+              className="w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:border-[#ff3e3e]/50"
+              placeholder="Enter a title for your script"
+            />
+          </div>
+
+          {isNexusTeamMember && (
+            <div className="mb-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={uploadAsTeam}
+                  onChange={() => setUploadAsTeam(!uploadAsTeam)}
+                  className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#00a2ff]"
+                />
+                <span className="text-white">
+                  Upload as{" "}
+                  <span>
+                    <i style={{ color: "var(--secondary)" }} className="fas fa-user-shield"></i> Nexus Team
+                  </span>
+                </span>
+              </label>
+              <p className="mt-1 text-xs text-gray-400">This script will be marked as an official Nexus Team script</p>
+            </div>
+          )}
+
+          <div className="mb-6">
+            <label className="mb-2 block font-medium text-[#ff3e3e]">Game Search</label>
+
+            <div className="mb-4 flex gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchMethod("id")
+                  setShowSearchResults(false)
+                }}
+                className={`flex-1 rounded px-4 py-2 ${
+                  searchMethod === "id"
+                    ? "bg-[#00c6ed] text-[#050505] font-semibold"
+                    : "bg-[#050505] text-white border border-white/10"
+                }`}
+              >
+                Search by ID
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchMethod("name")
+                  setShowSearchResults(false)
+                }}
+                className={`flex-1 rounded px-4 py-2 ${
+                  searchMethod === "name"
+                    ? "bg-[#00c6ed] text-[#050505] font-semibold"
+                    : "bg-[#050505] text-white border border-white/10"
+                }`}
+              >
+                Search by Name
+              </button>
+            </div>
+
+            {searchMethod === "id" ? (
+              <div className="mb-4">
+                <label htmlFor="gameId" className="mb-2 block text-sm font-medium text-gray-300">
+                  Game ID
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="gameId"
+                    value={gameId}
+                    onChange={(e) => setGameId(e.target.value)}
+                    className="flex-1 rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all focus:border-[#00c6ed] focus:outline-none focus:ring-1 focus:ring-[#00c6ed]"
+                    placeholder="Enter Roblox game ID"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleFetchGameDetailsById}
+                    disabled={isLoadingGame}
+                    className="rounded bg-[#00c6ed] px-4 py-3 font-semibold text-[#050505] transition-all hover:bg-[#00b8ff] disabled:opacity-50"
+                  >
+                    {isLoadingGame ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#050505]/20 border-t-[#050505]"></div>
+                        <span>Loading...</span>
+                      </div>
+                    ) : (
+                      "Fetch Game"
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <label htmlFor="gameName" className="mb-2 block text-sm font-medium text-gray-300">
+                  Game Name
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="gameName"
+                    value={gameName}
+                    onChange={(e) => setGameName(e.target.value)}
+                    className="flex-1 rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all focus:border-[#00c6ed] focus:outline-none focus:ring-1 focus:ring-[#00c6ed]"
+                    placeholder="Enter Roblox game name"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSearchGamesByName}
+                    disabled={isLoadingGame}
+                    className="rounded bg-[#00c6ed] px-4 py-3 font-semibold text-[#050505] transition-all hover:bg-[#00b8ff] disabled:opacity-50"
+                  >
+                    {isLoadingGame ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#050505]/20 border-t-[#050505]"></div>
+                        <span>Loading...</span>
+                      </div>
+                    ) : (
+                      "Search Game"
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {gameError && <p className="mt-1 text-sm text-red-400">{gameError}</p>}
+
+            {/* Game search results */}
+            {showSearchResults && gameSearchResults.length > 0 && (
+              <div className="mt-4 max-h-80 overflow-y-auto rounded border border-white/10 bg-[#050505] p-2">
+                <h3 className="mb-2 px-2 text-sm font-medium text-gray-300">Search Results</h3>
+                <div className="space-y-2">
+                  {gameSearchResults.map((game) => (
+                    <div
+                      key={game.gameId}
+                      className="flex cursor-pointer items-center gap-3 rounded p-2 transition-all hover:bg-[#1a1a1a]"
+                      onClick={() => handleSelectGame(game)}
+                    >
+                      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded">
+                        <img
+                          src={game.imageUrl || "/placeholder.svg"}
+                          alt={game.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-white">{game.name}</h4>
+                        <div className="flex items-center gap-4 text-xs text-gray-400">
+                          <span>
+                            <i className="fas fa-thumbs-up mr-1"></i> {game.stats.likes}
+                          </span>
+                          <span>
+                            <i className="fas fa-user mr-1"></i> {game.stats.playing}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Banner Ad - Middle */}
           <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
             <div className="flex justify-center">
@@ -422,7 +588,118 @@ export default function UploadScriptsPage() {
               />
             </div>
           </div>
-          {/* ... (rest of form code unchanged) ... */}
+
+          {gameDetails && (
+            <div className="mb-6 rounded border border-white/10 bg-[#050505] p-4">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 overflow-hidden rounded">
+                  <img
+                    src={gameDetails.imageUrl || "/placeholder.svg"}
+                    alt={gameDetails.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-medium text-white">{gameDetails.name}</h3>
+                  <p className="text-sm text-gray-400">Game ID: {gameDetails.gameId}</p>
+                  {requiresDiscord && (
+                    <p className="mt-1 text-xs text-blue-400">
+                      <i className="fab fa-discord mr-1"></i> Discord authentication required
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {gameDetails && checkDiscordRequirement(gameDetails.gameId || "").required && (
+            <div className="mt-4 rounded bg-yellow-900/30 p-4 text-yellow-200">
+              <div className="flex items-center">
+                <i className="fas fa-exclamation-triangle mr-2"></i>
+                <p>
+                  This is a popular game. You need to connect your Discord account to upload scripts for it.
+                  <Link href="/settings" className="ml-2 underline">
+                    Connect Discord
+                  </Link>
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="mb-6">
+            <label className="mb-2 block font-medium text-[#ff3e3e]">Categories</label>
+            <div className="relative" ref={categoriesRef}>
+              <button
+                type="button"
+                onClick={() => setShowCategories(!showCategories)}
+                className="w-full flex justify-between items-center rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all focus:border-[#00c6ed] focus:outline-none focus:ring-1 focus:ring-[#00c6ed]"
+              >
+                <span>
+                  {selectedCategories.length === 0
+                    ? "Select Categories"
+                    : `${selectedCategories.length} ${selectedCategories.length === 1 ? "Category" : "Categories"} Selected`}
+                </span>
+                <i className={`fas fa-chevron-${showCategories ? "up" : "down"} text-gray-400`}></i>
+              </button>
+
+              {showCategories && (
+                <div className="absolute z-10 mt-1 w-full rounded border border-white/10 bg-[#050505] py-1 shadow-lg max-h-60 overflow-y-auto">
+                  {scriptCategories.map((category) => (
+                    <div
+                      key={category.id}
+                      className="px-4 py-2 hover:bg-[#1a1a1a] cursor-pointer flex items-center"
+                      onClick={() => handleCategoryToggle(category.id)}
+                    >
+                      <div
+                        className={`mr-2 flex h-4 w-4 items-center justify-center rounded border ${
+                          selectedCategories.includes(category.id) ? "border-[#ff3e3e] bg-[#ff3e3e]" : "border-white/30"
+                        }`}
+                      >
+                        {selectedCategories.includes(category.id) && (
+                          <i className="fas fa-check text-xs text-[#050505]"></i>
+                        )}
+                      </div>
+                      <span className={selectedCategories.includes(category.id) ? "text-[#ff3e3e]" : "text-white"}>
+                        {category.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-gray-400">Select all that apply</p>
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="scriptDescription" className="mb-2 block font-medium text-[#ff3e3e]">
+              Description
+            </label>
+            <textarea
+              id="scriptDescription"
+              value={scriptDescription}
+              onChange={(e) => setScriptDescription(e.target.value)}
+              className="w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:border-[#ff3e3e]/50"
+              rows={3}
+              placeholder="Describe what your script does"
+              maxLength={500}
+            />
+            <p className="mt-1 text-right text-xs text-gray-400">{scriptDescription.length}/500 characters</p>
+          </div>
+
+          <div className="mb-6">
+            <label htmlFor="scriptCode" className="mb-2 block font-medium text-[#ff3e3e]">
+              Script Code
+            </label>
+            <textarea
+              id="scriptCode"
+              value={scriptCode}
+              onChange={(e) => setScriptCode(e.target.value)}
+              className="font-mono w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:border-[#ff3e3e]/50"
+              rows={10}
+              placeholder="-- Paste your Lua script here"
+            />
+            <p className="mt-1 text-xs text-gray-400">1000 Lines Limit</p>
+          </div>
 
           {/* Banner Ad - Bottom */}
           <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2">
@@ -439,6 +716,22 @@ export default function UploadScriptsPage() {
                 src="//geometrydoomeddrone.com/26399d5117f28dad5c8e0a5f7fa6a967/invoke.js"
               />
             </div>
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              type="submit"
+              className="flex-1 rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-4 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20 hover:scale-105 transform duration-300"
+              disabled={requiresDiscord && !hasDiscord}
+            >
+              <i className="fas fa-upload mr-2"></i> Upload Script
+            </button>
+            <Link
+              href="/scripts"
+              className="rounded border border-white/10 bg-[#050505] px-4 py-3 font-semibold text-white transition-all hover:bg-[#1a1a1a]"
+            >
+              Cancel
+            </Link>
           </div>
         </form>
       </div>

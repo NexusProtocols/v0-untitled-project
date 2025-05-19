@@ -274,7 +274,7 @@ export default function CreateGatewayPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#0a0a10] p-8 shadow-lg shadow-[#ff3e3e]/10"
+          className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#0a0a0a] p-8 shadow-lg shadow-[#ff3e3e]/10"
         >
           <div className="mb-6">
             <h2 className="mb-4 text-xl font-bold text-white">Gateway Information</h2>
@@ -287,7 +287,7 @@ export default function CreateGatewayPage() {
                 id="gatewayTitle"
                 value={gatewayTitle}
                 onChange={(e) => setGatewayTitle(e.target.value)}
-                className="input-focus-effect w-full rounded border border-white/10 bg-[#07071a] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                 placeholder="Enter a title for your gateway"
               />
             </div>
@@ -299,7 +299,7 @@ export default function CreateGatewayPage() {
                 id="gatewayDescription"
                 value={gatewayDescription}
                 onChange={(e) => setGatewayDescription(e.target.value)}
-                className="input-focus-effect w-full rounded border border-white/10 bg-[#07071a] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                 rows={3}
                 placeholder="Describe what users will get from this gateway"
               />
@@ -312,7 +312,7 @@ export default function CreateGatewayPage() {
                 <input type="file" id="gatewayImage" accept="image/*" onChange={handleImageUpload} className="hidden" />
                 <label
                   htmlFor="gatewayImage"
-                  className="interactive-element flex cursor-pointer items-center justify-center rounded border border-dashed border-white/20 bg-[#07071a] p-4 transition-all hover:border-[#ff3e3e]/50 hover:shadow-md hover:scale-[1.01] transform duration-200"
+                  className="interactive-element flex cursor-pointer items-center justify-center rounded border border-dashed border-white/20 bg-[#050505] p-4 transition-all hover:border-[#ff3e3e]/50 hover:shadow-md hover:scale-[1.01] transform duration-200"
                 >
                   <div className="text-center">
                     <i className="fas fa-upload mb-2 text-2xl text-[#ff3e3e]"></i>
@@ -321,7 +321,7 @@ export default function CreateGatewayPage() {
                 </label>
               </div>
               {gatewayImage && (
-                <div className="mt-4 rounded border border-white/10 bg-[#07071a] p-2">
+                <div className="mt-4 rounded border border-white/10 bg-[#050505] p-2">
                   <div className="relative h-40 w-full overflow-hidden rounded">
                     <img
                       src={gatewayImage || "/placeholder.svg"}
@@ -353,7 +353,7 @@ export default function CreateGatewayPage() {
                   type="button"
                   onClick={() => setRewardType("url")}
                   className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
-                    rewardType === "url" ? "bg-[#ff3e3e] text-white" : "bg-[#07071a] text-white border border-white/10"
+                    rewardType === "url" ? "bg-[#ff3e3e] text-white" : "bg-[#050505] text-white border border-white/10"
                   }`}
                 >
                   <i className="fas fa-external-link-alt"></i>
@@ -368,7 +368,7 @@ export default function CreateGatewayPage() {
                   className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
                     rewardType === "paste"
                       ? "bg-[#ff3e3e] text-white"
-                      : "bg-[#07071a] text-white border border-white/10"
+                      : "bg-[#050505] text-white border border-white/10"
                   }`}
                 >
                   <i className="fas fa-copy"></i>
@@ -389,7 +389,7 @@ export default function CreateGatewayPage() {
                   id="rewardUrl"
                   value={rewardUrl}
                   onChange={(e) => setRewardUrl(e.target.value)}
-                  className="input-focus-effect w-full rounded border border-white/10 bg-[#07071a] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                  className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                   placeholder="https://example.com/reward"
                 />
                 <p className="mt-1 text-xs text-gray-400">
@@ -405,7 +405,7 @@ export default function CreateGatewayPage() {
                   id="rewardPaste"
                   value={rewardPaste}
                   onChange={(e) => setRewardPaste(e.target.value)}
-                  className="input-focus-effect w-full rounded border border-white/10 bg-[#07071a] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                  className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-3 text-white transition-all hover:border-[#ff3e3e]/50 hover:shadow-md focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
                   rows={5}
                   placeholder="Enter the content users will receive after completing all steps"
                 />
@@ -427,12 +427,12 @@ export default function CreateGatewayPage() {
               {stages.map((stage) => (
                 <div
                   key={stage.id}
-                  className="rounded-xl border border-white/10 bg-[#141427] p-6 shadow-lg galaxy-stage-card relative"
+                  className="rounded-xl border border-white/10 bg-[#0a0a0a] p-6 shadow-lg galaxy-stage-card relative"
                   style={{
                     boxShadow:
-                      "0 0 36px 8px rgba(80,0,255,0.18), 0 0 0 2px #2d2250 inset",
+                      "0 0 36px 8px rgba(255,62,62,0.18), 0 0 0 2px #ff3e3e44 inset",
                     background:
-                      "radial-gradient(ellipse at 60% 40%,rgba(80,0,255,0.08) 0%,rgba(20,22,38,1) 100%)",
+                      "radial-gradient(ellipse at 60% 40%,rgba(255,62,62,0.10) 0%,rgba(20,22,38,1) 100%)",
                   }}
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -462,7 +462,7 @@ export default function CreateGatewayPage() {
                             onClick={() => updateStageLevel(stage.id, level)}
                             className={`galaxy-btn px-4 py-2 rounded-lg transition-all font-medium shadow-lg ${
                               stage.level === level
-                                ? "bg-[#2d2250] border-2 border-[#8a2be2] text-[#fff] galaxy-btn-selected"
+                                ? "bg-[#1a1a1a] border-2 border-[#ff3e3e] text-[#fff] galaxy-btn-selected"
                                 : "bg-[#18182c] border border-white/10 text-gray-300"
                             }`}
                           >
@@ -482,7 +482,7 @@ export default function CreateGatewayPage() {
                             onClick={() => updateStageTaskCount(stage.id, count)}
                             className={`galaxy-btn px-4 py-2 rounded-lg transition-all font-medium shadow-lg ${
                               stage.taskCount === count
-                                ? "bg-[#2d2250] border-2 border-[#8a2be2] text-[#fff] galaxy-btn-selected"
+                                ? "bg-[#1a1a1a] border-2 border-[#ff3e3e] text-[#fff] galaxy-btn-selected"
                                 : "bg-[#18182c] border border-white/10 text-gray-300"
                             }`}
                           >
@@ -501,7 +501,7 @@ export default function CreateGatewayPage() {
                 type="button"
                 onClick={addStage}
                 disabled={stages.length >= MAX_STAGES}
-                className="galaxy-add-stage-btn px-7 py-3 rounded-xl mt-2 text-lg font-bold bg-gradient-to-r from-[#8a2be2] to-[#3b1c6b] text-white shadow-xl transition-all hover:scale-105 hover:from-[#a161ff] hover:to-[#4d2a8a] disabled:opacity-40"
+                className="galaxy-add-stage-btn px-7 py-3 rounded-xl mt-2 text-lg font-bold bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] text-white shadow-xl transition-all hover:scale-105 hover:from-[#ff3e3e] hover:to-[#ff0000] disabled:opacity-40"
               >
                 <i className="fas fa-plus mr-2"></i> Add Stage
               </button>
@@ -522,7 +522,7 @@ export default function CreateGatewayPage() {
                       type="checkbox"
                       checked={showSubscriptionOptions}
                       onChange={(e) => setShowSubscriptionOptions(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#07071a] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
                     />
                     <span className="text-white">Show subscription options to skip ads</span>
                   </label>
@@ -531,7 +531,7 @@ export default function CreateGatewayPage() {
                       type="checkbox"
                       checked={showOperaGxOffer}
                       onChange={(e) => setShowOperaGxOffer(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#07071a] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
                     />
                     <span className="text-white">Show Opera GX offer</span>
                   </label>
@@ -542,13 +542,13 @@ export default function CreateGatewayPage() {
                       type="checkbox"
                       checked={blockVpnUsers}
                       onChange={(e) => setBlockVpnUsers(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#07071a] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
                     />
                     <span className="text-white">Block VPN Users</span>
                   </label>
                 </div>
               </div>
-              <div className="p-4 rounded-lg border border-white/10 bg-[#191932]">
+              <div className="p-4 rounded-lg border border-white/10 bg-[#18182c]">
                 <h3 className="text-lg font-medium text-white mb-4">Rate Limit Settings</h3>
                 <div className="flex items-center gap-2 mb-4">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -556,7 +556,7 @@ export default function CreateGatewayPage() {
                       type="checkbox"
                       checked={rateLimitEnabled}
                       onChange={(e) => setRateLimitEnabled(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/10 bg-[#07071a] text-[#ff3e3e]"
+                      className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
                     />
                     <span className="text-white">Rate Limit Per User</span>
                   </label>
@@ -576,7 +576,7 @@ export default function CreateGatewayPage() {
                         onChange={(e) =>
                           setRateLimitCount(Math.max(1, Math.min(60, Number.parseInt(e.target.value) || 1)))
                         }
-                        className="input-focus-effect w-full rounded border border-white/10 bg-[#07071a] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
+                        className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
                       />
                     </div>
                     <div>
@@ -597,7 +597,7 @@ export default function CreateGatewayPage() {
                           >
                             {rateLimitPeriod === period && (
                               <div className="absolute inset-0 opacity-30 pointer-events-none">
-                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/30 via-black/0 to-transparent"></div>
+                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#ff3e3e]/40 via-black/0 to-transparent"></div>
                               </div>
                             )}
                             {rateLimitPeriod === period && (
@@ -649,12 +649,12 @@ export default function CreateGatewayPage() {
       <style jsx>{`
         .galaxy-stage-card {
           border: 1.5px solid #3d2964;
-          box-shadow: 0 0 32px 8px #4a23b4a8, 0 0 0 2px #2d2250 inset;
+          box-shadow: 0 0 32px 8px #ff3e3e44, 0 0 0 2px #ff3e3e22 inset;
           position: relative;
           overflow: hidden;
         }
         .galaxy-btn-selected {
-          box-shadow: 0 0 12px 3px #8a2be2cc, 0 0 0 2px #fff1 inset !important;
+          box-shadow: 0 0 12px 3px #ff3e3ecc, 0 0 0 2px #fff1 inset !important;
           text-shadow: 0 0 6px #fff3;
         }
         .galaxy-btn {
@@ -663,17 +663,17 @@ export default function CreateGatewayPage() {
         }
         .galaxy-label {
           letter-spacing: 1px;
-          text-shadow: 0 0 8px #a161ff44;
+          text-shadow: 0 0 8px #ff3e3e44;
         }
         .galaxy-heading {
-          text-shadow: 0 0 18px #a161ff88, 0 0 8px #fff2;
+          text-shadow: 0 0 18px #ff3e3e88, 0 0 8px #fff2;
         }
         .galaxy-text-glow {
-          text-shadow: 0 0 10px #a161ff99, 0 0 6px #fff2;
+          text-shadow: 0 0 10px #ff3e3e99, 0 0 6px #fff2;
         }
         .galaxy-add-stage-btn {
-          background: linear-gradient(90deg, #8a2be2 0%, #3b1c6b 100%);
-          box-shadow: 0 0 24px 4px #8a2be277, 0 0 0 2px #3b1c6b99 inset;
+          background: linear-gradient(90deg, #ff3e3e 0%, #ff0000 100%);
+          box-shadow: 0 0 24px 4px #ff3e3e77, 0 0 0 2px #ff000099 inset;
         }
       `}</style>
     </div>

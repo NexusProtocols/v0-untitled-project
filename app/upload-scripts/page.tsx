@@ -9,7 +9,7 @@ import { fetchGameDetailsById, fetchGameDetailsByName } from "@/app/actions/fetc
 import { scriptCategories } from "@/lib/categories"
 import { validateScript } from "@/lib/script-validation"
 import { DiscordLoginButton } from "@/components/discord-login-button"
-import { AdUnit } from "@/components/AdUnit"
+import { AdScript } from "@/components/AdScript";
 
 type GameSearchResult = {
   gameId: string
@@ -299,10 +299,17 @@ export default function UploadScriptsPage() {
         </h1>
 
         {/* Banner Ad - Top */}
-        <div className="mb-6 overflow-hidden rounded-lg border border-white/10 bg-[#0a0a0a] p-2 flex justify-center">
-          <AdUnit name="top728" />
-        </div>
-
+ <AdScript
+  id="ad728top"
+  atOptions={{
+    key: "fd9b1c1a9efee5e08a1818fb900a7d69",
+    format: "iframe",
+    height: 90,
+    width: 728,
+    params: {},
+  }}
+  src="//geometrydoomeddrone.com/fd9b1c1a9efee5e08a1818fb900a7d69/invoke.js"
+/>
         {message.text && (
           <div
             className={`mb-6 rounded p-4 ${

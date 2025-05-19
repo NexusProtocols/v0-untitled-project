@@ -5,47 +5,7 @@ import Link from "next/link"
 export default function ExecutorsPage() {
   return (
     <div className="executors-page">
-      <header>
-        <div className="container header-container">
-          <Link href="/" className="logo">
-            NEXUS<span>.</span>
-          </Link>
-          <nav>
-            <ul>
-              <li>
-                <Link href="/">
-                  <i className="fas fa-home"></i> Home
-                </Link>
-              </li>
-              <li>
-                <Link href="/scripts">
-                  <i className="fas fa-code"></i> Scripts
-                </Link>
-              </li>
-              <li>
-                <Link href="/key-generator">
-                  <i className="fas fa-key"></i> Key
-                </Link>
-              </li>
-              <li>
-                <Link href="https://discord.gg/ZWCqcuxAv3">
-                  <i className="fab fa-discord"></i> Discord
-                </Link>
-              </li>
-              <li>
-                <Link href="/premium-key">
-                  <i className="fas fa-crown"></i> Premium Key
-                </Link>
-              </li>
-              <li>
-                <Link href="/executors" className="active">
-                  <i className="fas fa-terminal"></i> Executors
-                </Link>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      </header>
+
 
       <section className="executors">
         <div className="container">
@@ -369,6 +329,7 @@ export default function ExecutorsPage() {
       {/* Add Font Awesome */}
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
+      {/* Styles unchanged */}
       <style jsx>{`
         :root {
           --primary: #00c9ff;
@@ -381,28 +342,9 @@ export default function ExecutorsPage() {
           --text: #ffffff;
           --hover-bg: rgba(0, 255, 157, 0.1);
         }
-        
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-          font-family: 'Inter', 'Segoe UI', sans-serif;
-        }
-        
-        body {
-          background-color: var(--dark);
-          color: var(--text);
-          line-height: 1.6;
-          overflow-x: hidden;
-        }
-        
-        .container {
-          max-width: 1400px;
-          margin: 0 auto;
-          padding: 0 20px;
-        }
-        
-        /* Cyberpunk Header */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', 'Segoe UI', sans-serif; }
+        body { background-color: var(--dark); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
         header {
           background-color: rgba(10, 10, 10, 0.9);
           backdrop-filter: blur(10px);
@@ -413,13 +355,7 @@ export default function ExecutorsPage() {
           z-index: 1000;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
-        
-        .header-container {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        
+        .header-container { display: flex; justify-content: space-between; align-items: center; }
         .logo {
           font-size: 28px;
           font-weight: 700;
@@ -429,74 +365,10 @@ export default function ExecutorsPage() {
           align-items: center;
           letter-spacing: -0.5px;
         }
-        
-        .logo span {
-          color: var(--text);
-        }
-        
-        /* Matrix Navigation */
-        nav ul {
-          display: flex;
-          list-style: none;
-          gap: 10px;
-        }
-        
-        nav ul li a {
-          color: var(--text);
-          text-decoration: none;
-          font-weight: 500;
-          padding: 10px 20px;
-          border-radius: 4px;
-          transition: all 0.3s ease;
-          font-size: 15px;
-          position: relative;
-          opacity: 0.9;
-        }
-        
-        nav ul li a:hover {
-          color: var(--primary);
-          background-color: var(--hover-bg);
-        }
-        
-        nav ul li a.active {
-          color: var(--primary);
-          background-color: var(--hover-bg);
-        }
-        
-        nav ul li a::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 20px;
-          width: calc(100% - 40px);
-          height: 2px;
-          background-color: var(--primary);
-          transform: scaleX(0);
-          transition: transform 0.3s ease;
-        }
-        
-        nav ul li a:hover::after {
-          transform: scaleX(1);
-        }
-        
-        /* Executors Section - Enhanced */
-        .executors {
-          padding: 80px 0;
-          background-color: var(--darker);
-        }
-        
-        .section-title {
-          text-align: center;
-          margin-bottom: 60px;
-        }
-        
-        .section-title h2 {
-          font-size: 36px;
-          color: var(--text);
-          margin-bottom: 15px;
-          position: relative;
-        }
-        
+        .logo span { color: var(--text); }
+        .executors { padding: 80px 0; background-color: var(--darker); }
+        .section-title { text-align: center; margin-bottom: 60px; }
+        .section-title h2 { font-size: 36px; color: var(--text); margin-bottom: 15px; position: relative; }
         .section-title h2::after {
           content: '';
           position: absolute;
@@ -507,13 +379,11 @@ export default function ExecutorsPage() {
           height: 3px;
           background: linear-gradient(90deg, var(--primary), var(--secondary));
         }
-        
         .executors-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
           gap: 30px;
         }
-        
         .executor-card {
           background-color: var(--gray);
           border-radius: 12px;
@@ -523,16 +393,11 @@ export default function ExecutorsPage() {
           box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
           border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        
         .executor-card:hover {
           transform: translateY(-10px);
           box-shadow: 0 15px 30px rgba(0, 201, 255, 0.2);
         }
-        
-        .executor-card.featured {
-          border: 1px solid var(--accent);
-        }
-        
+        .executor-card.featured { border: 1px solid var(--accent); }
         .executor-card.featured::before {
           content: 'FEATURED';
           position: absolute;
@@ -546,18 +411,8 @@ export default function ExecutorsPage() {
           transform: rotate(45deg);
           z-index: 2;
         }
-        
-        .executor-image {
-          width: 100%;
-          height: 200px;
-          object-fit: cover;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .executor-content {
-          padding: 25px;
-        }
-        
+        .executor-image { width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid rgba(255, 255, 255, 0.1);}
+        .executor-content { padding: 25px; }
         .executor-badge {
           position: absolute;
           top: 15px;
@@ -570,45 +425,17 @@ export default function ExecutorsPage() {
           font-weight: bold;
           text-transform: uppercase;
         }
-        
-        .executor-card h3 {
-          font-size: 24px;
-          margin-bottom: 15px;
-          color: var(--primary);
-        }
-        
-        .executor-card p {
-          color: var(--light);
-          opacity: 0.8;
-          margin-bottom: 20px;
-          font-size: 15px;
-        }
-        
-        .executor-features {
-          list-style: none;
-          margin: 20px 0;
-        }
-        
-        .executor-features li {
-          padding: 8px 0;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          display: flex;
-          align-items: center;
-          font-size: 14px;
-        }
-        
-        .executor-features li i {
-          margin-right: 10px;
-          color: var(--secondary);
-        }
-        
+        .executor-card h3 { font-size: 24px; margin-bottom: 15px; color: var(--primary); }
+        .executor-card p { color: var(--light); opacity: 0.8; margin-bottom: 20px; font-size: 15px; }
+        .executor-features { list-style: none; margin: 20px 0; }
+        .executor-features li { padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; font-size: 14px; }
+        .executor-features li i { margin-right: 10px; color: var(--secondary); }
         .executor-actions {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-top: 25px;
         }
-        
         .executor-download {
           display: inline-flex;
           align-items: center;
@@ -624,17 +451,12 @@ export default function ExecutorsPage() {
           text-align: center;
           margin-right: 10px;
         }
-        
         .executor-download:hover {
           background: linear-gradient(135deg, var(--secondary), var(--primary));
           box-shadow: 0 0 20px rgba(0, 201, 255, 0.4);
           transform: translateY(-2px);
         }
-        
-        .executor-download i {
-          margin-right: 8px;
-        }
-        
+        .executor-download i { margin-right: 8px; }
         .executor-info {
           display: inline-flex;
           align-items: center;
@@ -647,66 +469,33 @@ export default function ExecutorsPage() {
           width: 45px;
           height: 45px;
         }
-        
         .executor-info:hover {
           background-color: rgba(255, 255, 255, 0.2);
         }
-        
-        /* System Requirements */
-        .requirements {
-          padding: 60px 0;
-          background-color: var(--dark);
-        }
-        
+        .requirements { padding: 60px 0; background-color: var(--dark);}
         .requirements-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
           gap: 30px;
           margin-top: 40px;
         }
-        
         .requirement-card {
           background-color: var(--gray);
           padding: 25px;
           border-radius: 6px;
           border-left: 3px solid var(--secondary);
         }
-        
-        .requirement-card h3 {
-          color: var(--secondary);
-          margin-bottom: 15px;
-          font-size: 20px;
-        }
-        
-        .requirement-card ul {
-          list-style: none;
-        }
-        
-        .requirement-card ul li {
-          padding: 6px 0;
-          display: flex;
-          align-items: center;
-        }
-        
-        .requirement-card ul li i {
-          margin-right: 10px;
-          color: var(--primary);
-        }
-        
-        /* Footer */
-        footer {
-          background-color: var(--darker);
-          padding: 70px 0 30px;
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        
+        .requirement-card h3 { color: var(--secondary); margin-bottom: 15px; font-size: 20px;}
+        .requirement-card ul { list-style: none; }
+        .requirement-card ul li { padding: 6px 0; display: flex; align-items: center;}
+        .requirement-card ul li i { margin-right: 10px; color: var(--primary);}
+        footer { background-color: var(--darker); padding: 70px 0 30px; border-top: 1px solid rgba(255,255,255,0.05);}
         .footer-content {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
           gap: 40px;
           margin-bottom: 50px;
         }
-        
         .footer-column h3 {
           font-size: 18px;
           margin-bottom: 25px;
@@ -714,7 +503,6 @@ export default function ExecutorsPage() {
           position: relative;
           padding-bottom: 10px;
         }
-        
         .footer-column h3::after {
           content: '';
           position: absolute;
@@ -724,101 +512,29 @@ export default function ExecutorsPage() {
           height: 2px;
           background-color: var(--primary);
         }
-        
-        .footer-column ul {
-          list-style: none;
-        }
-        
-        .footer-column ul li {
-          margin-bottom: 12px;
-        }
-        
-        .footer-column ul li a {
-          color: #a0a0a0;
-          text-decoration: none;
-          transition: all 0.3s;
-          font-size: 14px;
-        }
-        
-        .footer-column ul li a:hover {
-          color: var(--primary);
-          padding-left: 5px;
-        }
-        
-        .social-links {
-          display: flex;
-          gap: 15px;
-          margin-top: 20px;
-        }
-        
+        .footer-column ul { list-style: none;}
+        .footer-column ul li { margin-bottom: 12px;}
+        .footer-column ul li a { color: #a0a0a0; text-decoration: none; transition: all 0.3s; font-size: 14px;}
+        .footer-column ul li a:hover { color: var(--primary); padding-left: 5px;}
+        .social-links { display: flex; gap: 15px; margin-top: 20px;}
         .social-links a {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 40px;
-          height: 40px;
-          border-radius: 4px;
-          background-color: var(--gray);
-          color: var(--text);
-          font-size: 16px;
-          transition: all 0.3s;
+          display: flex; align-items: center; justify-content: center;
+          width: 40px; height: 40px; border-radius: 4px; background-color: var(--gray);
+          color: var(--text); font-size: 16px; transition: all 0.3s;
         }
-        
         .social-links a:hover {
-          background-color: var(--primary);
-          color: var(--dark);
-          transform: translateY(-3px);
+          background-color: var(--primary); color: var(--dark); transform: translateY(-3px);
         }
-        
-        .copyright {
-          text-align: center;
-          padding-top: 30px;
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
-          color: #666;
-          font-size: 13px;
-        }
-        
-        /* Responsive Design */
-        @media (max-width: 992px) {
-          .section-title h2 {
-            font-size: 30px;
-          }
-        }
-        
+        .copyright { text-align: center; padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); color: #666; font-size: 13px;}
+        @media (max-width: 992px) { .section-title h2 { font-size: 30px; } }
         @media (max-width: 768px) {
-          .header-container {
-            flex-direction: column;
-          }
-          
-          .logo {
-            margin-bottom: 20px;
-          }
-          
-          nav ul {
-            flex-wrap: wrap;
-            justify-content: center;
-          }
-          
-          .executor-actions {
-            flex-direction: column;
-          }
-          
-          .executor-download {
-            width: 100%;
-            margin-right: 0;
-            margin-bottom: 10px;
-          }
-          
-          .executor-info {
-            width: 100%;
-          }
+          .header-container { flex-direction: column; }
+          .logo { margin-bottom: 20px; }
+          .executor-actions { flex-direction: column; }
+          .executor-download { width: 100%; margin-right: 0; margin-bottom: 10px;}
+          .executor-info { width: 100%; }
         }
-        
-        @media (max-width: 576px) {
-          .executors-grid {
-            grid-template-columns: 1fr;
-          }
-        }
+        @media (max-width: 576px) { .executors-grid { grid-template-columns: 1fr; } }
       `}</style>
     </div>
   )

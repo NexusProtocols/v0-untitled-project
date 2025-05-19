@@ -226,7 +226,7 @@ export default function Header() {
             </li>
             <li>
               <Link
-                href="/submit-script"
+                href="/Script-Manager"
                 className={`nav-item flex items-center rounded px-5 py-2.5 text-sm font-medium transition-all relative group
                   ${
                     isActive("/submit-script")
@@ -480,7 +480,7 @@ export default function Header() {
                 </li>
                 <li>
                   <Link
-                    href="/submit-script"
+                    href="/Script-Manager"
                     className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-all transform hover:scale-105 ${
                       isActive("/submit-script")
                         ? "bg-[rgba(255,62,62,0.15)] text-[#ff3e3e]"

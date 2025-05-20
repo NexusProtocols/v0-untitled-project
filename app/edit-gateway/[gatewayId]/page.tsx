@@ -37,9 +37,12 @@ export default function EditGatewayPage() {
   const [gatewayStats, setGatewayStats] = useState<any | null>(null)
 
   // Multi-stage (stages) state
-  const [stages, setStages] = useState<StageConfig[]>([
-    { id: 1, adLevel: 3, taskCount: 2 }
-  ])
+  const [stages, setStages] = useState<StageConfig[]>([{ id: 1, adLevel: 3, taskCount: 2 }])
+
+  const [secureAuthEnabled, setSecureAuthEnabled] = useState(false)
+  const [apiEndpoint, setApiEndpoint] = useState("")
+  const [apiKey, setApiKey] = useState("")
+  const [encryptionEnabled, setEncryptionEnabled] = useState(false)
 
   useEffect(() => {
     // Redirect if not logged in
@@ -65,11 +68,13 @@ export default function EditGatewayPage() {
           }
 
           if (foundGateway.stages && Array.isArray(foundGateway.stages) && foundGateway.stages.length > 0) {
-            setStages(foundGateway.stages.map((stage: any, i: number) => ({
-              id: i + 1,
-              adLevel: stage.adLevel ?? 3,
-              taskCount: stage.taskCount ?? 2,
-            })))
+            setStages(
+              foundGateway.stages.map((stage: any, i: number) => ({
+                id: i + 1,
+                adLevel: stage.adLevel ?? 3,
+                taskCount: stage.taskCount ?? 2,
+              })),
+            )
           }
 
           if (foundGateway.settings) {
@@ -80,6 +85,14 @@ export default function EditGatewayPage() {
               setRateLimitEnabled(foundGateway.settings.rateLimit.enabled !== false)
               setRateLimitCount(foundGateway.settings.rateLimit.count || 1)
               setRateLimitPeriod(foundGateway.settings.rateLimit.period || "day")
+            }
+
+            // Load secure auth settings
+            if (foundGateway.settings.secureAuth) {
+              setSecureAuthEnabled(foundGateway.settings.secureAuth.enabled === true)
+              setApiEndpoint(foundGateway.settings.secureAuth.apiEndpoint || "")
+              setApiKey(foundGateway.settings.secureAuth.apiKey || "")
+              setEncryptionEnabled(foundGateway.settings.secureAuth.encryptionEnabled === true)
             }
           }
 
@@ -95,7 +108,9 @@ export default function EditGatewayPage() {
           }
         } else {
           setMessage({ type: "error", text: "Gateway not found" })
-          setTimeout(() => { router.push("/manage-gateways") }, 2000)
+          setTimeout(() => {
+            router.push("/manage-gateways")
+          }, 2000)
         }
       } catch (error) {
         console.error("Error fetching gateway:", error)
@@ -128,12 +143,10 @@ export default function EditGatewayPage() {
 
   // Multi-stage logic
   const addStage = () => {
-    if (stages.length < MAX_STAGES)
-      setStages([...stages, { id: stages.length + 1, adLevel: 3, taskCount: 2 }])
+    if (stages.length < MAX_STAGES) setStages([...stages, { id: stages.length + 1, adLevel: 3, taskCount: 2 }])
   }
   const removeStage = (id: number) => {
-    if (stages.length > 1)
-      setStages(stages.filter((s) => s.id !== id).map((s, i) => ({ ...s, id: i + 1 })))
+    if (stages.length > 1) setStages(stages.filter((s) => s.id !== id).map((s, i) => ({ ...s, id: i + 1 })))
   }
   const updateStageAdLevel = (id: number, adLevel: number) =>
     setStages(stages.map((s) => (s.id === id ? { ...s, adLevel } : s)))
@@ -143,12 +156,43 @@ export default function EditGatewayPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage({ type: "", text: "" })
-    if (!gatewayTitle) { setMessage({ type: "error", text: "Gateway title is required" }); return }
-    if (!gatewayDescription) { setMessage({ type: "error", text: "Gateway description is required" }); return }
-    if (!gatewayImage) { setMessage({ type: "error", text: "Gateway image is required" }); return }
-    if (stages.length === 0) { setMessage({ type: "error", text: "At least one stage is required" }); return }
-    if (rewardType === "url" && !rewardUrl) { setMessage({ type: "error", text: "Reward URL is required" }); return }
-    if (rewardType === "paste" && !rewardPaste) { setMessage({ type: "error", text: "Reward content is required" }); return }
+    if (!gatewayTitle) {
+      setMessage({ type: "error", text: "Gateway title is required" })
+      return
+    }
+    if (!gatewayDescription) {
+      setMessage({ type: "error", text: "Gateway description is required" })
+      return
+    }
+    if (!gatewayImage) {
+      setMessage({ type: "error", text: "Gateway image is required" })
+      return
+    }
+    if (stages.length === 0) {
+      setMessage({ type: "error", text: "At least one stage is required" })
+      return
+    }
+    if (rewardType === "url" && !rewardUrl) {
+      setMessage({ type: "error", text: "Reward URL is required" })
+      return
+    }
+    if (rewardType === "paste" && !rewardPaste) {
+      setMessage({ type: "error", text: "Reward content is required" })
+      return
+    }
+
+    // Validate secure auth settings if enabled
+    if (secureAuthEnabled) {
+      if (!apiEndpoint) {
+        setMessage({ type: "error", text: "API endpoint is required for secure authentication" })
+        return
+      }
+      if (!apiKey) {
+        setMessage({ type: "error", text: "API key is required for secure authentication" })
+        return
+      }
+    }
+
     try {
       setIsSubmitting(true)
       const updatedGateway = {
@@ -171,6 +215,12 @@ export default function EditGatewayPage() {
             enabled: rateLimitEnabled,
             count: rateLimitCount,
             period: rateLimitPeriod,
+          },
+          secureAuth: {
+            enabled: secureAuthEnabled,
+            apiEndpoint: secureAuthEnabled ? apiEndpoint : "",
+            apiKey: secureAuthEnabled ? apiKey : "",
+            encryptionEnabled: encryptionEnabled,
           },
         },
       }
@@ -576,6 +626,81 @@ export default function EditGatewayPage() {
               </div>
             </div>
           </div>
+
+          {/* Secure Authentication Settings */}
+          <div className="mb-6">
+            <h2 className="mb-4 text-xl font-bold text-white">Secure Authentication</h2>
+            <div className="p-4 rounded-lg border border-white/10 bg-[#0a0a0a]">
+              <div className="flex items-center gap-2 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={secureAuthEnabled}
+                    onChange={(e) => setSecureAuthEnabled(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                  />
+                  <span className="text-white">Enable Secure Authentication</span>
+                </label>
+              </div>
+
+              {secureAuthEnabled && (
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="apiEndpoint" className="mb-2 block text-sm font-medium text-[#ff3e3e]">
+                      API Endpoint
+                    </label>
+                    <input
+                      type="url"
+                      id="apiEndpoint"
+                      value={apiEndpoint}
+                      onChange={(e) => setApiEndpoint(e.target.value)}
+                      placeholder="https://your-api.com/validate"
+                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                    />
+                    <p className="mt-1 text-xs text-gray-400">The endpoint that will validate task completions</p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="apiKey" className="mb-2 block text-sm font-medium text-[#ff3e3e]">
+                      API Key
+                    </label>
+                    <input
+                      type="password"
+                      id="apiKey"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="Your secure API key"
+                      className="input-focus-effect w-full rounded border border-white/10 bg-[#050505] px-4 py-2 text-white transition-all hover:border-[#ff3e3e]/50 focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e] hover:scale-[1.01] transform duration-200"
+                    />
+                    <p className="mt-1 text-xs text-gray-400">
+                      This key will be used to authenticate requests to your API
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={encryptionEnabled}
+                        onChange={(e) => setEncryptionEnabled(e.target.checked)}
+                        className="h-4 w-4 rounded border-white/10 bg-[#050505] text-[#ff3e3e]"
+                      />
+                      <span className="text-white">Enable AES-256 Encryption</span>
+                    </label>
+                  </div>
+
+                  <div className="mt-2 p-3 bg-[#050505] rounded-lg border border-white/10">
+                    <p className="text-sm text-gray-400">
+                      <i className="fas fa-info-circle mr-2 text-[#ff3e3e]"></i>
+                      When enabled, all communication with your API will be encrypted using AES-256 with your API key as
+                      the encryption key.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={isSubmitting}

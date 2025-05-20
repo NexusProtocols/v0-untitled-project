@@ -38,10 +38,9 @@ export default function GatewayPage() {
   const [lastVisitTime, setLastVisitTime] = useState<number | null>(null)
 
   // Multi-stage gateway
-  const [currentStage, setCurrentStage] = useState(1)
-  const totalStages = 5
-  const stagesCompleted = new Array(totalStages).fill(false)
-  stagesCompleted[0] = captchaValidated // First stage is CAPTCHA
+  const totalStages = gateway?.stages?.length || 1
+  const [currentStage, setCurrentStage] = useState(-1) // Start at -1 for CAPTCHA pre-stage
+  const stagesCompleted = Array(totalStages + 1).fill(false) // +1 for CAPTCHA pre-stage
 
   // Fetch gateway data
   useEffect(() => {
@@ -112,17 +111,23 @@ export default function GatewayPage() {
 
   // Check if all tasks are completed
   useEffect(() => {
-    if (gateway && gateway.steps && completedTasks.length === gateway.steps.length && showTasks) {
+    if (
+      gateway?.stages &&
+      currentStage > 0 &&
+      currentStage <= gateway.stages.length &&
+      completedTasks.length === gateway.stages[currentStage - 1]?.taskCount &&
+      showTasks
+    ) {
       setAllTasksCompleted(true)
       // Mark current stage as completed
       stagesCompleted[currentStage] = true
 
       // If this is the final stage, show the reward
-      if (currentStage === totalStages - 1) {
+      if (currentStage === totalStages) {
         handleClaimReward()
       }
     }
-  }, [completedTasks, gateway, showTasks, currentStage])
+  }, [completedTasks, gateway, showTasks, currentStage, totalStages])
 
   // Function to increment gateway visits
   const incrementGatewayVisits = (gatewayId: string) => {
@@ -211,8 +216,8 @@ export default function GatewayPage() {
   const handleCaptchaValidated = (token: string) => {
     setCaptchaValidated(true)
     setValidationToken(token)
-    // Mark first stage as completed
-    stagesCompleted[0] = true
+    setCurrentStage(0) // Move to stage 0 (pre-stage)
+    stagesCompleted[0] = true // Mark CAPTCHA as completed
   }
 
   // Handle task completion
@@ -223,12 +228,12 @@ export default function GatewayPage() {
   // Handle start tasks
   const handleStartTasks = () => {
     setShowTasks(true)
-    setCurrentStage(1) // Move to stage 1 (tasks)
+    setCurrentStage(1) // Move to stage 1 (first actual stage)
   }
 
   // Move to next stage
   const handleNextStage = () => {
-    if (currentStage < totalStages - 1) {
+    if (currentStage < totalStages) {
       setCurrentStage(currentStage + 1)
       // Reset completed tasks for the new stage
       setCompletedTasks([])
@@ -314,6 +319,12 @@ export default function GatewayPage() {
           alert("Failed to copy content. Please select and copy manually.")
         })
     }
+  }
+
+  // Function to determine task type based on index
+  const getTaskType = (index: number): GatewayStep["type"] => {
+    const taskTypes: GatewayStep["type"][] = ["redirect", "article", "operagx", "youtube", "direct"]
+    return taskTypes[index % taskTypes.length]
   }
 
   if (isLoading) {
@@ -409,25 +420,42 @@ export default function GatewayPage() {
             <div className="mb-8">
               <div className="text-center mb-2">
                 <h2 className="text-lg font-medium text-white">
-                  Stage {currentStage + 1} of {totalStages}
+                  {currentStage < 1 ? "Verification" : `Stage ${currentStage} of ${totalStages}`}
                 </h2>
               </div>
               <div className="flex justify-center items-center gap-2 mb-4">
+                {/* CAPTCHA verification stage */}
+                <div
+                  className={`relative w-10 h-10 rounded-full flex items-center justify-center ${
+                    currentStage === -1
+                      ? "bg-[#ff3e3e] text-white"
+                      : stagesCompleted[0]
+                        ? "bg-green-500 text-white"
+                        : "bg-[#1a1a1a] text-gray-400"
+                  }`}
+                >
+                  {currentStage === -1 && (
+                    <div className="absolute inset-0 rounded-full bg-[#ff3e3e] animate-ping opacity-30"></div>
+                  )}
+                  {stagesCompleted[0] ? <i className="fas fa-check"></i> : <i className="fas fa-shield-alt"></i>}
+                </div>
+
+                {/* Gateway stages */}
                 {Array.from({ length: totalStages }).map((_, index) => (
                   <div
                     key={index}
                     className={`relative w-10 h-10 rounded-full flex items-center justify-center ${
-                      index === currentStage
+                      index + 1 === currentStage
                         ? "bg-[#ff3e3e] text-white"
-                        : stagesCompleted[index]
+                        : stagesCompleted[index + 1]
                           ? "bg-green-500 text-white"
                           : "bg-[#1a1a1a] text-gray-400"
                     }`}
                   >
-                    {index === currentStage && (
+                    {index + 1 === currentStage && (
                       <div className="absolute inset-0 rounded-full bg-[#ff3e3e] animate-ping opacity-30"></div>
                     )}
-                    {stagesCompleted[index] ? <i className="fas fa-check"></i> : <span>{index + 1}</span>}
+                    {stagesCompleted[index + 1] ? <i className="fas fa-check"></i> : <span>{index + 1}</span>}
                   </div>
                 ))}
               </div>
@@ -435,7 +463,7 @@ export default function GatewayPage() {
                 <div
                   className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]"
                   style={{
-                    width: `${((currentStage + (stagesCompleted[currentStage] ? 1 : 0)) / totalStages) * 100}%`,
+                    width: `${((currentStage + 1 + (stagesCompleted[currentStage + 1] ? 1 : 0)) / (totalStages + 1)) * 100}%`,
                   }}
                 ></div>
               </div>
@@ -466,31 +494,42 @@ export default function GatewayPage() {
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-sm text-white font-medium">
-                      {completedTasks.length} of {steps.length} Tasks Completed
+                      {completedTasks.length} of {gateway?.stages?.[currentStage - 1]?.taskCount || 0} Tasks Completed
                     </div>
                     <div className="text-sm text-gray-400">
-                      {steps.length > 0 ? Math.round((completedTasks.length / steps.length) * 100) : 0}% Complete
+                      {gateway?.stages?.[currentStage - 1]?.taskCount > 0
+                        ? Math.round((completedTasks.length / gateway.stages[currentStage - 1].taskCount) * 100)
+                        : 0}
+                      % Complete
                     </div>
                   </div>
                   <div className="h-2 w-full bg-[#111] rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]"
-                      style={{ width: `${steps.length > 0 ? (completedTasks.length / steps.length) * 100 : 0}%` }}
+                      style={{
+                        width: `${
+                          gateway?.stages?.[currentStage - 1]?.taskCount > 0
+                            ? (completedTasks.length / gateway.stages[currentStage - 1].taskCount) * 100
+                            : 0
+                        }%`,
+                      }}
                     ></div>
                   </div>
                 </div>
 
                 {/* Tasks */}
                 <div className="mb-8 space-y-4">
-                  {steps.map((step: GatewayStep, index: number) => (
+                  {Array.from({ length: gateway?.stages?.[currentStage - 1]?.taskCount || 0 }).map((_, index) => (
                     <GatewayTaskButton
-                      key={step.id}
-                      taskType={step.type}
+                      key={`task-${currentStage}-${index}`}
+                      taskType={getTaskType(index)}
                       taskNumber={index + 1}
-                      onComplete={() => handleTaskComplete(step.id)}
+                      onComplete={() => handleTaskComplete(`task-${currentStage}-${index}`)}
                       creatorId={gateway?.creatorId || "unknown"}
                       gatewayId={gateway?.id || "unknown"}
-                      content={step.content}
+                      content={{
+                        url: `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${gateway?.creatorId || "unknown"}&gateway=${gateway?.id || "unknown"}`,
+                      }}
                     />
                   ))}
                 </div>

@@ -240,15 +240,57 @@ export default function GatewayPage() {
   }
 
   // Handle claim reward
-  const handleClaimReward = () => {
+  const handleClaimReward = async () => {
     setShowFinalReward(true)
     incrementGatewayCompletions(params.gatewayId as string)
 
-    // If reward is a URL, redirect after a short delay
-    if (gateway?.reward?.type === "url" && gateway?.reward?.url) {
-      setTimeout(() => {
-        window.location.href = gateway.reward.url
-      }, 1500)
+    try {
+      // Get the stored CAPTCHA token
+      const captchaToken = localStorage.getItem("captchaToken")
+
+      if (!captchaToken) {
+        setError("Session expired. Please refresh and try again.")
+        return
+      }
+
+      // Mark the gateway as completed on the server
+      const response = await fetch("/api/gateway/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          gatewayId: params.gatewayId,
+          token: captchaToken,
+          completed: true,
+          stages: totalStages,
+          currentStage: currentStage,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        setError(data.error || "Failed to complete gateway")
+        return
+      }
+
+      // If reward is a URL, redirect with the token
+      if (gateway?.reward?.type === "url" && gateway?.reward?.url) {
+        // Check if the URL already has query parameters
+        const hasParams = gateway.reward.url.includes("?")
+        const separator = hasParams ? "&" : "?"
+
+        // Redirect to the reward URL with the token
+        const redirectUrl = `${gateway.reward.url}${separator}token=${data.token}`
+
+        setTimeout(() => {
+          window.location.href = redirectUrl
+        }, 1500)
+      }
+    } catch (error) {
+      console.error("Error completing gateway:", error)
+      setError("An error occurred while completing the gateway")
     }
   }
 

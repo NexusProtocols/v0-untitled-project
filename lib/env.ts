@@ -7,6 +7,13 @@ export const env = {
   DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN || "",
   DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID || "",
 
+  // Cloudflare Turnstile
+  CLOUDFLARE_SITE_KEY: process.env.CLOUDFLARE_SITE_KEY || "",
+  CLOUDFLARE_SECRET_KEY: process.env.CLOUDFLARE_SECRET_KEY || "",
+
+  // API Security
+  API_ENCRYPTION_KEY: process.env.API_ENCRYPTION_KEY || "default_encryption_key_should_be_changed",
+
   // Public variables (safe to expose to browser)
   NEXT_PUBLIC_DISCORD_CLIENT_ID: process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "",
   NEXT_PUBLIC_DISCORD_REDIRECT_URI: process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI || "",
@@ -24,6 +31,9 @@ export function validateEnv() {
     "DISCORD_BOT_TOKEN",
     "DISCORD_GUILD_ID",
     "NEXUS_READ_WRITE_TOKEN",
+    "CLOUDFLARE_SITE_KEY",
+    "CLOUDFLARE_SECRET_KEY",
+    "API_ENCRYPTION_KEY",
   ]
 
   const requiredClientVars = ["NEXT_PUBLIC_DISCORD_CLIENT_ID", "NEXT_PUBLIC_DISCORD_REDIRECT_URI"]

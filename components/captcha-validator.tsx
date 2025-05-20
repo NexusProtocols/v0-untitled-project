@@ -10,57 +10,70 @@ interface CaptchaValidatorProps {
 export function CaptchaValidator({ onValidated }: CaptchaValidatorProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [captchaText, setCaptchaText] = useState("")
-  const [userInput, setUserInput] = useState("")
-  const [fingerprint, setFingerprint] = useState("")
+  const [turnstileWidget, setTurnstileWidget] = useState<HTMLDivElement | null>(null)
+  const [turnstileLoaded, setTurnstileLoaded] = useState(false)
+  const [siteKey, setSiteKey] = useState<string>("")
   const router = useRouter()
 
-  // Generate a simple CAPTCHA
-  const generateCaptcha = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
-    let result = ""
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    setCaptchaText(result)
-    setUserInput("")
-  }
-
-  // Generate browser fingerprint
-  const generateFingerprint = () => {
-    const screen = `${window.screen.width}x${window.screen.height}x${window.screen.colorDepth}`
-    const timezone = new Date().getTimezoneOffset()
-    const plugins = Array.from(navigator.plugins)
-      .map((p) => p.name)
-      .join(";")
-    const canvas = document.createElement("canvas")
-    const gl = canvas.getContext("webgl")
-    const webglInfo = gl ? gl.getParameter(gl.RENDERER) : "unknown"
-
-    const fingerprintData = [navigator.userAgent, screen, timezone, plugins, webglInfo, navigator.language].join("|||")
-
-    // Create a hash of the fingerprint data
-    const hash = Array.from(fingerprintData)
-      .reduce((hash, char) => (hash << 5) - hash + char.charCodeAt(0), 0)
-      .toString(36)
-
-    setFingerprint(hash)
-  }
-
-  // Initialize CAPTCHA and fingerprint
+  // Fetch the site key from the server
   useEffect(() => {
-    generateCaptcha()
-    generateFingerprint()
+    async function fetchSiteKey() {
+      try {
+        const response = await fetch("/api/captcha/config")
+        const data = await response.json()
+        setSiteKey(data.siteKey)
+      } catch (error) {
+        console.error("Error fetching captcha config:", error)
+        setError("Failed to load security check. Please refresh the page.")
+      }
+    }
+
+    fetchSiteKey()
   }, [])
 
-  // Handle CAPTCHA validation
-  const handleValidate = async () => {
-    if (userInput !== captchaText) {
-      setError("Incorrect CAPTCHA. Please try again.")
-      generateCaptcha()
-      return
-    }
+  // Load Cloudflare Turnstile script
+  useEffect(() => {
+    // Only load if not already loaded
+    if (!document.getElementById("cloudflare-turnstile-script") && !turnstileLoaded) {
+      const script = document.createElement("script")
+      script.id = "cloudflare-turnstile-script"
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+      script.async = true
+      script.defer = true
 
+      script.onload = () => {
+        setTurnstileLoaded(true)
+      }
+
+      document.head.appendChild(script)
+
+      return () => {
+        // Clean up script if component unmounts
+        if (document.getElementById("cloudflare-turnstile-script")) {
+          document.getElementById("cloudflare-turnstile-script")?.remove()
+        }
+      }
+    }
+  }, [turnstileLoaded])
+
+  // Initialize Turnstile widget when script is loaded and site key is available
+  useEffect(() => {
+    if (turnstileLoaded && window.turnstile && !turnstileWidget && siteKey) {
+      const widgetId = window.turnstile.render("#turnstile-container", {
+        sitekey: siteKey,
+        theme: "dark",
+        callback: (token: string) => {
+          validateCaptcha(token)
+        },
+      })
+
+      const container = document.getElementById("turnstile-container") as HTMLDivElement
+      setTurnstileWidget(container)
+    }
+  }, [turnstileLoaded, turnstileWidget, siteKey])
+
+  // Handle CAPTCHA validation
+  const validateCaptcha = async (token: string) => {
     setLoading(true)
     setError("")
 
@@ -71,8 +84,8 @@ export function CaptchaValidator({ onValidated }: CaptchaValidatorProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          captchaResponse: userInput,
-          fingerprint,
+          captchaResponse: token,
+          captchaType: "cloudflare",
         }),
       })
 
@@ -80,19 +93,25 @@ export function CaptchaValidator({ onValidated }: CaptchaValidatorProps) {
 
       if (data.success) {
         // Store the validation token in localStorage
-        localStorage.setItem("captchaToken", data.data.token)
-        localStorage.setItem("captchaExpires", data.data.expiresAt)
+        localStorage.setItem("captchaToken", data.token)
+        localStorage.setItem("captchaExpires", new Date(Date.now() + 30 * 60 * 1000).toISOString())
 
         // Call the onValidated callback
-        onValidated(data.data.token)
+        onValidated(data.token)
       } else {
         setError(data.error || "CAPTCHA validation failed")
-        generateCaptcha()
+        // Reset the CAPTCHA
+        if (window.turnstile) {
+          window.turnstile.reset()
+        }
       }
     } catch (error) {
       console.error("Error validating CAPTCHA:", error)
       setError("An error occurred. Please try again.")
-      generateCaptcha()
+      // Reset the CAPTCHA
+      if (window.turnstile) {
+        window.turnstile.reset()
+      }
     } finally {
       setLoading(false)
     }
@@ -115,59 +134,16 @@ export function CaptchaValidator({ onValidated }: CaptchaValidatorProps) {
         </div>
       )}
 
-      <div className="mb-6">
-        <div className="mb-4 flex items-center justify-center">
-          <div className="relative overflow-hidden rounded bg-[#1a1a1a] p-4">
-            <div className="select-none text-2xl font-bold tracking-widest text-white">
-              {captchaText.split("").map((char, index) => (
-                <span
-                  key={index}
-                  style={{
-                    transform: `rotate(${Math.random() * 20 - 10}deg)`,
-                    display: "inline-block",
-                    margin: "0 2px",
-                  }}
-                >
-                  {char}
-                </span>
-              ))}
-            </div>
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                backgroundImage: "linear-gradient(45deg, transparent 45%, rgba(255,255,255,0.1) 50%, transparent 55%)",
-                backgroundSize: "4px 4px",
-              }}
-            ></div>
-          </div>
-          <button onClick={generateCaptcha} className="ml-2 rounded bg-[#1a1a1a] p-2 text-gray-400 hover:text-white">
-            <i className="fas fa-sync-alt"></i>
-          </button>
-        </div>
-
-        <input
-          type="text"
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          placeholder="Enter the text above"
-          className="w-full rounded border border-white/10 bg-[#000000] px-4 py-3 text-white transition-all focus:border-[#ff3e3e] focus:outline-none focus:ring-1 focus:ring-[#ff3e3e]"
-        />
+      <div className="mb-6 flex justify-center">
+        <div id="turnstile-container" className="cloudflare-captcha"></div>
       </div>
 
-      <button
-        onClick={handleValidate}
-        disabled={loading || !userInput}
-        className="interactive-element button-glow button-3d w-full rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-4 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20 disabled:opacity-50"
-      >
-        {loading ? (
-          <div className="flex items-center justify-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-            <span>Validating...</span>
-          </div>
-        ) : (
-          <>Verify</>
-        )}
-      </button>
+      {loading && (
+        <div className="flex items-center justify-center gap-2">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
+          <span>Validating...</span>
+        </div>
+      )}
     </div>
   )
 }

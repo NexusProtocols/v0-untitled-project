@@ -37,10 +37,11 @@ export default function GatewayPage() {
   const rewardRef = useRef<HTMLDivElement>(null)
   const [lastVisitTime, setLastVisitTime] = useState<number | null>(null)
 
-  // Multi-stage gateway - Using Script 1's approach
+  // Multi-stage gateway
+  const [currentStage, setCurrentStage] = useState(1)
   const totalStages = 5
-  const [currentStage, setCurrentStage] = useState(0) // 0 for CAPTCHA, 1-5 for stages
-  const stagesCompleted = new Array(totalStages + 1).fill(false) // +1 for CAPTCHA
+  const stagesCompleted = new Array(totalStages).fill(false)
+  stagesCompleted[0] = captchaValidated // First stage is CAPTCHA
 
   // Fetch gateway data
   useEffect(() => {
@@ -96,7 +97,6 @@ export default function GatewayPage() {
 
           if (expiresAt > now) {
             setCaptchaValidated(true)
-            setCurrentStage(1) // Move to first stage if CAPTCHA is valid
           }
         }
       } catch (error) {
@@ -110,7 +110,7 @@ export default function GatewayPage() {
     fetchGateway()
   }, [params.gatewayId])
 
-  // Check if all tasks are completed - Using Script 1's logic
+  // Check if all tasks are completed
   useEffect(() => {
     if (gateway && gateway.steps && completedTasks.length === gateway.steps.length && showTasks) {
       setAllTasksCompleted(true)
@@ -118,81 +118,203 @@ export default function GatewayPage() {
       stagesCompleted[currentStage] = true
 
       // If this is the final stage, show the reward
-      if (currentStage === totalStages) {
+      if (currentStage === totalStages - 1) {
         handleClaimReward()
       }
     }
   }, [completedTasks, gateway, showTasks, currentStage])
 
-  // Increment gateway visits
-  const incrementGatewayVisits = async (gatewayId: string) => {
+  // Function to increment gateway visits
+  const incrementGatewayVisits = (gatewayId: string) => {
     try {
-      // In a real implementation, this would be an API call
-      console.log(`Incrementing visits for gateway ${gatewayId}`)
-      // For now, just log it
+      const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
+      const updatedGateways = allGateways.map((g: any) => {
+        if (g.id === gatewayId) {
+          // Initialize stats if not present
+          if (!g.stats) {
+            g.stats = { visits: 0, completions: 0, conversionRate: 0, revenue: 0 }
+          }
+
+          // Increment visits
+          const visits = (g.stats?.visits || 0) + 1
+          return {
+            ...g,
+            stats: {
+              ...g.stats,
+              visits,
+              conversionRate: g.stats?.completions ? (g.stats.completions / visits) * 100 : 0,
+              revenue: calculateEstimatedRevenue(visits, g.stats?.completions || 0, g.settings?.adLevel || 3),
+            },
+          }
+        }
+        return g
+      })
+
+      localStorage.setItem("nexus_gateways", JSON.stringify(updatedGateways))
     } catch (error) {
       console.error("Error incrementing gateway visits:", error)
     }
   }
 
-  // Handle task completion
-  const handleTaskComplete = (taskId: string) => {
-    if (!completedTasks.includes(taskId)) {
-      setCompletedTasks([...completedTasks, taskId])
+  // Function to increment gateway completions
+  const incrementGatewayCompletions = (gatewayId: string) => {
+    try {
+      const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
+      const updatedGateways = allGateways.map((g: any) => {
+        if (g.id === gatewayId) {
+          // Initialize stats if not present
+          if (!g.stats) {
+            g.stats = { visits: 1, completions: 0, conversionRate: 0, revenue: 0 }
+          }
+
+          // Increment completions
+          const completions = (g.stats?.completions || 0) + 1
+          const visits = g.stats?.visits || 1
+          return {
+            ...g,
+            stats: {
+              ...g.stats,
+              completions,
+              conversionRate: (completions / visits) * 100,
+              revenue: calculateEstimatedRevenue(visits, completions, g.settings?.adLevel || 3),
+            },
+          }
+        }
+        return g
+      })
+
+      localStorage.setItem("nexus_gateways", JSON.stringify(updatedGateways))
+    } catch (error) {
+      console.error("Error incrementing gateway completions:", error)
     }
   }
 
-  // Handle moving to next stage
-  const handleNextStage = () => {
-    // Mark current stage as completed
-    const newStagesCompleted = [...stagesCompleted]
-    newStagesCompleted[currentStage] = true
+  // Calculate estimated revenue
+  const calculateEstimatedRevenue = (visits: number, completions: number, adLevel: number) => {
+    // Base CPM rate ($ per 1000 visits)
+    const baseCPM = 2.5
 
-    // Reset tasks for next stage
-    setCompletedTasks([])
-    setAllTasksCompleted(false)
-    setShowTasks(true)
+    // Adjust based on ad level
+    const adLevelMultiplier = 0.8 + adLevel * 0.2
 
-    // Move to next stage
-    setCurrentStage(currentStage + 1)
+    // Adjust based on completion rate
+    const completionRate = visits > 0 ? completions / visits : 0
+    const completionMultiplier = 1 + completionRate * 0.5
+
+    // Calculate revenue
+    const revenue = (visits / 1000) * baseCPM * adLevelMultiplier * completionMultiplier
+
+    return Number.parseFloat(revenue.toFixed(2))
   }
 
-  // Handle claiming reward
-  const handleClaimReward = () => {
-    setShowFinalReward(true)
-    setShowTasks(false)
-
-    // If reward is a URL, redirect after a delay
-    if (gateway?.reward?.type === "url" && gateway?.reward?.content) {
-      setTimeout(() => {
-        window.location.href = gateway.reward.content
-      }, 3000)
-    }
-  }
-
-  // Handle copying reward to clipboard
-  const handleCopyReward = () => {
-    if (gateway?.reward?.content) {
-      navigator.clipboard.writeText(gateway.reward.content)
-      alert("Copied to clipboard!")
-    }
-  }
-
-  // Handle CAPTCHA validation - Modified for Script 1's flow
+  // Handle CAPTCHA validation
   const handleCaptchaValidated = (token: string) => {
     setCaptchaValidated(true)
     setValidationToken(token)
-    setCurrentStage(1) // Move to first stage after CAPTCHA
-    stagesCompleted[0] = true // Mark CAPTCHA as completed
+    // Mark first stage as completed
+    stagesCompleted[0] = true
   }
 
-  // Handle start tasks - Simplified from Script 1
+  // Handle task completion
+  const handleTaskComplete = (taskId: string) => {
+    setCompletedTasks((prev) => [...prev, taskId])
+  }
+
+  // Handle start tasks
   const handleStartTasks = () => {
     setShowTasks(true)
-    setCurrentStage(1)
+    setCurrentStage(1) // Move to stage 1 (tasks)
   }
 
-  // [Rest of your handler functions remain the same...]
+  // Move to next stage
+  const handleNextStage = () => {
+    if (currentStage < totalStages - 1) {
+      setCurrentStage(currentStage + 1)
+      // Reset completed tasks for the new stage
+      setCompletedTasks([])
+      setAllTasksCompleted(false)
+    } else {
+      // Final stage completed
+      handleClaimReward()
+    }
+  }
+
+  // Handle claim reward
+  const handleClaimReward = async () => {
+    setShowFinalReward(true)
+    incrementGatewayCompletions(params.gatewayId as string)
+
+    try {
+      // Get the stored CAPTCHA token
+      const captchaToken = localStorage.getItem("captchaToken")
+
+      if (!captchaToken) {
+        setError("Session expired. Please refresh and try again.")
+        return
+      }
+
+      // Mark the gateway as completed on the server
+      const response = await fetch("/api/gateway/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          gatewayId: params.gatewayId,
+          token: captchaToken,
+          completed: true,
+          stages: totalStages,
+          currentStage: currentStage,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        setError(data.error || "Failed to complete gateway")
+        return
+      }
+
+      // If reward is a URL, redirect with the token
+      if (gateway?.reward?.type === "url" && gateway?.reward?.url) {
+        // Check if the URL already has query parameters
+        const hasParams = gateway.reward.url.includes("?")
+        const separator = hasParams ? "&" : "?"
+
+        // Redirect to the reward URL with the token
+        const redirectUrl = `${gateway.reward.url}${separator}token=${data.token}`
+
+        setTimeout(() => {
+          window.location.href = redirectUrl
+        }, 1500)
+      }
+    } catch (error) {
+      console.error("Error completing gateway:", error)
+      setError("An error occurred while completing the gateway")
+    }
+  }
+
+  // Handle scroll to reward
+  const handleScrollToReward = () => {
+    if (rewardRef.current) {
+      rewardRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
+  // Handle copy reward
+  const handleCopyReward = () => {
+    if (gateway?.reward?.content) {
+      navigator.clipboard
+        .writeText(gateway.reward.content)
+        .then(() => {
+          alert("Content copied to clipboard!")
+        })
+        .catch((error) => {
+          console.error("Error copying content:", error)
+          alert("Failed to copy content. Please select and copy manually.")
+        })
+    }
+  }
 
   if (isLoading) {
     return (
@@ -250,7 +372,7 @@ export default function GatewayPage() {
           </div>
 
           <div className="mx-auto max-w-3xl">
-            {/* Header with Gateway Info - Using Script 1's design */}
+            {/* Header with Gateway Info */}
             <div className="mb-8 rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-6 shadow-lg shadow-[#ff3e3e]/5">
               <div className="flex flex-col md:flex-row gap-6">
                 {gateway?.imageUrl && (
@@ -283,11 +405,11 @@ export default function GatewayPage() {
               </div>
             </div>
 
-            {/* Multi-stage progress indicator - Using Script 1's design */}
+            {/* Multi-stage progress indicator */}
             <div className="mb-8">
               <div className="text-center mb-2">
                 <h2 className="text-lg font-medium text-white">
-                  Stage {currentStage} of {totalStages}
+                  Stage {currentStage + 1} of {totalStages}
                 </h2>
               </div>
               <div className="flex justify-center items-center gap-2 mb-4">
@@ -295,17 +417,17 @@ export default function GatewayPage() {
                   <div
                     key={index}
                     className={`relative w-10 h-10 rounded-full flex items-center justify-center ${
-                      index + 1 === currentStage
+                      index === currentStage
                         ? "bg-[#ff3e3e] text-white"
-                        : stagesCompleted[index + 1]
+                        : stagesCompleted[index]
                           ? "bg-green-500 text-white"
                           : "bg-[#1a1a1a] text-gray-400"
                     }`}
                   >
-                    {index + 1 === currentStage && (
+                    {index === currentStage && (
                       <div className="absolute inset-0 rounded-full bg-[#ff3e3e] animate-ping opacity-30"></div>
                     )}
-                    {stagesCompleted[index + 1] ? <i className="fas fa-check"></i> : <span>{index + 1}</span>}
+                    {stagesCompleted[index] ? <i className="fas fa-check"></i> : <span>{index + 1}</span>}
                   </div>
                 ))}
               </div>
@@ -340,7 +462,7 @@ export default function GatewayPage() {
               </div>
             ) : showTasks && !showFinalReward ? (
               <>
-                {/* Progress bar - Using Script 1's design */}
+                {/* Progress bar */}
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-sm text-white font-medium">
@@ -374,7 +496,7 @@ export default function GatewayPage() {
                 </div>
 
                 {/* Next stage button */}
-                {allTasksCompleted && currentStage < totalStages && (
+                {allTasksCompleted && (
                   <div className="mb-8 text-center">
                     <button
                       onClick={handleNextStage}

@@ -85,6 +85,19 @@ export function GatewayTaskButton({
           taskId: `task-${taskNumber}`,
         }),
       })
+
+      // Update session storage to mark this task as completed
+      const sessionKey = `gateway_${gatewayId}_progress`
+      const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+      progress.completedTasks = progress.completedTasks || []
+
+      // Make sure we're using the correct task ID format
+      const taskId = `task-${taskNumber}`
+      if (!progress.completedTasks.includes(taskId)) {
+        progress.completedTasks.push(taskId)
+      }
+
+      sessionStorage.setItem(sessionKey, JSON.stringify(progress))
     } catch (error) {
       console.error("Error tracking task completion:", error)
     }

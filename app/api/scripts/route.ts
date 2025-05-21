@@ -1,74 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth-options"
-
-// Fallback data for when database operations fail
-const fallbackScripts = [
-  {
-    id: "script-1",
-    title: "Universal ESP Script",
-    description:
-      "A universal ESP script that works with most games. Highlights players, items, and other important objects.",
-    code: "-- ESP code here",
-    author: "NexusTeam",
-    createdAt: "2023-05-15T12:00:00Z",
-    views: 1250,
-    likes: ["user1", "user2", "user3"],
-    isPremium: false,
-    isNexusTeam: true,
-    isVerified: true,
-    keySystem: false,
-    game: {
-      id: 1,
-      gameId: "universal",
-      name: "Universal",
-      imageUrl: "/placeholder.svg?height=160&width=320",
-    },
-    categories: ["utility", "visual"],
-  },
-  {
-    id: "script-2",
-    title: "Advanced Aimbot",
-    description: "Advanced aimbot with customizable settings including smoothness, FOV, and target selection.",
-    code: "-- Aimbot code here",
-    author: "ScriptMaster",
-    createdAt: "2023-06-20T15:30:00Z",
-    views: 980,
-    likes: ["user1", "user4"],
-    isPremium: true,
-    isNexusTeam: false,
-    isVerified: true,
-    keySystem: true,
-    game: {
-      id: 2,
-      gameId: "fps-games",
-      name: "FPS Games",
-      imageUrl: "/placeholder.svg?height=160&width=320",
-    },
-    categories: ["combat", "utility"],
-  },
-  {
-    id: "script-3",
-    title: "Auto Farm Script",
-    description: "Automatically farms resources and completes tasks in farming simulators.",
-    code: "-- Auto farm code here",
-    author: "FarmingPro",
-    createdAt: "2023-07-10T09:45:00Z",
-    views: 750,
-    likes: ["user2", "user5", "user6"],
-    isPremium: false,
-    isNexusTeam: false,
-    isVerified: false,
-    keySystem: false,
-    game: {
-      id: 3,
-      gameId: "farming-simulator",
-      name: "Farming Simulator",
-      imageUrl: "/placeholder.svg?height=160&width=320",
-    },
-    categories: ["automation", "farming"],
-  },
-]
+import { prisma } from "@/lib/prisma"
 
 export async function GET(request: NextRequest) {
   try {
@@ -86,83 +19,98 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get("sortOrder") || "descending"
     const page = Number.parseInt(searchParams.get("page") || "1", 10)
     const limit = 20 // Default to 20 items per page
+    const skip = (page - 1) * limit
 
-    // Apply filters to fallback data
-    let filteredScripts = [...fallbackScripts]
+    // Build the where clause for filtering
+    const where: any = {}
 
     if (searchFilter) {
-      const searchLower = searchFilter.toLowerCase()
-      filteredScripts = filteredScripts.filter(
-        (script) =>
-          script.title.toLowerCase().includes(searchLower) ||
-          script.description.toLowerCase().includes(searchLower) ||
-          script.author.toLowerCase().includes(searchLower) ||
-          script.game.name.toLowerCase().includes(searchLower),
-      )
+      where.OR = [
+        { title: { contains: searchFilter, mode: "insensitive" } },
+        { description: { contains: searchFilter, mode: "insensitive" } },
+        { author: { contains: searchFilter, mode: "insensitive" } },
+        { gameName: { contains: searchFilter, mode: "insensitive" } },
+      ]
     }
 
     if (category) {
-      filteredScripts = filteredScripts.filter((script) => script.categories.includes(category))
+      where.categoriesJson = { contains: category }
+    }
+
+    if (gameId) {
+      where.gameId = gameId
     }
 
     if (verified) {
-      filteredScripts = filteredScripts.filter((script) => script.isVerified)
+      where.isVerified = true
     }
 
     if (keySystem) {
-      filteredScripts = filteredScripts.filter((script) => script.keySystem)
+      where.keySystem = true
     }
 
     if (free && !paid) {
-      filteredScripts = filteredScripts.filter((script) => !script.isPremium)
+      where.isPremium = false
     } else if (paid && !free) {
-      filteredScripts = filteredScripts.filter((script) => script.isPremium)
+      where.isPremium = true
     }
 
-    // Sort scripts
-    filteredScripts.sort((a, b) => {
-      switch (sortBy) {
-        case "views":
-          return sortOrder === "ascending" ? (a.views || 0) - (b.views || 0) : (b.views || 0) - (a.views || 0)
-        case "likes":
-          return sortOrder === "ascending"
-            ? (a.likes?.length || 0) - (b.likes?.length || 0)
-            : (b.likes?.length || 0) - (a.likes?.length || 0)
-        case "updatedAt":
-          return sortOrder === "ascending"
-            ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-            : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        case "createdAt":
-        default:
-          return sortOrder === "ascending"
-            ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-            : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    // Build the orderBy clause for sorting
+    const orderBy: any = {}
+
+    switch (sortBy) {
+      case "views":
+        orderBy.views = sortOrder === "ascending" ? "asc" : "desc"
+        break
+      case "updatedAt":
+        orderBy.updatedAt = sortOrder === "ascending" ? "asc" : "desc"
+        break
+      case "createdAt":
+      default:
+        orderBy.createdAt = sortOrder === "ascending" ? "asc" : "desc"
+        break
+    }
+
+    // Get scripts from database
+    const scripts = await prisma.script.findMany({
+      where,
+      orderBy,
+      skip,
+      take: limit,
+    })
+
+    // Get total count for pagination
+    const total = await prisma.script.count({ where })
+
+    // Transform scripts to include parsed categories
+    const transformedScripts = scripts.map((script) => {
+      const categories = script.categoriesJson ? JSON.parse(script.categoriesJson) : []
+
+      return {
+        ...script,
+        categories,
+        game: {
+          id: script.id,
+          gameId: script.gameId || "unknown",
+          name: script.gameName || "Unknown Game",
+          imageUrl: script.gameImage || "/placeholder.svg?height=160&width=320",
+        },
       }
     })
 
-    // Return response with fallback data
     return NextResponse.json({
       success: true,
-      scripts: filteredScripts,
+      scripts: transformedScripts,
       pagination: {
-        total: filteredScripts.length,
+        total,
         page,
         limit,
-        pages: Math.ceil(filteredScripts.length / limit),
+        pages: Math.ceil(total / limit),
       },
     })
   } catch (error) {
     console.error("Error fetching scripts:", error)
-    return NextResponse.json({
-      success: true,
-      scripts: fallbackScripts,
-      pagination: {
-        total: fallbackScripts.length,
-        page: 1,
-        limit: 20,
-        pages: 1,
-      },
-    })
+    return NextResponse.json({ success: false, message: "An error occurred while fetching scripts" }, { status: 500 })
   }
 }
 
@@ -182,34 +130,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
     }
 
-    // Create a mock script for initial deployment
-    const newScript = {
-      id: `script-${Date.now()}`,
-      title: data.title,
-      description: data.description,
-      code: data.code,
-      author: session.user.name || "Unknown",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      views: 0,
-      likes: [],
-      isPremium: data.isPremium || false,
-      isNexusTeam: false,
-      isVerified: false,
-      keySystem: data.keySystem || false,
-      game: data.game || {
-        id: 999,
-        gameId: "unknown",
-        name: "Unknown Game",
-        imageUrl: "/placeholder.svg?height=160&width=320",
+    // Create script in database
+    const newScript = await prisma.script.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        code: data.code,
+        author: data.author || session.user.name || "Unknown",
+        isPremium: data.isPremium || false,
+        isNexusTeam: data.isNexusTeam || false,
+        isVerified: false,
+        keySystem: data.keySystem || false,
+        gameId: data.game?.gameId || "unknown",
+        gameName: data.game?.name || "Unknown Game",
+        gameImage: data.game?.imageUrl || "/placeholder.svg?height=160&width=320",
+        categoriesJson: JSON.stringify(data.categories || []),
       },
-      categories: data.categories || [],
-    }
+    })
 
     return NextResponse.json({
       success: true,
       message: "Script created successfully",
-      script: newScript,
+      script: {
+        ...newScript,
+        categories: data.categories || [],
+        game: {
+          id: newScript.id,
+          gameId: newScript.gameId || "unknown",
+          name: newScript.gameName || "Unknown Game",
+          imageUrl: newScript.gameImage || "/placeholder.svg?height=160&width=320",
+        },
+      },
     })
   } catch (error) {
     console.error("Error creating script:", error)

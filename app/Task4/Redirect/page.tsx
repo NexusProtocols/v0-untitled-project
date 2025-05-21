@@ -7,86 +7,58 @@ import Link from "next/link"
 export default function Task4RedirectPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [isRedirecting, setIsRedirecting] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
   const [error, setError] = useState("")
 
   const gatewayId = searchParams?.get("gateway") || ""
   const creatorId = searchParams?.get("creator") || ""
   const token = searchParams?.get("token") || ""
-  const status = searchParams?.get("status") || ""
 
   useEffect(() => {
-    if (!gatewayId || !token) {
+    if (!gatewayId || !creatorId || !token) {
       setError("Missing required parameters")
       return
     }
 
-    // If status is already set, we've been redirected back from Ad Maven
-    if (status === "success") {
-      handleSuccessfulCompletion()
-    } else {
-      // Otherwise, we need to track the task completion
-      trackTaskCompletion()
-    }
-  }, [gatewayId, token, status])
+    const validateTask = async () => {
+      try {
+        // Track task completion
+        await fetch("/api/task4/redirect", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            gatewayId,
+            creatorId,
+            token,
+          }),
+        })
 
-  const trackTaskCompletion = async () => {
-    try {
-      setIsRedirecting(true)
+        // Update session storage to mark task 4 as completed
+        const sessionKey = `gateway_${gatewayId}_progress`
+        const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+        progress.completedTasks = progress.completedTasks || []
 
-      // Store progress in session storage
-      const sessionKey = `gateway_${gatewayId}_progress`
-      const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+        if (!progress.completedTasks.includes("task-4")) {
+          progress.completedTasks.push("task-4")
+        }
 
-      // Mark task 4 as completed
-      progress.completedTasks = progress.completedTasks || []
-      if (!progress.completedTasks.includes("task-4")) {
-        progress.completedTasks.push("task-4")
+        sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+
+        // Redirect back to gateway with task completion parameters
+        setRedirecting(true)
+        setTimeout(() => {
+          router.push(`/key-gateway/${gatewayId}?creator=${creatorId}&token=${token}&task=4&completed=true`)
+        }, 2000)
+      } catch (error) {
+        console.error("Error validating task:", error)
+        setError("Failed to validate task. Please try again.")
       }
-
-      // Set expiration time (15 minutes from now)
-      progress.expiresAt = Date.now() + 15 * 60 * 1000
-
-      sessionStorage.setItem(sessionKey, JSON.stringify(progress))
-
-      // Redirect back to gateway
-      setTimeout(() => {
-        router.push(`/gateway/${gatewayId}?creator=${creatorId}&token=${token}&task=4&completed=true`)
-      }, 2000)
-    } catch (error) {
-      console.error("Error tracking task completion:", error)
-      setError("An error occurred while processing your request")
-      setIsRedirecting(false)
-    }
-  }
-
-  const handleSuccessfulCompletion = () => {
-    setIsRedirecting(true)
-
-    // Store progress in session storage
-    try {
-      const sessionKey = `gateway_${gatewayId}_progress`
-      const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
-
-      // Mark task 4 as completed
-      progress.completedTasks = progress.completedTasks || []
-      if (!progress.completedTasks.includes("task-4")) {
-        progress.completedTasks.push("task-4")
-      }
-
-      // Set expiration time (15 minutes from now)
-      progress.expiresAt = Date.now() + 15 * 60 * 1000
-
-      sessionStorage.setItem(sessionKey, JSON.stringify(progress))
-    } catch (error) {
-      console.error("Error storing progress:", error)
     }
 
-    // Redirect back to gateway
-    setTimeout(() => {
-      router.push(`/gateway/${gatewayId}?creator=${creatorId}&token=${token}&task=4&completed=true`)
-    }, 2000)
-  }
+    validateTask()
+  }, [gatewayId, creatorId, token, router])
 
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center">
@@ -100,25 +72,32 @@ export default function Task4RedirectPage() {
         </div>
 
         {error ? (
-          <div className="mb-6 text-center">
-            <div className="rounded-lg bg-red-500/20 p-4 text-red-400">
+          <div className="text-center">
+            <div className="mb-6 rounded bg-red-900/30 p-4 text-red-200">
               <p>{error}</p>
             </div>
-            <div className="mt-4">
-              <Link
-                href={`/gateway/${gatewayId}`}
-                className="interactive-element button-shine inline-flex items-center rounded border border-[#ff3e3e] px-6 py-3 font-semibold text-[#ff3e3e] transition-all hover:bg-[#ff3e3e]/10"
-              >
-                <i className="fas fa-arrow-left mr-2"></i> Return to Gateway
-              </Link>
+            <Link
+              href={`/key-gateway/${gatewayId}?creator=${creatorId}`}
+              className="inline-block rounded bg-[#ff3e3e] px-4 py-2 font-medium text-white transition-all hover:bg-[#ff0000]"
+            >
+              Return to Gateway
+            </Link>
+          </div>
+        ) : redirecting ? (
+          <div className="text-center">
+            <p className="text-white mb-4">Redirecting you back to the gateway...</p>
+            <div className="flex justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-[#ff3e3e]"></div>
             </div>
           </div>
         ) : (
           <div className="text-center">
-            <p className="mb-4 text-white">Redirecting you back to the gateway...</p>
-            <div className="flex justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-[#ff3e3e]"></div>
-            </div>
+            <Link
+              href={`/key-gateway/${gatewayId}?creator=${creatorId}&token=${token}&task=4&completed=true`}
+              className="inline-block rounded bg-[#ff3e3e] px-4 py-2 font-medium text-white transition-all hover:bg-[#ff0000]"
+            >
+              Return to Gateway
+            </Link>
           </div>
         )}
       </div>

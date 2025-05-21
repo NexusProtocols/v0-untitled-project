@@ -59,9 +59,10 @@ export default function AutoTagPage() {
           // Track completion
           trackCompletion()
 
-          // Redirect back to gateway
+          // Redirect back to gateway with task completion parameters
           setTimeout(() => {
-            router.push(`/gateway/${gatewayId}?creator=${creatorId}&token=${token}`)
+            // Use the correct format for the redirect URL
+            router.push(`/key-gateway/${gatewayId}?creator=${creatorId}&token=${token}&task=4&completed=true`)
           }, 1000)
 
           return 0
@@ -73,16 +74,19 @@ export default function AutoTagPage() {
     return () => clearInterval(timer)
   }, [creatorId, gatewayId, token, router])
 
-  // Track completion of AutoTag task
+  // Update the trackCompletion function to properly mark the task as completed
   const trackCompletion = async () => {
     try {
       // Store completion in sessionStorage
       const sessionKey = `gateway_${gatewayId}_progress`
       const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
       progress.completedTasks = progress.completedTasks || []
-      if (!progress.completedTasks.includes("autotag")) {
-        progress.completedTasks.push("autotag")
+
+      // Make sure we're using the correct task ID format
+      if (!progress.completedTasks.includes("task-4")) {
+        progress.completedTasks.push("task-4")
       }
+
       sessionStorage.setItem(sessionKey, JSON.stringify(progress))
 
       await fetch("/api/gateway/track", {
@@ -94,7 +98,7 @@ export default function AutoTagPage() {
           gatewayId,
           creatorId,
           action: "task_complete",
-          taskId: "autotag",
+          taskId: "task-4",
           userData: {
             userAgent: navigator.userAgent,
             screenSize: `${window.innerWidth}x${window.innerHeight}`,

@@ -273,15 +273,28 @@ export default function GatewayPage() {
 
   // Handle task completion
   const handleTaskComplete = (taskId: string) => {
-    const updatedTasks = [...completedTasks, taskId]
-    setCompletedTasks(updatedTasks)
+    // Only add if not already in the completed tasks
+    if (!completedTasks.includes(taskId)) {
+      const updatedTasks = [...completedTasks, taskId]
+      setCompletedTasks(updatedTasks)
 
-    // Store progress in sessionStorage
-    const sessionKey = `gateway_${params.gatewayId}_progress`
-    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
-    progress.completedTasks = updatedTasks
-    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
-    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+      // Store progress in sessionStorage
+      const sessionKey = `gateway_${params.gatewayId}_progress`
+      const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+      progress.completedTasks = updatedTasks
+      progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+      sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+
+      // Also update the allTasksCompleted state if needed
+      if (
+        gateway?.stages &&
+        currentStage > 0 &&
+        currentStage <= gateway.stages.length &&
+        updatedTasks.length === gateway.stages[currentStage - 1]?.taskCount
+      ) {
+        setAllTasksCompleted(true)
+      }
+    }
   }
 
   // Handle start tasks
@@ -413,10 +426,22 @@ export default function GatewayPage() {
     const completedTask = searchParams.get("task")
     const isCompleted = searchParams.get("completed") === "true"
 
-    if (completedTask && isCompleted && !completedTasks.includes(`task-${completedTask}`)) {
-      handleTaskComplete(`task-${completedTask}`)
+    if (completedTask && isCompleted) {
+      const taskId = `task-${completedTask}`
+
+      // Only add if not already in the completed tasks
+      if (!completedTasks.includes(taskId)) {
+        const updatedTasks = [...completedTasks, taskId]
+        setCompletedTasks(updatedTasks)
+
+        // Update session storage
+        const sessionKey = `gateway_${params.gatewayId}_progress`
+        const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+        progress.completedTasks = updatedTasks
+        sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+      }
     }
-  }, [])
+  }, [completedTasks, params.gatewayId])
 
   if (isLoading) {
     return (

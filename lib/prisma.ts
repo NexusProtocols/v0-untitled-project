@@ -1,14 +1,11 @@
-// This is a placeholder file for future Prisma implementation
-// We'll implement the actual Prisma client after successful deployment
+import { PrismaClient } from "@prisma/client"
 
-export const prisma = {
-  script: {
-    findMany: async () => [],
-    count: async () => 0,
-    create: async () => ({}),
-  },
-  user: {
-    findUnique: async () => null,
-    create: async () => ({}),
-  },
-}
+const globalForPrisma = global as unknown as { prisma: PrismaClient }
+
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+  })
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma

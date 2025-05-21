@@ -300,47 +300,58 @@ export default function UploadScriptsPage() {
       return
     }
 
-    const script = {
-      id: Date.now().toString(),
-      title: scriptTitle,
-      description: scriptDescription,
-      code: scriptCode,
-      author: uploadAsTeam && isNexusTeamMember ? "Nexus Team" : user?.username,
-      createdAt: new Date().toISOString(),
-      game: {
-        id: Date.now(),
-        gameId: gameDetails.gameId,
-        name: gameDetails.name,
-        imageUrl: gameDetails.imageUrl,
-      },
-      categories: selectedCategories,
-      likes: [],
-      dislikes: [],
-      views: 0,
-      isNexusTeam: uploadAsTeam && isNexusTeamMember,
+    try {
+      setMessage({ type: "", text: "Uploading script..." })
+
+      const scriptData = {
+        title: scriptTitle,
+        description: scriptDescription,
+        code: scriptCode,
+        author: uploadAsTeam && isNexusTeamMember ? "Nexus Team" : user?.username,
+        game: {
+          gameId: gameDetails.gameId,
+          name: gameDetails.name,
+          imageUrl: gameDetails.imageUrl,
+        },
+        categories: selectedCategories,
+        isNexusTeam: uploadAsTeam && isNexusTeamMember,
+      }
+
+      const response = await fetch("/api/scripts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(scriptData),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setMessage({ type: "success", text: "Script uploaded successfully!" })
+
+        setScriptTitle("")
+        setScriptDescription("")
+        setScriptCode("")
+        setGameId("")
+        setGameName("")
+        setGameDetails(null)
+        setSelectedCategories([])
+        setValidationErrors([])
+        setGameSearchResults([])
+        setShowSearchResults(false)
+        setUploadAsTeam(false)
+
+        setTimeout(() => {
+          router.push("/scripts")
+        }, 2000)
+      } else {
+        setMessage({ type: "error", text: result.message || "Failed to upload script" })
+      }
+    } catch (error) {
+      console.error("Error uploading script:", error)
+      setMessage({ type: "error", text: "An error occurred while uploading the script" })
     }
-
-    const existingScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
-    existingScripts.push(script)
-    localStorage.setItem("nexus_scripts", JSON.stringify(existingScripts))
-
-    setMessage({ type: "success", text: "Script uploaded successfully!" })
-
-    setScriptTitle("")
-    setScriptDescription("")
-    setScriptCode("")
-    setGameId("")
-    setGameName("")
-    setGameDetails(null)
-    setSelectedCategories([])
-    setValidationErrors([])
-    setGameSearchResults([])
-    setShowSearchResults(false)
-    setUploadAsTeam(false)
-
-    setTimeout(() => {
-      router.push("/scripts")
-    }, 2000)
   }
 
   if (isLoading) {

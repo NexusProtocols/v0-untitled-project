@@ -3,18 +3,40 @@
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
+import Script from "next/script"
 
 export default function AutoTagPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [seconds, setSeconds] = useState(10)
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [adcashScript, setAdcashScript] = useState<string | null>(null)
 
   const creatorId = searchParams?.get("creator") || "unknown"
   const gatewayId = searchParams?.get("gateway") || "unknown"
   const token = searchParams?.get("token") || Date.now().toString()
 
   useEffect(() => {
+    // Fetch Adcash script
+    const fetchAdcashScript = async () => {
+      try {
+        const response = await fetch('/api/adcash');
+        const script = await response.text();
+        setAdcashScript(script);
+        
+        // Initialize AutoTag after script is loaded
+        if (typeof window !== 'undefined' && (window as any).aclib) {
+          (window as any).aclib.runAutoTag({
+            zoneId: '9ozlcrjpfe',
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch Adcash script:", error);
+      }
+    };
+
+    fetchAdcashScript();
+
     // Track that user visited the AutoTag page
     const trackVisit = async () => {
       try {
@@ -94,7 +116,32 @@ export default function AutoTagPage() {
 
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center">
+      {/* Adcash Script */}
+      {adcashScript && (
+        <Script
+          id="adcash-script"
+          dangerouslySetInnerHTML={{ __html: adcashScript }}
+          strategy="beforeInteractive"
+        />
+      )}
+      
+      {/* Initialize AutoTag */}
+      <Script
+        id="adcash-init"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            if (typeof aclib !== 'undefined') {
+              aclib.runAutoTag({
+                zoneId: '9ozlcrjpfe',
+              });
+            }
+          `,
+        }}
+      />
+
       <div className="max-w-md w-full mx-auto p-8 rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a]">
+        {/* Rest of your existing component JSX */}
         <div className="text-center mb-8">
           <div className="inline-block rounded-full bg-[#ff3e3e]/20 p-4 mb-4">
             <i className="fas fa-tag text-4xl text-[#ff3e3e]"></i>

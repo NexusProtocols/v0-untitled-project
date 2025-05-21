@@ -1,12 +1,8 @@
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import DiscordProvider from "next-auth/providers/discord"
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -19,51 +15,28 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        try {
-          // Try to get user from database
-          const user = await prisma.user.findUnique({
-            where: { username: credentials.username },
-          })
-
-          if (user && user.password === credentials.password) {
-            // In production, use proper password hashing
-            return {
-              id: user.id,
-              name: user.username,
-              email: user.email,
-            }
-          }
-        } catch (dbError) {
-          console.error("Database error:", dbError)
-
-          // Fallback to localStorage if database fails
-          try {
-            const userKey = `nexus_user_${credentials.username}`
-            const userData = localStorage.getItem(userKey)
-
-            if (userData) {
-              const user = JSON.parse(userData)
-
-              if (user.password === credentials.password) {
-                return {
-                  id: credentials.username,
-                  name: credentials.username,
-                  email: user.email,
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Error checking localStorage:", error)
+        // Mock user authentication for initial deployment
+        if (credentials.username === "admin" && credentials.password === "password") {
+          return {
+            id: "user-1",
+            name: "Admin User",
+            email: "admin@example.com",
           }
         }
 
         return null
       },
     }),
+    DiscordProvider({
+      clientId: process.env.DISCORD_CLIENT_ID || "",
+      clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
+    }),
   ],
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  pages: {
+    signIn: "/login",
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -74,16 +47,10 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async session({ session, token }) {
-      if (token) {
+      if (token && session.user) {
         session.user.id = token.id as string
-        session.user.name = token.name as string
       }
       return session
     },
   },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
-  secret: process.env.NEXTAUTH_SECRET || "nexus-secret-key",
 }

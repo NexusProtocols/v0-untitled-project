@@ -1,11 +1,14 @@
-import { PrismaClient } from "@prisma/client"
+// This is a placeholder file for future Prisma implementation
+// We'll implement the actual Prisma client after successful deployment
 
-// PrismaClient is attached to the `global` object in development to prevent
-// exhausting your database connection limit.
-// Learn more: https://pris.ly/d/help/next-js-best-practices
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient }
-
-export const prisma = globalForPrisma.prisma || new PrismaClient()
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma
+export const prisma = {
+  script: {
+    findMany: async () => [],
+    count: async () => 0,
+    create: async () => ({}),
+  },
+  user: {
+    findUnique: async () => null,
+    create: async () => ({}),
+  },
+}

@@ -160,39 +160,51 @@ export function GatewayStep({
           <div className="bg-[#050505] h-[250px] w-[300px] flex items-center justify-center text-gray-600">
             <div className="text-center">
               <div className="animate-pulse mb-2">Loading ad...</div>
-              <script
-                dangerouslySetInnerHTML={{
-                  __html: `
-                  atOptions = {
-                    'key' : 'bcc7655c0da0cf4f4cae5db51791ed6e',
-                    'format' : 'iframe',
-                    'height' : 250,
-                    'width' : 300,
-                    'params' : {}
-                  };
-                  document.write('<scr' + 'ipt type="text/javascript" src="//www.highperformanceformat.com/bcc7655c0da0cf4f4cae5db51791ed6e/invoke.js"></scr' + 'ipt>');
-                `,
-                }}
-              />
+              <div id={`ad-container-${step.id}`} className="min-h-[250px] flex items-center justify-center">
+                <script
+                  dangerouslySetInnerHTML={{
+                    __html: `
+        try {
+          atOptions = {
+            'key' : 'bcc7655c0da0cf4f4cae5db51791ed6e',
+            'format' : 'iframe',
+            'height' : 250,
+            'width' : 300,
+            'params' : {}
+          };
+          document.write('<scr' + 'ipt type="text/javascript" src="//www.highperformanceformat.com/bcc7655c0da0cf4f4cae5db51791ed6e/invoke.js" onerror="document.getElementById(\'ad-container-${step.id}\').innerHTML = \'<div class=\\\'bg-[#050505] h-[250px] w-[300px] flex items-center justify-center text-gray-600\\\'>Ad Space</div>\'"></scr' + 'ipt>');
+        } catch(e) {
+          document.getElementById('ad-container-${step.id}').innerHTML = '<div class="bg-[#050505] h-[250px] w-[300px] flex items-center justify-center text-gray-600">Ad Space</div>';
+        }
+      `,
+                  }}
+                />
+              </div>
             </div>
           </div>
           <div className="bg-[#050505] h-[250px] w-[300px] flex items-center justify-center text-gray-600">
             <div className="text-center">
               <div className="animate-pulse mb-2">Loading ad...</div>
-              <script
-                dangerouslySetInnerHTML={{
-                  __html: `
-                  atOptions = {
-                    'key' : 'bcc7655c0da0cf4f4cae5db51791ed6e',
-                    'format' : 'iframe',
-                    'height' : 250,
-                    'width' : 300,
-                    'params' : {}
-                  };
-                  document.write('<scr' + 'ipt type="text/javascript" src="//www.highperformanceformat.com/bcc7655c0da0cf4f4cae5db51791ed6e/invoke.js"></scr' + 'ipt>');
-                `,
-                }}
-              />
+              <div id={`ad-container-${step.id}`} className="min-h-[250px] flex items-center justify-center">
+                <script
+                  dangerouslySetInnerHTML={{
+                    __html: `
+        try {
+          atOptions = {
+            'key' : 'bcc7655c0da0cf4f4cae5db51791ed6e',
+            'format' : 'iframe',
+            'height' : 250,
+            'width' : 300,
+            'params' : {}
+          };
+          document.write('<scr' + 'ipt type="text/javascript" src="//www.highperformanceformat.com/bcc7655c0da0cf4f4cae5db51791ed6e/invoke.js" onerror="document.getElementById(\'ad-container-${step.id}\').innerHTML = \'<div class=\\\'bg-[#050505] h-[250px] w-[300px] flex items-center justify-center text-gray-600\\\'>Ad Space</div>\'"></scr' + 'ipt>');
+        } catch(e) {
+          document.getElementById('ad-container-${step.id}').innerHTML = '<div class="bg-[#050505] h-[250px] w-[300px] flex items-center justify-center text-gray-600">Ad Space</div>';
+        }
+      `,
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -403,7 +415,15 @@ export function GatewayStep({
       {step.imageUrl && (
         <div className="mb-6">
           <div className="relative h-40 w-full overflow-hidden rounded">
-            <img src={step.imageUrl || "/placeholder.svg"} alt={step.title} className="h-full w-full object-cover" />
+            <img
+              src={step.imageUrl || "/placeholder.svg"}
+              alt={step.title}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = "/placeholder.svg"
+                e.currentTarget.onerror = null
+              }}
+            />
           </div>
         </div>
       )}

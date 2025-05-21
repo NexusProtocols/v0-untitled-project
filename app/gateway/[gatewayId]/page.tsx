@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { SecureAd } from "@/components/secure-ad"
 import { CaptchaValidator } from "@/components/captcha-validator"
-import { GatewayTaskButton } from "@/components/gateway-task-button"
 
 // Gateway step types
 type StepType = "redirect" | "article" | "operagx" | "youtube" | "direct"
@@ -71,10 +70,12 @@ export default function GatewayPage() {
         // In a real implementation, fetch from API
         // For now, get from localStorage
         const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
-        const currentGateway = allGateways.find((g: any) => g.id === params.gatewayId)
+        let currentGateway = allGateways.find((g: any) => g.id === params.gatewayId)
 
         if (!currentGateway) {
-          setError("Gateway not found")
+          console.warn("Gateway not found, using fallback")
+          currentGateway = createFallbackGateway(params.gatewayId as string)
+          setGateway(currentGateway)
           setIsLoading(false)
           return
         }
@@ -210,6 +211,31 @@ export default function GatewayPage() {
     const revenue = (visits / 1000) * baseCPM * adLevelMultiplier * completionMultiplier
 
     return Number.parseFloat(revenue.toFixed(2))
+  }
+
+  // Create a fallback gateway if the real one fails to load
+  const createFallbackGateway = (gatewayId: string) => {
+    return {
+      id: gatewayId,
+      title: "Gateway Content",
+      description: "Complete all tasks to access the content",
+      creatorId: "system",
+      creatorName: "System",
+      steps: [],
+      stages: [
+        {
+          taskCount: 2,
+          title: "Basic Tasks",
+        },
+      ],
+      reward: {
+        type: "paste",
+        content: "Thank you for completing this gateway. The content is currently unavailable.",
+      },
+      settings: {
+        adLevel: 2,
+      },
+    }
   }
 
   // Handle CAPTCHA validation
@@ -367,7 +393,23 @@ export default function GatewayPage() {
       {/* Top banner ad */}
       <div className="container mx-auto px-5 pt-8">
         <div className="flex justify-center">
-          <SecureAd adType="BANNER_728x90" creatorId={gateway?.creatorId || "unknown"} />
+          <div className="ad-container">
+            {gateway ? (
+              <SecureAd
+                adType="BANNER_728x90"
+                creatorId={gateway?.creatorId || "unknown"}
+                fallback={
+                  <div className="h-[90px] w-[728px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                    Ad Space
+                  </div>
+                }
+              />
+            ) : (
+              <div className="h-[90px] w-[728px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                Ad Space
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -376,10 +418,42 @@ export default function GatewayPage() {
         <div className="relative">
           {/* Side ads */}
           <div className="absolute -left-40 top-0 hidden xl:block">
-            <SecureAd adType="BANNER_160x600" creatorId={gateway?.creatorId || "unknown"} />
+            <div className="ad-container">
+              {gateway ? (
+                <SecureAd
+                  adType="BANNER_160x600"
+                  creatorId={gateway?.creatorId || "unknown"}
+                  fallback={
+                    <div className="h-[600px] w-[160px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                      Ad Space
+                    </div>
+                  }
+                />
+              ) : (
+                <div className="h-[600px] w-[160px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                  Ad Space
+                </div>
+              )}
+            </div>
           </div>
           <div className="absolute -right-40 top-0 hidden xl:block">
-            <SecureAd adType="BANNER_160x600" creatorId={gateway?.creatorId || "unknown"} />
+            <div className="ad-container">
+              {gateway ? (
+                <SecureAd
+                  adType="BANNER_160x600"
+                  creatorId={gateway?.creatorId || "unknown"}
+                  fallback={
+                    <div className="h-[600px] w-[160px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                      Ad Space
+                    </div>
+                  }
+                />
+              ) : (
+                <div className="h-[600px] w-[160px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                  Ad Space
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mx-auto max-w-3xl">
@@ -393,6 +467,10 @@ export default function GatewayPage() {
                         src={gateway.imageUrl || "/placeholder.svg"}
                         alt={gateway.title}
                         className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg"
+                          e.currentTarget.onerror = null // Prevent infinite error loop
+                        }}
                       />
                     </div>
                   </div>
@@ -520,17 +598,30 @@ export default function GatewayPage() {
                 {/* Tasks */}
                 <div className="mb-8 space-y-4">
                   {Array.from({ length: gateway?.stages?.[currentStage - 1]?.taskCount || 0 }).map((_, index) => (
-                    <GatewayTaskButton
+                    <div
                       key={`task-${currentStage}-${index}`}
-                      taskType={getTaskType(index)}
-                      taskNumber={index + 1}
-                      onComplete={() => handleTaskComplete(`task-${currentStage}-${index}`)}
-                      creatorId={gateway?.creatorId || "unknown"}
-                      gatewayId={gateway?.id || "unknown"}
-                      content={{
-                        url: `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${gateway?.creatorId || "unknown"}&gateway=${gateway?.id || "unknown"}`,
-                      }}
-                    />
+                      className="rounded-lg border border-white/10 bg-[#1a1a1a] p-4 transition-all hover:border-[#ff3e3e]/30 hover:shadow-[0_0_15px_-3px_rgba(255,62,62,0.3)]"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff3e3e]/20 text-[#ff3e3e]">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-white">
+                              {getTaskType(index).charAt(0).toUpperCase() + getTaskType(index).slice(1)} Task
+                            </h3>
+                            <p className="text-xs text-gray-400">Complete this task to progress</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleTaskComplete(`task-${currentStage}-${index}`)}
+                          className="interactive-element rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-4 py-2 text-sm font-medium text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
+                        >
+                          Complete
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
 
@@ -548,13 +639,61 @@ export default function GatewayPage() {
 
                 {/* Bottom ads */}
                 <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <SecureAd adType="BANNER_300x250" creatorId={gateway?.creatorId || "unknown"} />
-                  <SecureAd adType="BANNER_300x250_ALT" creatorId={gateway?.creatorId || "unknown"} />
+                  <div className="ad-container">
+                    {gateway ? (
+                      <SecureAd
+                        adType="BANNER_300x250"
+                        creatorId={gateway?.creatorId || "unknown"}
+                        fallback={
+                          <div className="h-[250px] w-[300px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                            Ad Space
+                          </div>
+                        }
+                      />
+                    ) : (
+                      <div className="h-[250px] w-[300px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                        Ad Space
+                      </div>
+                    )}
+                  </div>
+                  <div className="ad-container">
+                    {gateway ? (
+                      <SecureAd
+                        adType="BANNER_300x250_ALT"
+                        creatorId={gateway?.creatorId || "unknown"}
+                        fallback={
+                          <div className="h-[250px] w-[300px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                            Ad Space
+                          </div>
+                        }
+                      />
+                    ) : (
+                      <div className="h-[250px] w-[300px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                        Ad Space
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Native banner */}
                 <div className="mb-8">
-                  <SecureAd adType="NATIVE_BANNER_1" creatorId={gateway?.creatorId || "unknown"} />
+                  <div className="ad-container">
+                    {gateway ? (
+                      <SecureAd
+                        adType="NATIVE_BANNER_1"
+                        creatorId={gateway?.creatorId || "unknown"}
+                        fallback={
+                          <div className="h-[auto] w-[auto] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                            Ad Space
+                          </div>
+                        }
+                      />
+                    ) : (
+                      <div className="h-[auto] w-[auto] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                        Ad Space
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             ) : (
@@ -613,12 +752,77 @@ export default function GatewayPage() {
       {/* Bottom banner ads */}
       <div className="container mx-auto px-5 py-8">
         <div className="mb-8 flex justify-center">
-          <SecureAd adType="BANNER_728x90" creatorId={gateway?.creatorId || "unknown"} />
+          <div className="ad-container">
+            {gateway ? (
+              <SecureAd
+                adType="BANNER_728x90"
+                creatorId={gateway?.creatorId || "unknown"}
+                fallback={
+                  <div className="h-[90px] w-[728px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                    Ad Space
+                  </div>
+                }
+              />
+            ) : (
+              <div className="h-[90px] w-[728px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                Ad Space
+              </div>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <SecureAd adType="BANNER_300x250" creatorId={gateway?.creatorId || "unknown"} />
-          <SecureAd adType="NATIVE_BANNER_2" creatorId={gateway?.creatorId || "unknown"} className="h-full" />
-          <SecureAd adType="BANNER_300x250_ALT" creatorId={gateway?.creatorId || "unknown"} />
+          <div className="ad-container">
+            {gateway ? (
+              <SecureAd
+                adType="BANNER_300x250"
+                creatorId={gateway?.creatorId || "unknown"}
+                fallback={
+                  <div className="h-[250px] w-[300px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                    Ad Space
+                  </div>
+                }
+              />
+            ) : (
+              <div className="h-[250px] w-[300px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                Ad Space
+              </div>
+            )}
+          </div>
+          <div className="ad-container">
+            {gateway ? (
+              <SecureAd
+                adType="NATIVE_BANNER_2"
+                creatorId={gateway?.creatorId || "unknown"}
+                className="h-full"
+                fallback={
+                  <div className="h-[auto] w-[auto] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                    Ad Space
+                  </div>
+                }
+              />
+            ) : (
+              <div className="h-[auto] w-[auto] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                Ad Space
+              </div>
+            )}
+          </div>
+          <div className="ad-container">
+            {gateway ? (
+              <SecureAd
+                adType="BANNER_300x250_ALT"
+                creatorId={gateway?.creatorId || "unknown"}
+                fallback={
+                  <div className="h-[250px] w-[300px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                    Ad Space
+                  </div>
+                }
+              />
+            ) : (
+              <div className="h-[250px] w-[300px] bg-[#0a0a0a] flex items-center justify-center text-gray-500">
+                Ad Space
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

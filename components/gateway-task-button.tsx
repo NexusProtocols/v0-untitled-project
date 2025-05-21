@@ -10,12 +10,14 @@ interface GatewayTaskButtonProps {
   onComplete: () => void
   creatorId: string
   gatewayId: string
+  sessionId: string
   content?: {
     url?: string
     videoId?: string
   }
   secureAuth?: boolean
   apiEndpoint?: string
+  isCompleted?: boolean
 }
 
 export function GatewayTaskButton({
@@ -24,15 +26,21 @@ export function GatewayTaskButton({
   onComplete,
   creatorId,
   gatewayId,
+  sessionId,
   content,
   secureAuth = false,
   apiEndpoint,
+  isCompleted: initialIsCompleted = false,
 }: GatewayTaskButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [isCompleted, setIsCompleted] = useState(false)
-  const [countdown, setCountdown] = useState(0)
+  const [isCompleted, setIsCompleted] = useState(initialIsCompleted)
   const [taskStarted, setTaskStarted] = useState(false)
   const taskFooterRef = useRef<HTMLDivElement>(null)
+
+  // Update isCompleted if the prop changes
+  useEffect(() => {
+    setIsCompleted(initialIsCompleted)
+  }, [initialIsCompleted])
 
   // Handle task completion
   const handleComplete = async () => {
@@ -52,6 +60,7 @@ export function GatewayTaskButton({
             gatewayId,
             creatorId,
             taskId: `task-${taskNumber}`,
+            sessionId,
             timestamp: Date.now(),
           }),
         })
@@ -81,23 +90,11 @@ export function GatewayTaskButton({
         body: JSON.stringify({
           gatewayId,
           creatorId,
+          sessionId,
           action: "task_complete",
           taskId: `task-${taskNumber}`,
         }),
       })
-
-      // Update session storage to mark this task as completed
-      const sessionKey = `gateway_${gatewayId}_progress`
-      const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
-      progress.completedTasks = progress.completedTasks || []
-
-      // Make sure we're using the correct task ID format
-      const taskId = `task-${taskNumber}`
-      if (!progress.completedTasks.includes(taskId)) {
-        progress.completedTasks.push(taskId)
-      }
-
-      sessionStorage.setItem(sessionKey, JSON.stringify(progress))
     } catch (error) {
       console.error("Error tracking task completion:", error)
     }
@@ -112,7 +109,7 @@ export function GatewayTaskButton({
     setTaskStarted(true)
     const url =
       content?.url ||
-      `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${creatorId}&gateway=${gatewayId}`
+      `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${creatorId}&gateway=${gatewayId}&sessionId=${sessionId}`
     window.open(url, "_blank")
 
     // Start countdown for completion (8 seconds for task 1)
@@ -134,7 +131,7 @@ export function GatewayTaskButton({
       // @ts-ignore
       window.aclib?.runInterstitial({
         zoneId: "9962174",
-        customParams: { creatorId, gatewayId },
+        customParams: { creatorId, gatewayId, sessionId },
       })
 
       // Start countdown for completion (25 seconds for task 2)
@@ -153,28 +150,30 @@ export function GatewayTaskButton({
 
     // Generate a token for validation
     const token = Date.now().toString()
-    const returnUrl = `${window.location.origin}/Task4/Redirect?gateway=${gatewayId}&creator=${creatorId}&token=${token}`
-
-    // Store token in sessionStorage with expiration
-    const sessionKey = `gateway_${gatewayId}_progress`
-    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
-    progress.token = token
-    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
-    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+    const returnUrl = `${window.location.origin}/Task4/Redirect?gateway=${gatewayId}&creator=${creatorId}&token=${token}&sessionId=${sessionId}`
 
     // Open Ad Maven link
     window.open(
-      `https://free-content.pro/s?TFleLfjA&creator=${creatorId}&gateway=${gatewayId}&redirect=${encodeURIComponent(returnUrl)}`,
+      `https://free-content.pro/s?TFleLfjA&creator=${creatorId}&gateway=${gatewayId}&sessionId=${sessionId}&redirect=${encodeURIComponent(returnUrl)}`,
       "_blank",
     )
 
     // Check for validation every second
     const checkInterval = setInterval(() => {
-      const updatedProgress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
-      if (updatedProgress.completedTasks && updatedProgress.completedTasks.includes("task-4")) {
-        clearInterval(checkInterval)
-        handleComplete()
-      }
+      // Check if task is completed in session storage
+      fetch(`/api/gateway/session?sessionId=${sessionId}`)
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success && data.session && data.session.completedTasks) {
+            if (data.session.completedTasks.includes(`task-${taskNumber}`)) {
+              clearInterval(checkInterval)
+              handleComplete()
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Error checking session:", error)
+        })
     }, 1000)
 
     // Clear interval after 5 minutes to prevent memory leaks
@@ -188,16 +187,8 @@ export function GatewayTaskButton({
     // Generate a token for validation
     const token = Date.now().toString()
 
-    // Store token in sessionStorage with expiration
-    const sessionKey = `gateway_${gatewayId}_progress`
-    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
-    progress.token = token
-    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
-    progress.currentTask = "task-4"
-    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
-
-    // Redirect to AutoTag page
-    window.location.href = `/AutoTag?creator=${creatorId}&gateway=${gatewayId}&token=${token}`
+    // Redirect to AutoTag page with session ID
+    window.location.href = `/AutoTag?creator=${creatorId}&gateway=${gatewayId}&token=${token}&sessionId=${sessionId}`
   }
 
   // Handle footer validation task
@@ -208,7 +199,7 @@ export function GatewayTaskButton({
       // Create and load the script
       const script = document.createElement("script")
       script.src = "https://cdn.work.ink/js/redirect.js?id=700"
-      script.dataset.url = `https://work.ink/direct/700?creator=${creatorId}&gateway=${gatewayId}`
+      script.dataset.url = `https://work.ink/direct/700?creator=${creatorId}&gateway=${gatewayId}&sessionId=${sessionId}`
       script.dataset.ids = "TaskFooter"
       taskFooterRef.current.appendChild(script)
 
@@ -275,22 +266,24 @@ export function GatewayTaskButton({
     }
   }
 
-  // Check for token in URL for external validation task
+  // Check for task completion in session on mount
   useEffect(() => {
-    if (taskType === "operagx") {
-      const urlParams = new URLSearchParams(window.location.search)
-      const token = urlParams.get("token")
-      const storedToken = localStorage.getItem("task3_token")
-
-      if (token && storedToken && token === storedToken) {
-        localStorage.setItem("task3_verified", "true")
-        localStorage.removeItem("task3_token")
-        handleComplete()
-      }
+    if (sessionId) {
+      fetch(`/api/gateway/session?sessionId=${sessionId}`)
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success && data.session && data.session.completedTasks) {
+            if (data.session.completedTasks.includes(`task-${taskNumber}`)) {
+              setIsCompleted(true)
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Error checking session:", error)
+        })
     }
-  }, [taskType])
+  }, [sessionId, taskNumber])
 
-  // Update the render function to not show countdown timer
   return (
     <div
       className={`rounded-lg border-l-4 ${isCompleted ? "border-green-500 bg-green-900/20" : "border-[#ff3e3e] bg-[#1a1a1a]"} p-6 transition-all duration-300`}

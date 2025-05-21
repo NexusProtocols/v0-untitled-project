@@ -13,6 +13,7 @@ export default function Task4RedirectPage() {
   const gatewayId = searchParams?.get("gateway") || ""
   const creatorId = searchParams?.get("creator") || ""
   const token = searchParams?.get("token") || ""
+  const sessionId = searchParams?.get("sessionId") || ""
 
   useEffect(() => {
     if (!gatewayId || !creatorId || !token) {
@@ -32,24 +33,42 @@ export default function Task4RedirectPage() {
             gatewayId,
             creatorId,
             token,
+            sessionId,
           }),
         })
 
-        // Update session storage to mark task 4 as completed
-        const sessionKey = `gateway_${gatewayId}_progress`
-        const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
-        progress.completedTasks = progress.completedTasks || []
+        // Update session in the database
+        if (sessionId) {
+          try {
+            const response = await fetch(`/api/gateway/session?sessionId=${sessionId}`)
+            const data = await response.json()
 
-        if (!progress.completedTasks.includes("task-4")) {
-          progress.completedTasks.push("task-4")
+            if (data.success && data.session) {
+              const completedTasks = [...(data.session.completedTasks || []), "task-4"]
+
+              await fetch("/api/gateway/session", {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  sessionId,
+                  completedTasks,
+                  currentStage: data.session.currentStage,
+                }),
+              })
+            }
+          } catch (error) {
+            console.error("Error updating session:", error)
+          }
         }
-
-        sessionStorage.setItem(sessionKey, JSON.stringify(progress))
 
         // Redirect back to gateway with task completion parameters
         setRedirecting(true)
         setTimeout(() => {
-          router.push(`/key-gateway/${gatewayId}?creator=${creatorId}&token=${token}&task=4&completed=true`)
+          router.push(
+            `/key-gateway/${gatewayId}?creator=${creatorId}&token=${token}&task=4&completed=true&sessionId=${sessionId}`,
+          )
         }, 2000)
       } catch (error) {
         console.error("Error validating task:", error)
@@ -58,7 +77,7 @@ export default function Task4RedirectPage() {
     }
 
     validateTask()
-  }, [gatewayId, creatorId, token, router])
+  }, [gatewayId, creatorId, token, sessionId, router])
 
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center">
@@ -77,7 +96,7 @@ export default function Task4RedirectPage() {
               <p>{error}</p>
             </div>
             <Link
-              href={`/key-gateway/${gatewayId}?creator=${creatorId}`}
+              href={`/key-gateway/${gatewayId}?creator=${creatorId}&sessionId=${sessionId}`}
               className="inline-block rounded bg-[#ff3e3e] px-4 py-2 font-medium text-white transition-all hover:bg-[#ff0000]"
             >
               Return to Gateway
@@ -93,7 +112,7 @@ export default function Task4RedirectPage() {
         ) : (
           <div className="text-center">
             <Link
-              href={`/key-gateway/${gatewayId}?creator=${creatorId}&token=${token}&task=4&completed=true`}
+              href={`/key-gateway/${gatewayId}?creator=${creatorId}&token=${token}&task=4&completed=true&sessionId=${sessionId}`}
               className="inline-block rounded bg-[#ff3e3e] px-4 py-2 font-medium text-white transition-all hover:bg-[#ff0000]"
             >
               Return to Gateway

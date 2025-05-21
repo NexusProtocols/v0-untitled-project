@@ -7,7 +7,6 @@ import Footer from "@/components/footer"
 import { AuthProvider } from "@/components/auth-provider"
 import { BanNotification } from "@/components/ban-notification"
 import CookieConsent from "@/components/cookie-consent"
-import { SessionProvider } from "@/components/session-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,19 +24,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-[#050505] text-white`}>
-        <SessionProvider>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-            <AuthProvider>
-              <div className="flex min-h-screen flex-col">
-                <Header />
-                <BanNotification />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </div>
-              <CookieConsent />
-            </AuthProvider>
-          </ThemeProvider>
-        </SessionProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          <AuthProvider>
+            <div className="flex min-h-screen flex-col">
+              <Header />
+              <BanNotification />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </div>
+            <CookieConsent />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

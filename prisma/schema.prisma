@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -12,52 +11,96 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  username      String    @unique
-  email         String?   @unique
-  emailVerified DateTime?
-  password      String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // Profile information
-  bio           String?
-  profilePicture String?
-  
-  // User status
-  isBanned      Boolean   @default(false)
-  bannedReason  String?
-  banExpiration DateTime?
-  
-  // Authentication
-  discordId     String?   @unique
-  hwid          String?
-  ip            String?
-  browser       String?
-  os            String?
+  id                String         @id @default(uuid())
+  username          String         @unique
+  email             String?        @unique
+  password          String?
+  discordId         String?        @unique
+  discordUsername   String?
+  discordAvatar     String?
+  discordToken      String?
+  discordRefreshToken String?
+  isAdmin           Boolean        @default(false)
+  isBanned          Boolean        @default(false)
+  isPremium         Boolean        @default(false)
+  premiumExpires    DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  lastLoginAt       DateTime?
+  scripts           Script[]
+  scriptRatings     ScriptRating[]
 }
 
 model Script {
-  id          String   @id @default(cuid())
+  id              String         @id @default(uuid())
+  title           String
+  description     String
+  code            String
+  author          String
+  authorId        String?
+  user            User?          @relation(fields: [authorId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  views           Int            @default(0)
+  likesCount      Int            @default(0)
+  dislikesCount   Int            @default(0)
+  isPremium       Boolean        @default(false)
+  isNexusTeam     Boolean        @default(false)
+  isVerified      Boolean        @default(false)
+  keySystem       Boolean        @default(false)
+  gameId          String?
+  gameName        String?
+  gameImage       String?
+  categoriesJson  String?        // JSON string of categories
+  ratings         ScriptRating[]
+}
+
+model ScriptRating {
+  id        String   @id @default(uuid())
+  scriptId  String
+  userId    String
+  isLike    Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  script    Script   @relation(fields: [scriptId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([scriptId, userId])
+}
+
+model Gateway {
+  id          String   @id @default(uuid())
   title       String
-  description String
-  code        String   @db.Text
-  author      String
+  description String?
+  creatorId   String
+  creatorName String
+  imageUrl    String?
+  stages      Json     // JSON array of stages
+  reward      Json?    // JSON object with reward details
+  settings    Json?    // JSON object with gateway settings
+  stats       Json?    // JSON object with gateway stats
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  // Script metadata
-  views       Int      @default(0)
-  isPremium   Boolean  @default(false)
-  isNexusTeam Boolean  @default(false)
-  isVerified  Boolean  @default(false)
-  keySystem   Boolean  @default(false)
-  
-  // Game information
-  gameId      String?
-  gameName    String?
-  gameImage   String?
-  
-  // Categories as JSON
-  categoriesJson String? @db.Text
+}
+
+model GatewaySession {
+  id            String   @id @default(uuid())
+  gatewayId     String
+  userId        String?
+  completedTasks Json?    // JSON array of completed task IDs
+  currentStage  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  expiresAt     DateTime
+}
+
+model GatewayAnalytics {
+  id        String   @id @default(uuid())
+  gatewayId String
+  sessionId String?
+  userId    String?
+  action    String
+  taskId    String?
+  timestamp DateTime @default(now())
+  metadata  Json?    // JSON object with additional data
 }

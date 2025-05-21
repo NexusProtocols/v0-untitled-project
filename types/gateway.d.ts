@@ -3,18 +3,20 @@ import type { Stage } from "./stage"
 export interface Gateway {
   id: string
   title: string
-  description: string
-  imageUrl?: string
+  description?: string
   creatorId: string
   creatorName: string
+  imageUrl?: string
   stages: Stage[]
   reward?: {
     type: "url" | "paste"
-    url?: string
     content?: string
+    url?: string
   }
   settings?: {
     adLevel: number
+    adultAds: boolean
+    requireCaptcha: boolean
   }
   stats?: {
     visits: number
@@ -22,4 +24,6 @@ export interface Gateway {
     conversionRate: number
     revenue: number
   }
+  createdAt: string
+  updatedAt: string
 }

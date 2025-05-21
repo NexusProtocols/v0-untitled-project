@@ -45,6 +45,74 @@ type SortOptions = {
   sortOrder: "ascending" | "descending"
 }
 
+// Fallback data for when API fails
+const fallbackScripts: Script[] = [
+  {
+    id: "script-1",
+    title: "Universal ESP Script",
+    description:
+      "A universal ESP script that works with most games. Highlights players, items, and other important objects.",
+    code: "-- ESP code here",
+    author: "NexusTeam",
+    createdAt: "2023-05-15T12:00:00Z",
+    views: 1250,
+    likes: ["user1", "user2", "user3"],
+    isPremium: false,
+    isNexusTeam: true,
+    isVerified: true,
+    keySystem: false,
+    game: {
+      id: 1,
+      gameId: "universal",
+      name: "Universal",
+      imageUrl: "/placeholder.svg?height=160&width=320",
+    },
+    categories: ["utility", "visual"],
+  },
+  {
+    id: "script-2",
+    title: "Advanced Aimbot",
+    description: "Advanced aimbot with customizable settings including smoothness, FOV, and target selection.",
+    code: "-- Aimbot code here",
+    author: "ScriptMaster",
+    createdAt: "2023-06-20T15:30:00Z",
+    views: 980,
+    likes: ["user1", "user4"],
+    isPremium: true,
+    isNexusTeam: false,
+    isVerified: true,
+    keySystem: true,
+    game: {
+      id: 2,
+      gameId: "fps-games",
+      name: "FPS Games",
+      imageUrl: "/placeholder.svg?height=160&width=320",
+    },
+    categories: ["combat", "utility"],
+  },
+  {
+    id: "script-3",
+    title: "Auto Farm Script",
+    description: "Automatically farms resources and completes tasks in farming simulators.",
+    code: "-- Auto farm code here",
+    author: "FarmingPro",
+    createdAt: "2023-07-10T09:45:00Z",
+    views: 750,
+    likes: ["user2", "user5", "user6"],
+    isPremium: false,
+    isNexusTeam: false,
+    isVerified: false,
+    keySystem: false,
+    game: {
+      id: 3,
+      gameId: "farming-simulator",
+      name: "Farming Simulator",
+      imageUrl: "/placeholder.svg?height=160&width=320",
+    },
+    categories: ["automation", "farming"],
+  },
+]
+
 const FilterToggle = ({
   label,
   checked,
@@ -135,6 +203,7 @@ export default function ScriptsPage() {
     sortBy: "",
     sortOrder: "descending",
   })
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   const handleImageError = (scriptId: string) => {
     console.log(`Image error for script: ${scriptId}`)
@@ -204,6 +273,7 @@ export default function ScriptsPage() {
 
   useEffect(() => {
     setIsLoading(true)
+    setFetchError(null)
 
     // Build the API URL with search parameters
     let apiUrl = "/api/scripts"
@@ -238,94 +308,91 @@ export default function ScriptsPage() {
       apiUrl += `?${params.toString()}`
     }
 
-    // Fetch scripts from API
+    // Fetch scripts from API with a timeout
+    const fetchTimeout = setTimeout(() => {
+      if (isLoading) {
+        setIsLoading(false)
+        setFetchError("Request timed out. Using fallback data.")
+        setScripts(fallbackScripts)
+      }
+    }, 5000)
+
     fetch(apiUrl)
       .then((response) => {
+        clearTimeout(fetchTimeout)
         if (!response.ok) {
-          throw new Error("Failed to fetch scripts")
+          throw new Error(`Server responded with status: ${response.status}`)
         }
         return response.json()
       })
       .then((data) => {
-        setScripts(data.scripts)
+        if (data.success && Array.isArray(data.scripts)) {
+          setScripts(data.scripts)
+
+          // Cache the scripts in localStorage for future use
+          try {
+            localStorage.setItem("nexus_scripts", JSON.stringify(data.scripts))
+          } catch (error) {
+            console.error("Error caching scripts:", error)
+          }
+        } else {
+          throw new Error("Invalid response format")
+        }
       })
       .catch((error) => {
         console.error("Error loading scripts:", error)
+        setFetchError(`Failed to fetch scripts. ${error.message}`)
 
-        // Fallback to localStorage if API fails
+        // Try to load from localStorage first
         try {
           let storedScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
 
-          // Apply the same filtering logic as before
-          if (filters.verified) {
-            storedScripts = storedScripts.filter((script: Script) => script.isVerified)
-          }
-          if (filters.keySystem) {
-            storedScripts = storedScripts.filter((script: Script) => script.keySystem)
-          }
-          if (filters.free) {
-            storedScripts = storedScripts.filter((script: Script) => !script.isPremium)
-          }
-          if (filters.paid) {
-            storedScripts = storedScripts.filter((script: Script) => script.isPremium)
-          }
+          if (storedScripts && storedScripts.length > 0) {
+            console.log("Using cached scripts from localStorage")
 
-          // Apply sorting
-          if (sortOptions.sortBy) {
-            storedScripts.sort((a: Script, b: Script) => {
-              let aValue, bValue
+            // Apply filters to stored scripts
+            if (filters.verified) {
+              storedScripts = storedScripts.filter((script: Script) => script.isVerified)
+            }
+            if (filters.keySystem) {
+              storedScripts = storedScripts.filter((script: Script) => script.keySystem)
+            }
+            if (filters.free) {
+              storedScripts = storedScripts.filter((script: Script) => !script.isPremium)
+            }
+            if (filters.paid) {
+              storedScripts = storedScripts.filter((script: Script) => script.isPremium)
+            }
 
-              switch (sortOptions.sortBy) {
-                case "views":
-                  aValue = a.views || 0
-                  bValue = b.views || 0
-                  break
-                case "likes":
-                  aValue = a.likes?.length || 0
-                  bValue = b.likes?.length || 0
-                  break
-                case "createdAt":
-                  aValue = new Date(a.createdAt).getTime()
-                  bValue = new Date(b.createdAt).getTime()
-                  break
-                case "updatedAt":
-                  aValue = a.updatedAt ? new Date(a.updatedAt).getTime() : new Date(a.createdAt).getTime()
-                  bValue = b.updatedAt ? new Date(b.updatedAt).getTime() : new Date(b.createdAt).getTime()
-                  break
-                default:
-                  return 0
-              }
+            // Apply search filter if search query exists
+            if (searchQuery) {
+              storedScripts = storedScripts.filter(
+                (script: Script) =>
+                  script.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  script.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  script.game?.name.toLowerCase().includes(searchQuery.toLowerCase()),
+              )
+            }
 
-              return sortOptions.sortOrder === "ascending" ? aValue - bValue : bValue - aValue
-            })
+            // Apply category filter if selected
+            if (selectedCategory) {
+              storedScripts = storedScripts.filter((script: Script) => script.categories?.includes(selectedCategory))
+            }
+
+            setScripts(storedScripts)
+          } else {
+            // If no localStorage data, use fallback data
+            console.log("Using fallback script data")
+            setScripts(fallbackScripts)
           }
-
-          // Apply search filter if search query exists
-          if (searchQuery) {
-            storedScripts = storedScripts.filter(
-              (script: Script) =>
-                script.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                script.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                script.game?.name.toLowerCase().includes(searchQuery.toLowerCase()),
-            )
-          }
-
-          // Apply category filter if selected
-          if (selectedCategory) {
-            storedScripts = storedScripts.filter((script: Script) => script.categories?.includes(selectedCategory))
-          }
-
-          // Apply game filter if selected
-          if (selectedGame) {
-            storedScripts = storedScripts.filter((script: Script) => script.game?.id === selectedGame)
-          }
-
-          setScripts(storedScripts)
         } catch (error) {
           console.error("Error loading scripts from localStorage:", error)
+          // Use fallback data if localStorage fails
+          setScripts(fallbackScripts)
         }
       })
       .finally(() => {
+        clearTimeout(fetchTimeout)
         setIsLoading(false)
       })
   }, [searchQuery, selectedCategory, selectedGame, filters, sortOptions])
@@ -496,6 +563,18 @@ export default function ScriptsPage() {
           </Link>
         )}
       </div>
+
+      {fetchError && (
+        <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-red-400">
+          <div className="flex items-center">
+            <i className="fas fa-exclamation-triangle mr-2"></i>
+            <span>{fetchError}</span>
+          </div>
+          <div className="mt-1 text-sm text-gray-400">
+            Showing fallback or cached data. Some features may be limited.
+          </div>
+        </div>
+      )}
 
       {/* Compact Advanced Search Toggle */}
       <div className="mb-4 flex justify-end">

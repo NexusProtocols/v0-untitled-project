@@ -110,7 +110,14 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error("Error fetching scripts:", error)
-    return NextResponse.json({ success: false, message: "An error occurred while fetching scripts" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        message: "An error occurred while fetching scripts",
+        error: process.env.NODE_ENV === "development" ? String(error) : undefined,
+      },
+      { status: 500 },
+    )
   }
 }
 
@@ -165,7 +172,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error creating script:", error)
     return NextResponse.json(
-      { success: false, message: "An error occurred while creating the script" },
+      {
+        success: false,
+        message: "An error occurred while creating the script",
+        error: process.env.NODE_ENV === "development" ? String(error) : undefined,
+      },
       { status: 500 },
     )
   }

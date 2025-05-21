@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Profile information
+  bio           String?
+  profilePicture String?
+  
+  // User status
+  isBanned      Boolean   @default(false)
+  bannedReason  String?
+  banExpiration DateTime?
+  
+  // Authentication
+  discordId     String?   @unique
+  hwid          String?
+  ip            String?
+  browser       String?
+  os            String?
+  
+  // Relations
+  scripts       Script[]
+  gateways      Gateway[]
+  likes         Like[]
+  supportRequests SupportRequest[]
+}
+
+model Script {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  code        String   @db.Text
+  author      String
+  authorUser  User     @relation(fields: [author], references: [username])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Script metadata
+  views       Int      @default(0)
+  isPremium   Boolean  @default(false)
+  isNexusTeam Boolean  @default(false)
+  isVerified  Boolean  @default(false)
+  keySystem   Boolean  @default(false)
+  
+  // Relations
+  game        Game?    @relation(fields: [gameId], references: [id])
+  gameId      String?
+  categories  Category[]
+  likes       Like[]
+}
+
+model Game {
+  id          String   @id @default(cuid())
+  gameId      String   @unique
+  name        String
+  imageUrl    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  scripts     Script[]
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  
+  // Relations
+  scripts     Script[]
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  scriptId  String
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+  script    Script   @relation(fields: [scriptId], references: [id])
+  
+  @@unique([userId, scriptId])
+}
+
+model Gateway {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  creatorId   String
+  creator     User     @relation(fields: [creatorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Gateway metadata
+  imageUrl    String?
+  stages      Json?
+  steps       Json?
+  reward      Json?
+  settings    Json?
+  stats       Json?
+}
+
+model SupportRequest {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  issue       String
+  timestamp   DateTime @default(now())
+  status      String   @default("pending")
+  messages    Json
+}

@@ -98,6 +98,47 @@ export default function GatewayPage() {
             setCaptchaValidated(true)
           }
         }
+
+        // Check for session progress
+        const sessionKey = `gateway_${params.gatewayId}_progress`
+        const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+
+        // If we have valid progress that hasn't expired
+        if (progress.expiresAt && progress.expiresAt > Date.now()) {
+          // Restore progress
+          if (progress.completedTasks && progress.completedTasks.length > 0) {
+            setCompletedTasks(progress.completedTasks)
+          }
+
+          // If we have a current stage, restore it
+          if (progress.currentStage !== undefined) {
+            setCurrentStage(progress.currentStage)
+
+            // If we're past the CAPTCHA stage, mark it as completed
+            if (progress.currentStage >= 0) {
+              setCaptchaValidated(true)
+            }
+
+            // If we're in a task stage, show tasks
+            if (progress.currentStage > 0) {
+              setShowTasks(true)
+            }
+          }
+
+          // Check URL parameters for task completion
+          const searchParams = new URLSearchParams(window.location.search)
+          const completedTask = searchParams.get("task")
+          const isCompleted = searchParams.get("completed") === "true"
+
+          if (completedTask && isCompleted && !progress.completedTasks?.includes(`task-${completedTask}`)) {
+            const updatedTasks = [...(progress.completedTasks || []), `task-${completedTask}`]
+            setCompletedTasks(updatedTasks)
+
+            // Update session storage
+            progress.completedTasks = updatedTasks
+            sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+          }
+        }
       } catch (error) {
         console.error("Error fetching gateway:", error)
         setError("An error occurred while fetching the gateway")
@@ -218,26 +259,61 @@ export default function GatewayPage() {
     setValidationToken(token)
     setCurrentStage(0) // Move to stage 0 (pre-stage)
     stagesCompleted[0] = true // Mark CAPTCHA as completed
+
+    // Store progress in sessionStorage
+    const sessionKey = `gateway_${params.gatewayId}_progress`
+    const progress = {
+      captchaValidated: true,
+      currentStage: 0,
+      completedTasks: [],
+      expiresAt: Date.now() + 15 * 60 * 1000, // 15 minutes
+    }
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
   }
 
   // Handle task completion
   const handleTaskComplete = (taskId: string) => {
-    setCompletedTasks((prev) => [...prev, taskId])
+    const updatedTasks = [...completedTasks, taskId]
+    setCompletedTasks(updatedTasks)
+
+    // Store progress in sessionStorage
+    const sessionKey = `gateway_${params.gatewayId}_progress`
+    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+    progress.completedTasks = updatedTasks
+    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
   }
 
   // Handle start tasks
   const handleStartTasks = () => {
     setShowTasks(true)
     setCurrentStage(1) // Move to stage 1 (first actual stage)
+
+    // Store progress in sessionStorage
+    const sessionKey = `gateway_${params.gatewayId}_progress`
+    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+    progress.currentStage = 1
+    progress.showTasks = true
+    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
   }
 
   // Move to next stage
   const handleNextStage = () => {
     if (currentStage < totalStages) {
-      setCurrentStage(currentStage + 1)
+      const nextStage = currentStage + 1
+      setCurrentStage(nextStage)
       // Reset completed tasks for the new stage
       setCompletedTasks([])
       setAllTasksCompleted(false)
+
+      // Store progress in sessionStorage
+      const sessionKey = `gateway_${params.gatewayId}_progress`
+      const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+      progress.currentStage = nextStage
+      progress.completedTasks = []
+      progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+      sessionStorage.setItem(sessionKey, JSON.stringify(progress))
     } else {
       // Final stage completed
       handleClaimReward()
@@ -248,6 +324,9 @@ export default function GatewayPage() {
   const handleClaimReward = async () => {
     setShowFinalReward(true)
     incrementGatewayCompletions(params.gatewayId as string)
+
+    // Clear session progress
+    sessionStorage.removeItem(`gateway_${params.gatewayId}_progress`)
 
     try {
       // Get the stored CAPTCHA token
@@ -326,6 +405,18 @@ export default function GatewayPage() {
     const taskTypes: GatewayStep["type"][] = ["redirect", "article", "operagx", "youtube", "direct"]
     return taskTypes[index % taskTypes.length]
   }
+
+  // Update the useEffect hook to check for task completion in URL parameters
+  useEffect(() => {
+    // Check URL parameters for task completion
+    const searchParams = new URLSearchParams(window.location.search)
+    const completedTask = searchParams.get("task")
+    const isCompleted = searchParams.get("completed") === "true"
+
+    if (completedTask && isCompleted && !completedTasks.includes(`task-${completedTask}`)) {
+      handleTaskComplete(`task-${completedTask}`)
+    }
+  }, [])
 
   if (isLoading) {
     return (

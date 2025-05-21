@@ -204,122 +204,130 @@ export default function ScriptsPage() {
 
   useEffect(() => {
     setIsLoading(true)
-    try {
-      let storedScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
 
-      // Sanitize image URLs
-      storedScripts = storedScripts.map((script: Script) => {
-        if (script.game && (!script.game.imageUrl || !script.game.imageUrl.startsWith("http"))) {
-          return {
-            ...script,
-            game: {
-              ...script.game,
-              imageUrl: "/placeholder.svg?height=160&width=320",
-            },
-          }
-        }
-        return script
-      })
+    // Build the API URL with search parameters
+    let apiUrl = "/api/scripts"
+    const params = new URLSearchParams()
 
-      // Apply filters
-      if (filters.verified) {
-        storedScripts = storedScripts.filter((script: Script) => script.isVerified)
-      }
-      if (filters.keySystem) {
-        storedScripts = storedScripts.filter((script: Script) => script.keySystem)
-      }
-      if (filters.free) {
-        storedScripts = storedScripts.filter((script: Script) => !script.isPremium)
-      }
-      if (filters.paid) {
-        storedScripts = storedScripts.filter((script: Script) => script.isPremium)
-      }
-
-      // Apply sorting
-      if (sortOptions.sortBy) {
-        storedScripts.sort((a: Script, b: Script) => {
-          let aValue, bValue
-
-          switch (sortOptions.sortBy) {
-            case "views":
-              aValue = a.views || 0
-              bValue = b.views || 0
-              break
-            case "likes":
-              aValue = a.likes?.length || 0
-              bValue = b.likes?.length || 0
-              break
-            case "createdAt":
-              aValue = new Date(a.createdAt).getTime()
-              bValue = new Date(b.createdAt).getTime()
-              break
-            case "updatedAt":
-              aValue = a.updatedAt ? new Date(a.updatedAt).getTime() : new Date(a.createdAt).getTime()
-              bValue = b.updatedAt ? new Date(b.updatedAt).getTime() : new Date(b.createdAt).getTime()
-              break
-            default:
-              return 0
-          }
-
-          return sortOptions.sortOrder === "ascending" ? aValue - bValue : bValue - aValue
-        })
-      }
-
-      // Apply search filter if search query exists
-      if (searchQuery) {
-        storedScripts = storedScripts.filter(
-          (script: Script) =>
-            script.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            script.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            script.game?.name.toLowerCase().includes(searchQuery.toLowerCase()),
-        )
-      }
-
-      // Apply category filter if selected
-      if (selectedCategory) {
-        storedScripts = storedScripts.filter((script: Script) => script.categories?.includes(selectedCategory))
-      }
-
-      // Apply game filter if selected
-      if (selectedGame) {
-        storedScripts = storedScripts.filter((script: Script) => script.game?.id === selectedGame)
-      }
-
-      // Sort scripts based on criteria
-      storedScripts.sort((a: Script, b: Script) => {
-        // First, prioritize Nexus team scripts
-        const aIsNexusTeam = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"].includes(
-          a.author,
-        )
-        const bIsNexusTeam = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"].includes(
-          b.author,
-        )
-
-        if (aIsNexusTeam && !bIsNexusTeam) return -1
-        if (!aIsNexusTeam && bIsNexusTeam) return 1
-
-        // Then sort by likes
-        const aLikes = a.likes?.length || 0
-        const bLikes = b.likes?.length || 0
-
-        if (aLikes !== bLikes) return bLikes - aLikes
-
-        // Then by views
-        const aViews = a.views || 0
-        const bViews = b.views || 0
-
-        if (aViews !== bViews) return bViews - aViews
-
-        // Finally by date (newest first)
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      })
-
-      setScripts(storedScripts)
-    } catch (error) {
-      console.error("Error loading scripts:", error)
-    } finally {
-      setIsLoading(false)
+    if (searchQuery) {
+      params.append("searchFilter", searchQuery)
     }
+
+    if (selectedCategory) {
+      params.append("category", selectedCategory)
+    }
+
+    if (selectedGame) {
+      params.append("gameId", selectedGame.toString())
+    }
+
+    // Add filter parameters
+    if (filters.verified) params.append("verified", "true")
+    if (filters.keySystem) params.append("keySystem", "true")
+    if (filters.free) params.append("free", "true")
+    if (filters.paid) params.append("paid", "true")
+
+    // Add sort parameters
+    if (sortOptions.sortBy) {
+      params.append("sortBy", sortOptions.sortBy)
+      params.append("sortOrder", sortOptions.sortOrder)
+    }
+
+    // Append params to URL if there are any
+    if (params.toString()) {
+      apiUrl += `?${params.toString()}`
+    }
+
+    // Fetch scripts from API
+    fetch(apiUrl)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch scripts")
+        }
+        return response.json()
+      })
+      .then((data) => {
+        setScripts(data.scripts)
+      })
+      .catch((error) => {
+        console.error("Error loading scripts:", error)
+
+        // Fallback to localStorage if API fails
+        try {
+          let storedScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
+
+          // Apply the same filtering logic as before
+          if (filters.verified) {
+            storedScripts = storedScripts.filter((script: Script) => script.isVerified)
+          }
+          if (filters.keySystem) {
+            storedScripts = storedScripts.filter((script: Script) => script.keySystem)
+          }
+          if (filters.free) {
+            storedScripts = storedScripts.filter((script: Script) => !script.isPremium)
+          }
+          if (filters.paid) {
+            storedScripts = storedScripts.filter((script: Script) => script.isPremium)
+          }
+
+          // Apply sorting
+          if (sortOptions.sortBy) {
+            storedScripts.sort((a: Script, b: Script) => {
+              let aValue, bValue
+
+              switch (sortOptions.sortBy) {
+                case "views":
+                  aValue = a.views || 0
+                  bValue = b.views || 0
+                  break
+                case "likes":
+                  aValue = a.likes?.length || 0
+                  bValue = b.likes?.length || 0
+                  break
+                case "createdAt":
+                  aValue = new Date(a.createdAt).getTime()
+                  bValue = new Date(b.createdAt).getTime()
+                  break
+                case "updatedAt":
+                  aValue = a.updatedAt ? new Date(a.updatedAt).getTime() : new Date(a.createdAt).getTime()
+                  bValue = b.updatedAt ? new Date(b.updatedAt).getTime() : new Date(b.createdAt).getTime()
+                  break
+                default:
+                  return 0
+              }
+
+              return sortOptions.sortOrder === "ascending" ? aValue - bValue : bValue - aValue
+            })
+          }
+
+          // Apply search filter if search query exists
+          if (searchQuery) {
+            storedScripts = storedScripts.filter(
+              (script: Script) =>
+                script.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                script.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                script.game?.name.toLowerCase().includes(searchQuery.toLowerCase()),
+            )
+          }
+
+          // Apply category filter if selected
+          if (selectedCategory) {
+            storedScripts = storedScripts.filter((script: Script) => script.categories?.includes(selectedCategory))
+          }
+
+          // Apply game filter if selected
+          if (selectedGame) {
+            storedScripts = storedScripts.filter((script: Script) => script.game?.id === selectedGame)
+          }
+
+          setScripts(storedScripts)
+        } catch (error) {
+          console.error("Error loading scripts from localStorage:", error)
+        }
+      })
+      .finally(() => {
+        setIsLoading(false)
+      })
   }, [searchQuery, selectedCategory, selectedGame, filters, sortOptions])
 
   // Close categories dropdown when clicking outside

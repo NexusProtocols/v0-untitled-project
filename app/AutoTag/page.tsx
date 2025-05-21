@@ -42,6 +42,13 @@ export default function AutoTagPage() {
 
     trackVisit()
 
+    // Store progress in sessionStorage
+    const sessionKey = `gateway_${gatewayId}_progress`
+    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+    progress.currentTask = "autotag"
+    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+
     // Start countdown
     const timer = setInterval(() => {
       setSeconds((prev) => {
@@ -69,6 +76,15 @@ export default function AutoTagPage() {
   // Track completion of AutoTag task
   const trackCompletion = async () => {
     try {
+      // Store completion in sessionStorage
+      const sessionKey = `gateway_${gatewayId}_progress`
+      const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+      progress.completedTasks = progress.completedTasks || []
+      if (!progress.completedTasks.includes("autotag")) {
+        progress.completedTasks.push("autotag")
+      }
+      sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+
       await fetch("/api/gateway/track", {
         method: "POST",
         headers: {

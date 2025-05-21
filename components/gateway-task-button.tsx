@@ -94,7 +94,7 @@ export function GatewayTaskButton({
     onComplete()
   }
 
-  // Handle direct link task
+  // Update the task handlers and timers
   const handleDirectLinkTask = () => {
     setTaskStarted(true)
     const url =
@@ -102,18 +102,12 @@ export function GatewayTaskButton({
       `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${creatorId}&gateway=${gatewayId}`
     window.open(url, "_blank")
 
-    // Start countdown for completion
-    setCountdown(10)
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          handleComplete()
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
+    // Start countdown for completion (8 seconds for task 1)
+    const timer = setTimeout(() => {
+      handleComplete()
+    }, 8000) // 8 seconds for task 1
+
+    return () => clearTimeout(timer)
   }
 
   // Handle interstitial ad task
@@ -130,55 +124,67 @@ export function GatewayTaskButton({
         customParams: { creatorId, gatewayId },
       })
 
-      // Start countdown for completion
-      setCountdown(10)
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer)
-            handleComplete()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
+      // Start countdown for completion (25 seconds for task 2)
+      const timer = setTimeout(() => {
+        handleComplete()
+      }, 25000) // 25 seconds for task 2
+
+      return () => clearTimeout(timer)
     }
     document.head.appendChild(script)
   }
 
-  // Handle external validation task
+  // Handle external validation task (Ad Maven)
   const handleExternalValidationTask = () => {
     setTaskStarted(true)
 
     // Generate a token for validation
-    const token = Math.random().toString(36).slice(2, 10)
-    const returnUrl = `${window.location.origin}/gateway/${gatewayId}?creator=${creatorId}&token=${token}`
+    const token = Date.now().toString()
+    const returnUrl = `${window.location.origin}/Task4/Redirect?gateway=${gatewayId}&creator=${creatorId}&token=${token}`
 
-    // Store token in localStorage
-    localStorage.setItem("task3_token", token)
+    // Store token in sessionStorage with expiration
+    const sessionKey = `gateway_${gatewayId}_progress`
+    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+    progress.token = token
+    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
 
-    // Open external validation page
+    // Open Ad Maven link
     window.open(
-      `https://ad-maven.com?api_key=67c51367a37686fb2fdd2313a3bd626f9576cf5b45c6534c25d0bee527f5d2cd&redirect=${encodeURIComponent(returnUrl)}`,
+      `https://free-content.pro/s?TFleLfjA&creator=${creatorId}&gateway=${gatewayId}&redirect=${encodeURIComponent(returnUrl)}`,
       "_blank",
     )
 
-    // Check for validation after 60 seconds
-    setTimeout(() => {
-      if (!localStorage.getItem("task3_verified")) {
-        alert("Task failed: Stay 10+ seconds on external site")
-      } else {
+    // Check for validation every second
+    const checkInterval = setInterval(() => {
+      const updatedProgress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+      if (updatedProgress.completedTasks && updatedProgress.completedTasks.includes("task-4")) {
+        clearInterval(checkInterval)
         handleComplete()
       }
-    }, 60000)
+    }, 1000)
+
+    // Clear interval after 5 minutes to prevent memory leaks
+    setTimeout(() => clearInterval(checkInterval), 5 * 60 * 1000)
   }
 
   // Handle AutoTag redirect task
   const handleAutoTagTask = () => {
     setTaskStarted(true)
 
+    // Generate a token for validation
+    const token = Date.now().toString()
+
+    // Store token in sessionStorage with expiration
+    const sessionKey = `gateway_${gatewayId}_progress`
+    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+    progress.token = token
+    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+    progress.currentTask = "task-4"
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+
     // Redirect to AutoTag page
-    window.location.href = `/AutoTag?creator=${creatorId}&gateway=${gatewayId}&token=${Date.now()}`
+    window.location.href = `/AutoTag?creator=${creatorId}&gateway=${gatewayId}&token=${token}`
   }
 
   // Handle footer validation task
@@ -186,8 +192,6 @@ export function GatewayTaskButton({
     setTaskStarted(true)
 
     if (taskFooterRef.current) {
-      const startTime = Date.now()
-
       // Create and load the script
       const script = document.createElement("script")
       script.src = "https://cdn.work.ink/js/redirect.js?id=700"
@@ -195,24 +199,12 @@ export function GatewayTaskButton({
       script.dataset.ids = "TaskFooter"
       taskFooterRef.current.appendChild(script)
 
-      // Check if user stayed long enough
-      setTimeout(() => {
-        if (Date.now() - startTime < 2000) {
-          alert("Task failed: Wait 2+ seconds")
-          if (taskFooterRef.current) {
-            taskFooterRef.current.innerHTML = `
-              <button 
-                class="interactive-element button-glow rounded bg-[#ff3e3e] px-4 py-2 font-semibold text-white transition-all hover:bg-[#ff0000]"
-                onClick="handleFooterValidationTask()"
-              >
-                Retry Task
-              </button>
-            `
-          }
-        } else {
-          handleComplete()
-        }
-      }, 2000)
+      // Start countdown for completion (10 seconds for task 5)
+      const timer = setTimeout(() => {
+        handleComplete()
+      }, 10000) // 10 seconds for task 5
+
+      return () => clearTimeout(timer)
     }
   }
 
@@ -285,6 +277,7 @@ export function GatewayTaskButton({
     }
   }, [taskType])
 
+  // Update the render function to not show countdown timer
   return (
     <div
       className={`rounded-lg border-l-4 ${isCompleted ? "border-green-500 bg-green-900/20" : "border-[#ff3e3e] bg-[#1a1a1a]"} p-6 transition-all duration-300`}
@@ -318,28 +311,11 @@ export function GatewayTaskButton({
         </div>
       ) : !isCompleted && taskStarted ? (
         <div className="text-center">
-          {countdown > 0 ? (
-            <div className="mb-4">
-              <div className="inline-block rounded-full bg-[#ff3e3e]/20 px-4 py-2 text-lg font-bold text-white">
-                {countdown}s
-              </div>
+          <div className="mb-4">
+            <div className="inline-block rounded-full bg-[#ff3e3e]/20 px-4 py-2 text-lg font-bold text-white">
+              <i className="fas fa-spinner fa-spin mr-2"></i> Processing...
             </div>
-          ) : (
-            <button
-              onClick={handleComplete}
-              disabled={isLoading}
-              className="interactive-element button-glow button-3d rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20 disabled:opacity-50"
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-                  <span>Processing...</span>
-                </div>
-              ) : (
-                <>Complete Task {taskNumber}</>
-              )}
-            </button>
-          )}
+          </div>
         </div>
       ) : (
         <div className="text-center">

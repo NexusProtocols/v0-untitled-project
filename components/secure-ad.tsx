@@ -1,111 +1,118 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AD_FORMATS } from "@/lib/ad-utils"
 
 interface SecureAdProps {
   adType: keyof typeof AD_FORMATS
   creatorId: string
   className?: string
-  fallback?: React.ReactNode
 }
 
-export function SecureAd({ adType, creatorId, className = "", fallback }: SecureAdProps) {
-  const [adLoaded, setAdLoaded] = useState(false)
-  const [adError, setAdError] = useState(false)
-  const adFormat = AD_FORMATS[adType]
+export function SecureAd({ adType, creatorId, className = "" }: SecureAdProps) {
+  const adContainerRef = useRef<HTMLDivElement>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [isError, setIsError] = useState(false)
 
   useEffect(() => {
+    const adConfig = AD_FORMATS[adType]
+    if (!adConfig) return
+
     try {
-      // Create a unique container ID for this ad instance
-      const containerId = `ad-container-${Math.random().toString(36).substring(2, 9)}`
+      // Create a container for the ad if it's a native format
+      if (adConfig.format === "native" && adConfig.containerId) {
+        const container = document.createElement("div")
+        container.id = adConfig.containerId
+        adContainerRef.current?.appendChild(container)
+      }
 
-      // Set up the ad options
-      const adOptions = {
-        ...adFormat,
-        params: {
-          creatorId,
-          timestamp: Date.now(),
+      // Create the script element for ad options
+      const optionsScript = document.createElement("script")
+      optionsScript.type = "text/javascript"
+
+      // Set the ad options
+      if (adConfig.format === "iframe") {
+        optionsScript.innerHTML = `
+          atOptions = {
+            'key' : '${adConfig.key}',
+            'format' : '${adConfig.format}',
+            'height' : ${adConfig.height},
+            'width' : ${adConfig.width},
+            'params' : { 'creatorId': '${creatorId}' }
+          };
+        `
+      }
+
+      // Append the options script to the container
+      adContainerRef.current?.appendChild(optionsScript)
+
+      // Create the invoke script
+      const invokeScript = document.createElement("script")
+      invokeScript.type = "text/javascript"
+
+      if (adConfig.format === "iframe") {
+        invokeScript.src = `//www.highperformanceformat.com/${adConfig.key}/invoke.js`
+      } else if (adConfig.format === "native") {
+        invokeScript.src = `//pl26476210.profitableratecpm.com/${adConfig.key}/invoke.js`
+        invokeScript.async = true
+        invokeScript.setAttribute("data-cfasync", "false")
+      }
+
+      // Set up event listeners
+      invokeScript.onload = () => {
+        setIsLoaded(true)
+      }
+
+      invokeScript.onerror = () => {
+        setIsError(true)
+      }
+
+      // Append the invoke script to the container
+      adContainerRef.current?.appendChild(invokeScript)
+
+      // Track impression for earnings
+      fetch("/api/track-ad-impression", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      }
-
-      // Create a safe way to load the ad
-      const loadAd = () => {
-        try {
-          // @ts-ignore - atOptions is a global variable used by the ad network
-          window.atOptions = adOptions
-
-          // Create and append the script
-          const script = document.createElement("script")
-          script.type = "text/javascript"
-          script.src = "//www.highperformanceformat.com/" + adFormat.key + "/invoke.js"
-          script.onerror = () => {
-            setAdError(true)
-            console.warn("Ad failed to load:", adType)
-          }
-          script.onload = () => {
-            setAdLoaded(true)
-          }
-
-          // Append to the container
-          const container = document.getElementById(containerId)
-          if (container) {
-            container.appendChild(script)
-          }
-        } catch (error) {
-          console.error("Error loading ad:", error)
-          setAdError(true)
-        }
-      }
-
-      // Load the ad with a slight delay to prevent race conditions
-      const timer = setTimeout(loadAd, 100)
-
-      return () => {
-        clearTimeout(timer)
-      }
+        body: JSON.stringify({
+          adKey: adConfig.key,
+          creatorId,
+          timestamp: new Date().toISOString(),
+        }),
+      }).catch(console.error)
     } catch (error) {
-      console.error("Error setting up ad:", error)
-      setAdError(true)
+      console.error("Error loading ad:", error)
+      setIsError(true)
     }
-  }, [adType, creatorId, adFormat])
 
-  if (adError) {
-    return fallback ? (
-      <>{fallback}</>
-    ) : (
-      <div
-        className={`bg-[#0a0a0a] flex items-center justify-center text-gray-500 ${className}`}
-        style={{
-          width: adFormat.width ? `${adFormat.width}px` : "100%",
-          height: adFormat.height ? `${adFormat.height}px` : "250px",
-        }}
-      >
-        Ad Space
-      </div>
-    )
-  }
+    // Cleanup function
+    return () => {
+      if (adContainerRef.current) {
+        adContainerRef.current.innerHTML = ""
+      }
+    }
+  }, [adType, creatorId])
 
   return (
     <div
-      id={`ad-container-${Math.random().toString(36).substring(2, 9)}`}
-      className={`ad-container ${className}`}
+      ref={adContainerRef}
+      className={`ad-container relative overflow-hidden ${className}`}
       style={{
-        width: adFormat.width ? `${adFormat.width}px` : "100%",
-        height: adFormat.height ? `${adFormat.height}px` : "250px",
-        minHeight: adFormat.height ? `${adFormat.height}px` : "250px",
-        background: "#0a0a0a",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        minHeight: AD_FORMATS[adType].height ? `${AD_FORMATS[adType].height}px` : "auto",
+        minWidth: AD_FORMATS[adType].width ? `${AD_FORMATS[adType].width}px` : "auto",
       }}
     >
-      {!adLoaded && (
-        <div className="text-center">
-          <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-[#ff3e3e] border-t-transparent"></div>
-          <p className="mt-2 text-xs text-gray-500">Loading ad...</p>
+      {!isLoaded && !isError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a] bg-opacity-50">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#ff3e3e] border-t-transparent"></div>
+        </div>
+      )}
+
+      {isError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a] bg-opacity-50">
+          <div className="text-center text-sm text-gray-400">Ad failed to load</div>
         </div>
       )}
     </div>

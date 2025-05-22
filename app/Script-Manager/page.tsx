@@ -25,7 +25,7 @@ export default function ScriptManagerPage() {
             <div
               className="h-24 w-24 animate-pulse rounded-full bg-gradient-to-r from-[#3e9fff] to-[#006eff]"
               style={{
-                boxShadow: "0 0 32px 8px #2699fb, 0 0 0 2px #3e9fff80 inset"
+                boxShadow: "0 0 32px 8px #2699fb, 0 0 0 2px #3e9fff80 inset",
               }}
             ></div>
             <div className="absolute inset-0 flex items-center justify-center">
@@ -41,7 +41,8 @@ export default function ScriptManagerPage() {
         <div className="mb-8 rounded-lg border-l-4 border-[#3e9fff] bg-[#1a1a1a] p-8 shadow-lg transition-all duration-300 hover:shadow-xl">
           <h2 className="mb-4 text-2xl font-bold text-white">Coming Soon</h2>
           <p className="mb-6 text-lg text-gray-300">
-            Soon you’ll be able to upload your own scripts, set up a custom key system, and let our API securely check key validity for users.
+            Soon you’ll be able to upload your own scripts, set up a custom key system, and let our API securely check
+            key validity for users.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

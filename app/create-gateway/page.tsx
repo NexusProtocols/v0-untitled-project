@@ -27,9 +27,7 @@ export default function CreateGatewayPage() {
   const [rateLimitPeriod, setRateLimitPeriod] = useState<"hour" | "day" | "week" | "month">("day")
 
   // Multi-stage gateway (start with stage 1 only)
-  const [stages, setStages] = useState([
-    { id: 1, level: 3, taskCount: 2 }
-  ])
+  const [stages, setStages] = useState([{ id: 1, level: 3, taskCount: 2 }])
   const MAX_STAGES = 5
 
   useEffect(() => {
@@ -101,51 +99,90 @@ export default function CreateGatewayPage() {
   // Helpers for step generation
   const getStepTitle = (type: StepType, index: number) => {
     switch (type) {
-      case "redirect": return `Visit Website ${index + 1}`
-      case "article": return "Read Article"
-      case "operagx": return "Download Opera GX"
-      case "youtube": return "Watch Video"
-      case "direct": return "Visit Sponsor"
-      default: return "Complete Task"
+      case "redirect":
+        return `Visit Website ${index + 1}`
+      case "article":
+        return "Read Article"
+      case "operagx":
+        return "Download Opera GX"
+      case "youtube":
+        return "Watch Video"
+      case "direct":
+        return "Visit Sponsor"
+      default:
+        return "Complete Task"
     }
   }
   const getStepDescription = (type: StepType) => {
     switch (type) {
-      case "redirect": return "Visit this website to continue"
-      case "article": return "Read this article to continue"
-      case "operagx": return "Download Opera GX browser to continue"
-      case "youtube": return "Watch this video to continue"
-      case "direct": return "Visit our sponsor to continue"
-      default: return "Complete this task to continue"
+      case "redirect":
+        return "Visit this website to continue"
+      case "article":
+        return "Read this article to continue"
+      case "operagx":
+        return "Download Opera GX browser to continue"
+      case "youtube":
+        return "Watch this video to continue"
+      case "direct":
+        return "Visit our sponsor to continue"
+      default:
+        return "Complete this task to continue"
     }
   }
   const getStepWaitTime = (type: StepType) => {
     switch (type) {
-      case "redirect": return 10
-      case "article": return 15
-      case "operagx": return 10
-      case "youtube": return 20
-      case "direct": return 10
-      default: return 10
+      case "redirect":
+        return 10
+      case "article":
+        return 15
+      case "operagx":
+        return 10
+      case "youtube":
+        return 20
+      case "direct":
+        return 10
+      default:
+        return 10
     }
   }
   const getStepContent = (type: StepType) => {
     switch (type) {
-      case "redirect": return { url: "https://example.com", platform: "other", buttonText: "Visit Link" }
-      case "article": return { url: "https://example.com/article" }
-      case "youtube": return { videoId: "dQw4w9WgXcQ" }
-      case "operagx": case "direct": default: return {}
+      case "redirect":
+        return { url: "https://example.com", platform: "other", buttonText: "Visit Link" }
+      case "article":
+        return { url: "https://example.com/article" }
+      case "youtube":
+        return { videoId: "dQw4w9WgXcQ" }
+      case "operagx":
+      case "direct":
+      default:
+        return {}
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage({ type: "", text: "" })
-    if (!gatewayTitle) { setMessage({ type: "error", text: "Gateway title is required" }); return }
-    if (!gatewayDescription) { setMessage({ type: "error", text: "Gateway description is required" }); return }
-    if (!gatewayImage) { setMessage({ type: "error", text: "Gateway image is required" }); return }
-    if (rewardType === "url" && !rewardUrl) { setMessage({ type: "error", text: "Reward URL is required" }); return }
-    if (rewardType === "paste" && !rewardPaste) { setMessage({ type: "error", text: "Reward content is required" }); return }
+    if (!gatewayTitle) {
+      setMessage({ type: "error", text: "Gateway title is required" })
+      return
+    }
+    if (!gatewayDescription) {
+      setMessage({ type: "error", text: "Gateway description is required" })
+      return
+    }
+    if (!gatewayImage) {
+      setMessage({ type: "error", text: "Gateway image is required" })
+      return
+    }
+    if (rewardType === "url" && !rewardUrl) {
+      setMessage({ type: "error", text: "Reward URL is required" })
+      return
+    }
+    if (rewardType === "paste" && !rewardPaste) {
+      setMessage({ type: "error", text: "Reward content is required" })
+      return
+    }
     try {
       setIsSubmitting(true)
       const gatewayId = `gateway-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
@@ -189,7 +226,9 @@ export default function CreateGatewayPage() {
       existingGateways.push(gatewayObject)
       localStorage.setItem("nexus_gateways", JSON.stringify(existingGateways))
       setMessage({ type: "success", text: "Gateway created successfully! Redirecting..." })
-      setTimeout(() => { router.push("/manage-gateways") }, 2000)
+      setTimeout(() => {
+        router.push("/manage-gateways")
+      }, 2000)
     } catch (error) {
       console.error("Error creating gateway:", error)
       setMessage({ type: "error", text: "An error occurred while creating the gateway" })

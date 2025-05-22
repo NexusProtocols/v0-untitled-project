@@ -25,7 +25,7 @@ export default function ClientExamplePage() {
             <div
               className="h-24 w-24 animate-pulse rounded-full bg-gradient-to-r from-[#3e9fff] to-[#006eff]"
               style={{
-                boxShadow: "0 0 32px 8px #2699fb, 0 0 0 2px #3e9fff80 inset"
+                boxShadow: "0 0 32px 8px #2699fb, 0 0 0 2px #3e9fff80 inset",
               }}
             ></div>
             <div className="absolute inset-0 flex items-center justify-center">

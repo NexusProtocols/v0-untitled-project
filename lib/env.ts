@@ -11,3 +11,6 @@ export const env = {
   // Other environment variables
   // ...
 }
+
+// Add the missing export for Nexus_READ_WRITE_TOKEN
+export const Nexus_READ_WRITE_TOKEN = process.env.BLOB_READ_WRITE_TOKEN || ""

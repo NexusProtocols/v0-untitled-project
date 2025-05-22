@@ -9,6 +9,7 @@ export default function Task4RedirectPage() {
   const searchParams = useSearchParams()
   const [redirecting, setRedirecting] = useState(false)
   const [error, setError] = useState("")
+  const [processingStatus, setProcessingStatus] = useState("Validating your task completion...")
 
   const gatewayId = searchParams?.get("gateway") || ""
   const creatorId = searchParams?.get("creator") || ""
@@ -23,8 +24,10 @@ export default function Task4RedirectPage() {
 
     const validateTask = async () => {
       try {
+        setProcessingStatus("Tracking task completion...")
+
         // Track task completion
-        await fetch("/api/task4/redirect", {
+        const trackResponse = await fetch("/api/task4/redirect", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -37,26 +40,46 @@ export default function Task4RedirectPage() {
           }),
         })
 
+        if (!trackResponse.ok) {
+          throw new Error(`Failed to track task: ${trackResponse.status}`)
+        }
+
+        const trackData = await trackResponse.json()
+        if (!trackData.success) {
+          throw new Error(trackData.error || "Failed to track task completion")
+        }
+
         // Update session in the database
         if (sessionId) {
           try {
-            const response = await fetch(`/api/gateway/session?sessionId=${sessionId}`)
-            const data = await response.json()
+            setProcessingStatus("Updating session data...")
 
-            if (data.success && data.session) {
-              const completedTasks = [...(data.session.completedTasks || []), "task-4"]
+            const sessionResponse = await fetch(`/api/gateway/session?sessionId=${sessionId}`)
+            const sessionData = await sessionResponse.json()
 
-              await fetch("/api/gateway/session", {
-                method: "PUT",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  sessionId,
-                  completedTasks,
-                  currentStage: data.session.currentStage,
-                }),
-              })
+            if (sessionData.success && sessionData.session) {
+              const taskId = `task-4`
+              const completedTasks = [...(sessionData.session.completedTasks || [])]
+
+              if (!completedTasks.includes(taskId)) {
+                completedTasks.push(taskId)
+
+                const updateResponse = await fetch("/api/gateway/session", {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    sessionId,
+                    completedTasks,
+                    currentStage: sessionData.session.currentStage,
+                  }),
+                })
+
+                if (!updateResponse.ok) {
+                  console.error("Error updating session:", await updateResponse.text())
+                }
+              }
             }
           } catch (error) {
             console.error("Error updating session:", error)
@@ -64,6 +87,7 @@ export default function Task4RedirectPage() {
         }
 
         // Redirect back to gateway with task completion parameters
+        setProcessingStatus("Task completed! Redirecting...")
         setRedirecting(true)
         setTimeout(() => {
           router.push(
@@ -72,7 +96,7 @@ export default function Task4RedirectPage() {
         }, 2000)
       } catch (error) {
         console.error("Error validating task:", error)
-        setError("Failed to validate task. Please try again.")
+        setError(error instanceof Error ? error.message : "Failed to validate task. Please try again.")
       }
     }
 
@@ -111,8 +135,12 @@ export default function Task4RedirectPage() {
           </div>
         ) : (
           <div className="text-center">
+            <p className="text-gray-400 mb-4">{processingStatus}</p>
+            <div className="flex justify-center mb-4">
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-[#ff3e3e]"></div>
+            </div>
             <Link
-              href={`/key-gateway/${gatewayId}?creator=${creatorId}&token=${token}&task=4&completed=true&sessionId=${sessionId}`}
+              href={`/key-gateway/${gatewayId}?creator=${creatorId}&token=${token}&sessionId=${sessionId}`}
               className="inline-block rounded bg-[#ff3e3e] px-4 py-2 font-medium text-white transition-all hover:bg-[#ff0000]"
             >
               Return to Gateway

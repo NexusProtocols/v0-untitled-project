@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { gatewayDb } from "@/lib/db"
+import { gatewayDb, sessionDb } from "@/lib/db"
 import { v4 as uuidv4 } from "uuid"
 
 export async function POST(request: NextRequest) {
@@ -10,51 +10,64 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Missing required parameters" }, { status: 400 })
     }
 
+    console.log(`Gateway track: ${action} for task ${taskId || "unknown"} in session ${sessionId || "unknown"}`)
+
     // Log the analytics event
-    await gatewayDb.logGatewayAnalytics({
-      id: uuidv4(),
-      gatewayId,
-      sessionId: sessionId || null,
-      userId: null, // We could add user ID if available
-      action,
-      taskId: taskId || null,
-      timestamp: new Date().toISOString(),
-      metadata: {
-        creatorId,
-        userData: userData || {},
-        userAgent: request.headers.get("user-agent") || "",
-        ip: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "",
-      },
-    })
+    try {
+      await gatewayDb.logGatewayAnalytics({
+        id: uuidv4(),
+        gatewayId,
+        sessionId: sessionId || null,
+        userId: null, // We could add user ID if available
+        action,
+        taskId: taskId || null,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          creatorId,
+          userData: userData || {},
+          userAgent: request.headers.get("user-agent") || "",
+          ip: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "",
+        },
+      })
+    } catch (analyticsError) {
+      console.error("Error logging analytics (non-fatal):", analyticsError)
+      // Continue even if analytics logging fails
+    }
 
     // If this is a task completion, update the session if we have a session ID
     if (action === "task_complete" && taskId && sessionId) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/gateway/session?sessionId=${sessionId}`)
-        const data = await response.json()
+        // Get current session directly from the database
+        const session = await sessionDb.getGatewaySession(sessionId)
 
-        if (data.success && data.session) {
-          const completedTasks = [...(data.session.completedTasks || [])]
+        if (session) {
+          // Add taskId to completed tasks if not already there
+          const completedTasks = [...(session.completedTasks || [])]
 
           if (!completedTasks.includes(taskId)) {
             completedTasks.push(taskId)
 
-            await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/gateway/session`, {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                sessionId,
-                completedTasks,
-                currentStage: data.session.currentStage,
-              }),
+            // Update session with new completed tasks
+            await sessionDb.saveGatewaySession({
+              id: sessionId,
+              completedTasks,
+              currentStage: session.currentStage,
+              updatedAt: new Date().toISOString(),
             })
+
+            console.log(`Updated session ${sessionId} with completed task ${taskId}`)
           }
+        } else {
+          console.warn(`Session ${sessionId} not found for task completion`)
         }
-      } catch (error) {
-        console.error("Error updating session:", error)
-        // Continue even if session update fails
+      } catch (sessionError) {
+        console.error("Error updating session:", sessionError)
+        // Continue even if session update fails, but return the error in the response
+        return NextResponse.json({
+          success: true,
+          message: "Event tracked successfully, but session update failed",
+          error: sessionError.message,
+        })
       }
     }
 
@@ -64,6 +77,13 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Error tracking gateway event:", error)
-    return NextResponse.json({ success: false, message: "An error occurred while tracking the event" }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        message: "An error occurred while tracking the event",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

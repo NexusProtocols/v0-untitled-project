@@ -10,6 +10,7 @@ import { fetchGameDetailsById, fetchGameDetailsByName } from "@/app/actions/fetc
 import { scriptCategories } from "@/lib/categories"
 import { validateScript } from "@/lib/script-validation"
 import { DiscordLoginButton } from "@/components/discord-login-button"
+import { checkDiscordRequirement } from "@/lib/discord-requirement" // Declare the variable before using it
 
 type GameSearchResult = {
   gameId: string
@@ -236,33 +237,22 @@ export default function UploadScriptsPage() {
     })
   }
 
-  const checkDiscordRequirement = (gameId: string) => {
-    const popularGames = ["18668065416", "920587237", "2753915549"]
-    if (popularGames.includes(gameId)) {
-      if (!user?.discord_id) {
-        return {
-          required: true,
-          message: "This is a popular game. You need to connect your Discord account to upload scripts for it.",
-        }
-      }
-    }
-    return { required: false }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage({ type: "", text: "" })
     setValidationErrors([])
 
-    if (user) {
-      const userData = JSON.parse(localStorage.getItem(`nexus_user_${user.username}`) || "{}")
-      if (userData.isBanned) {
-        setMessage({
-          type: "error",
-          text: "Your account has been banned. You cannot upload scripts.",
-        })
-        return
-      }
+    // Get user token from cookies or localStorage
+    const userToken =
+      localStorage.getItem("nexus_auth_token") ||
+      document.cookie.replace(/(?:(?:^|.*;\s*)nexus_auth_token\s*=\s*([^;]*).*$)|^.*$/, "$1")
+
+    if (!userToken) {
+      setMessage({
+        type: "error",
+        text: "You must be logged in to upload scripts. Please log in and try again.",
+      })
+      return
     }
 
     if (!scriptTitle || !scriptDescription || !scriptCode) {
@@ -294,12 +284,6 @@ export default function UploadScriptsPage() {
       return
     }
 
-    const discordCheck = checkDiscordRequirement(gameDetails?.gameId || "")
-    if (discordCheck.required) {
-      setMessage({ type: "error", text: discordCheck.message || "Discord connection required" })
-      return
-    }
-
     try {
       setMessage({ type: "", text: "Uploading script..." })
 
@@ -321,9 +305,15 @@ export default function UploadScriptsPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${userToken}`, // Use the user's token for authentication
         },
         body: JSON.stringify(scriptData),
       })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || `HTTP error! Status: ${response.status}`)
+      }
 
       const result = await response.json()
 
@@ -350,7 +340,10 @@ export default function UploadScriptsPage() {
       }
     } catch (error) {
       console.error("Error uploading script:", error)
-      setMessage({ type: "error", text: "An error occurred while uploading the script" })
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "An error occurred while uploading the script",
+      })
     }
   }
 

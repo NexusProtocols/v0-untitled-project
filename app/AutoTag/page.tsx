@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import Link from "next/link"
 
 export default function AutoTagPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [seconds, setSeconds] = useState(10)
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [taskCompleted, setTaskCompleted] = useState(false)
 
   const creatorId = searchParams?.get("creator") || "unknown"
   const gatewayId = searchParams?.get("gateway") || "unknown"
@@ -50,6 +50,7 @@ export default function AutoTagPage() {
         if (prev <= 1) {
           clearInterval(timer)
           setIsRedirecting(true)
+          setTaskCompleted(true)
 
           // Track completion
           trackCompletion()
@@ -124,6 +125,12 @@ export default function AutoTagPage() {
     }
   }
 
+  // Handle manual return to gateway without completing task
+  const handleReturnToGateway = () => {
+    // Return to gateway without completing the task
+    router.push(`/key-gateway/${gatewayId}?creator=${creatorId}&sessionId=${sessionId}`)
+  }
+
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center">
       <div className="max-w-md w-full mx-auto p-8 rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a]">
@@ -148,9 +155,16 @@ export default function AutoTagPage() {
 
             <div className="text-3xl font-bold text-white mb-6">{seconds}</div>
 
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-400 mb-4">
               Please do not close this window. You will be redirected automatically.
             </p>
+
+            <button
+              onClick={handleReturnToGateway}
+              className="text-sm text-[#ff3e3e] hover:text-white transition-colors"
+            >
+              Return to gateway (task will not be completed)
+            </button>
           </div>
         ) : (
           <div className="text-center">
@@ -168,15 +182,6 @@ export default function AutoTagPage() {
             </div>
           </div>
         )}
-
-        <div className="mt-8 text-center">
-          <Link
-            href={`/key-gateway/${gatewayId}?creator=${creatorId}&token=${token}&sessionId=${sessionId}`}
-            className="text-sm text-[#ff3e3e] hover:text-white transition-colors"
-          >
-            Return to gateway
-          </Link>
-        </div>
       </div>
     </div>
   )

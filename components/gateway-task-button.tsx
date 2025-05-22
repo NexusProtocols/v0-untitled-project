@@ -35,18 +35,30 @@ export function GatewayTaskButton({
   const [isLoading, setIsLoading] = useState(false)
   const [isCompleted, setIsCompleted] = useState(initialIsCompleted)
   const [taskStarted, setTaskStarted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const taskFooterRef = useRef<HTMLDivElement>(null)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Update isCompleted if the prop changes
   useEffect(() => {
     setIsCompleted(initialIsCompleted)
   }, [initialIsCompleted])
 
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+      }
+    }
+  }, [])
+
   // Handle task completion
   const handleComplete = async () => {
     if (isCompleted) return
 
     setIsLoading(true)
+    setError(null)
 
     // If secure auth is enabled, validate with the creator's API
     if (secureAuth && apiEndpoint) {
@@ -69,20 +81,23 @@ export function GatewayTaskButton({
 
         if (!data.success) {
           setIsLoading(false)
-          alert("Task validation failed. Please try again.")
+          setError("Task validation failed. Please try again.")
           return
         }
       } catch (error) {
         console.error("Error validating task:", error)
         setIsLoading(false)
-        alert("Task validation failed. Please try again.")
+        setError("Task validation failed. Please try again.")
         return
       }
     }
 
     // Track task completion
     try {
-      await fetch("/api/gateway/track", {
+      const taskId = `task-${taskNumber}`
+      console.log(`Marking task ${taskId} as complete for session ${sessionId}`)
+
+      const response = await fetch("/api/gateway/track", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -92,16 +107,27 @@ export function GatewayTaskButton({
           creatorId,
           sessionId,
           action: "task_complete",
-          taskId: `task-${taskNumber}`,
+          taskId,
         }),
       })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        console.error("Error tracking task completion:", data.message || "Unknown error")
+        setError("Failed to track task completion. Please try again.")
+        setIsLoading(false)
+        return
+      }
+
+      setIsCompleted(true)
+      setIsLoading(false)
+      onComplete()
     } catch (error) {
       console.error("Error tracking task completion:", error)
+      setError("Failed to track task completion. Please try again.")
+      setIsLoading(false)
     }
-
-    setIsCompleted(true)
-    setIsLoading(false)
-    onComplete()
   }
 
   // Update the task handlers and timers
@@ -113,11 +139,9 @@ export function GatewayTaskButton({
     window.open(url, "_blank")
 
     // Start countdown for completion (8 seconds for task 1)
-    const timer = setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       handleComplete()
     }, 8000) // 8 seconds for task 1
-
-    return () => clearTimeout(timer)
   }
 
   // Handle interstitial ad task
@@ -135,11 +159,9 @@ export function GatewayTaskButton({
       })
 
       // Start countdown for completion (25 seconds for task 2)
-      const timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         handleComplete()
       }, 25000) // 25 seconds for task 2
-
-      return () => clearTimeout(timer)
     }
     document.head.appendChild(script)
   }
@@ -158,26 +180,10 @@ export function GatewayTaskButton({
       "_blank",
     )
 
-    // Check for validation every second
-    const checkInterval = setInterval(() => {
-      // Check if task is completed in session storage
-      fetch(`/api/gateway/session?sessionId=${sessionId}`)
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success && data.session && data.session.completedTasks) {
-            if (data.session.completedTasks.includes(`task-${taskNumber}`)) {
-              clearInterval(checkInterval)
-              handleComplete()
-            }
-          }
-        })
-        .catch((error) => {
-          console.error("Error checking session:", error)
-        })
-    }, 1000)
-
-    // Clear interval after 5 minutes to prevent memory leaks
-    setTimeout(() => clearInterval(checkInterval), 5 * 60 * 1000)
+    // For task 3, automatically complete after 20 seconds as requested
+    timerRef.current = setTimeout(() => {
+      handleComplete()
+    }, 20000) // 20 seconds for task 3 as requested
   }
 
   // Handle AutoTag redirect task
@@ -204,11 +210,9 @@ export function GatewayTaskButton({
       taskFooterRef.current.appendChild(script)
 
       // Start countdown for completion (10 seconds for task 5)
-      const timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         handleComplete()
       }, 10000) // 10 seconds for task 5
-
-      return () => clearTimeout(timer)
     }
   }
 
@@ -273,7 +277,9 @@ export function GatewayTaskButton({
         .then((response) => response.json())
         .then((data) => {
           if (data.success && data.session && data.session.completedTasks) {
-            if (data.session.completedTasks.includes(`task-${taskNumber}`)) {
+            const taskId = `task-${taskNumber}`
+            if (data.session.completedTasks.includes(taskId)) {
+              console.log(`Task ${taskId} is already completed in session ${sessionId}`)
               setIsCompleted(true)
             }
           }
@@ -304,6 +310,11 @@ export function GatewayTaskButton({
 
       <div className="mb-6">
         <p className="text-gray-400">{getTaskDescription()}</p>
+        {error && (
+          <div className="mt-2 text-sm text-red-400 bg-red-500/10 p-2 rounded">
+            <i className="fas fa-exclamation-triangle mr-1"></i> {error}
+          </div>
+        )}
       </div>
 
       {!isCompleted && !taskStarted ? (

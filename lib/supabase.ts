@@ -18,3 +18,6 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
     persistSession: false,
   },
 })
+
+// Re-export createClient for use elsewhere
+export { createClient }

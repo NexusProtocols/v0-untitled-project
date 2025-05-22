@@ -108,8 +108,14 @@ export default function GatewayPage() {
   useEffect(() => {
     const fetchGateway = async () => {
       try {
-        // Fetch gateway data from API
+        // Fetch gateway data from API with improved error handling
         const response = await fetch(`/api/gateway/${params.gatewayId}`)
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || `HTTP error! Status: ${response.status}`)
+        }
+
         const data = await response.json()
 
         if (!data.success) {
@@ -151,7 +157,7 @@ export default function GatewayPage() {
         }
       } catch (error) {
         console.error("Error fetching gateway:", error)
-        setError("An error occurred while fetching the gateway")
+        setError(error instanceof Error ? error.message : "An error occurred while fetching the gateway")
       } finally {
         setIsLoading(false)
       }

@@ -9,15 +9,19 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, message: "Gateway ID is required" }, { status: 400 })
     }
 
-    // Get gateway from database
+    // Get gateway from database with improved error handling
     const gateway = await gatewayDb.getGatewayById(gatewayId)
 
     if (!gateway) {
+      console.error(`Gateway not found with ID: ${gatewayId}`)
       return NextResponse.json({ success: false, message: "Gateway not found" }, { status: 404 })
     }
 
     // Track gateway visit
-    await gatewayDb.trackGatewayActivity(gatewayId, "visit")
+    await gatewayDb.trackGatewayActivity(gatewayId, "visit").catch((error) => {
+      // Log error but don't fail the request
+      console.error("Error tracking gateway visit:", error)
+    })
 
     return NextResponse.json({
       success: true,
@@ -44,6 +48,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Update gateway in database
     const updatedGateway = await gatewayDb.updateGateway(gatewayId, updates)
+
+    if (!updatedGateway) {
+      return NextResponse.json({ success: false, message: "Gateway not found or update failed" }, { status: 404 })
+    }
 
     return NextResponse.json({
       success: true,

@@ -265,9 +265,25 @@ export const gatewayDb = {
   // Get a gateway by ID
   getGatewayById: async (id: string) => {
     try {
+      // First try to get from Prisma
+      try {
+        const gateway = await prisma.gateway.findUnique({
+          where: { id },
+        })
+
+        if (gateway) return gateway
+      } catch (prismaError) {
+        console.warn("Prisma gateway fetch failed, falling back to Supabase:", prismaError)
+      }
+
+      // Fallback to Supabase if Prisma fails
       const { data, error } = await supabase.from("gateways").select("*").eq("id", id).single()
 
-      if (error) throw error
+      if (error) {
+        console.error("Supabase gateway fetch error:", error)
+        throw error
+      }
+
       return data
     } catch (error) {
       console.error("Error fetching gateway:", error)
@@ -278,9 +294,25 @@ export const gatewayDb = {
   // Create a new gateway
   createGateway: async (gatewayData: any) => {
     try {
+      // First try to create with Prisma
+      try {
+        const gateway = await prisma.gateway.create({
+          data: gatewayData,
+        })
+
+        return gateway
+      } catch (prismaError) {
+        console.warn("Prisma gateway creation failed, falling back to Supabase:", prismaError)
+      }
+
+      // Fallback to Supabase if Prisma fails
       const { data, error } = await supabaseAdmin.from("gateways").insert([gatewayData]).select()
 
-      if (error) throw error
+      if (error) {
+        console.error("Supabase gateway creation error:", error)
+        throw error
+      }
+
       return data[0]
     } catch (error) {
       console.error("Error creating gateway:", error)
@@ -291,9 +323,26 @@ export const gatewayDb = {
   // Update a gateway
   updateGateway: async (id: string, updates: any) => {
     try {
+      // First try to update with Prisma
+      try {
+        const gateway = await prisma.gateway.update({
+          where: { id },
+          data: updates,
+        })
+
+        return gateway
+      } catch (prismaError) {
+        console.warn("Prisma gateway update failed, falling back to Supabase:", prismaError)
+      }
+
+      // Fallback to Supabase if Prisma fails
       const { data, error } = await supabaseAdmin.from("gateways").update(updates).eq("id", id).select()
 
-      if (error) throw error
+      if (error) {
+        console.error("Supabase gateway update error:", error)
+        throw error
+      }
+
       return data[0]
     } catch (error) {
       console.error("Error updating gateway:", error)
@@ -305,13 +354,11 @@ export const gatewayDb = {
   trackGatewayActivity: async (gatewayId: string, activity: "visit" | "completion") => {
     try {
       // First get the current gateway stats
-      const { data: gateway, error: fetchError } = await supabase
-        .from("gateways")
-        .select("stats")
-        .eq("id", gatewayId)
-        .single()
+      const gateway = await gatewayDb.getGatewayById(gatewayId)
 
-      if (fetchError) throw fetchError
+      if (!gateway) {
+        throw new Error(`Gateway with ID ${gatewayId} not found`)
+      }
 
       // Update the stats
       const stats = gateway.stats || { visits: 0, completions: 0, conversionRate: 0 }
@@ -326,9 +373,7 @@ export const gatewayDb = {
       stats.conversionRate = stats.visits > 0 ? (stats.completions / stats.visits) * 100 : 0
 
       // Update the gateway with new stats
-      const { error: updateError } = await supabaseAdmin.from("gateways").update({ stats }).eq("id", gatewayId)
-
-      if (updateError) throw updateError
+      await gatewayDb.updateGateway(gatewayId, { stats })
 
       return true
     } catch (error) {
@@ -340,9 +385,25 @@ export const gatewayDb = {
   // Track detailed gateway analytics
   logGatewayAnalytics: async (data: any) => {
     try {
+      // First try to create with Prisma
+      try {
+        await prisma.gatewayAnalytics.create({
+          data,
+        })
+
+        return true
+      } catch (prismaError) {
+        console.warn("Prisma analytics logging failed, falling back to Supabase:", prismaError)
+      }
+
+      // Fallback to Supabase if Prisma fails
       const { error } = await supabaseAdmin.from("gateway_analytics").insert([data])
 
-      if (error) throw error
+      if (error) {
+        console.error("Supabase analytics logging error:", error)
+        throw error
+      }
+
       return true
     } catch (error) {
       console.error("Error logging gateway analytics:", error)
@@ -356,6 +417,26 @@ export const sessionDb = {
   // Create or update a gateway session
   saveGatewaySession: async (sessionData: any) => {
     try {
+      // First try to upsert with Prisma
+      try {
+        const session = await prisma.gatewaySession.upsert({
+          where: { id: sessionData.id || "" },
+          update: {
+            ...sessionData,
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes from now
+          },
+          create: {
+            ...sessionData,
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes from now
+          },
+        })
+
+        return session
+      } catch (prismaError) {
+        console.warn("Prisma session save failed, falling back to Supabase:", prismaError)
+      }
+
+      // Fallback to Supabase if Prisma fails
       const { data, error } = await supabaseAdmin
         .from("gateway_sessions")
         .upsert([
@@ -366,7 +447,11 @@ export const sessionDb = {
         ])
         .select()
 
-      if (error) throw error
+      if (error) {
+        console.error("Supabase session save error:", error)
+        throw error
+      }
+
       return data[0]
     } catch (error) {
       console.error("Error saving gateway session:", error)
@@ -377,9 +462,30 @@ export const sessionDb = {
   // Get a gateway session
   getGatewaySession: async (sessionId: string) => {
     try {
+      // First try to get from Prisma
+      try {
+        const session = await prisma.gatewaySession.findUnique({
+          where: { id: sessionId },
+        })
+
+        if (session) {
+          // Check if session is expired
+          if (new Date(session.expiresAt) < new Date()) {
+            return null
+          }
+          return session
+        }
+      } catch (prismaError) {
+        console.warn("Prisma session fetch failed, falling back to Supabase:", prismaError)
+      }
+
+      // Fallback to Supabase if Prisma fails
       const { data, error } = await supabase.from("gateway_sessions").select("*").eq("id", sessionId).single()
 
-      if (error) throw error
+      if (error) {
+        console.error("Supabase session fetch error:", error)
+        throw error
+      }
 
       // Check if session is expired
       if (new Date(data.expiresAt) < new Date()) {

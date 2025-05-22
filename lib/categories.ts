@@ -4,4 +4,5 @@ export const scriptCategories = [
   { id: "macros", name: "Macros", description: "Scripts for farming resources or currency" },
   { id: "FPS Booster", name: "Fps Booster", description: "Script Macros" },
   { id: "other", name: "Other", description: "Other types of scripts" },
+
 ]

@@ -1,23 +1,27 @@
 import { createClient } from "@supabase/supabase-js"
 
-// Create a Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+// Create a single supabase client for the browser
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+)
 
-// Regular client with anonymous key
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: false,
-  },
-})
+// Create a supabase client with admin privileges for server-side operations
+export const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+)
 
-// Admin client with service role key for privileged operations
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    persistSession: false,
-  },
-})
+// Create a singleton for client-side usage to prevent multiple instances
+let clientSingleton: typeof supabase
 
-// Re-export createClient for use elsewhere
-export { createClient }
+export function getSupabaseBrowserClient() {
+  if (clientSingleton) return clientSingleton
+
+  clientSingleton = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+  )
+
+  return clientSingleton
+}

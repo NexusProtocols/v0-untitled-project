@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth-options"
 import { scriptDb } from "@/lib/db"
+import { getSupabaseBrowserClient } from "@/lib/supabase"
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +14,7 @@ export async function GET(request: NextRequest) {
     const keySystem = searchParams.get("keySystem") === "true"
     const free = searchParams.get("free") === "true"
     const paid = searchParams.get("paid") === "true"
-    const sortBy = searchParams.get("sortBy") || "createdAt"
+    const sortBy = searchParams.get("sortBy") || "created_at"
     const sortOrder = searchParams.get("sortOrder") || "desc"
     const page = Number.parseInt(searchParams.get("page") || "1", 10)
     const limit = 20 // Default to 20 items per page
@@ -48,10 +47,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    // Get the Supabase client
+    const supabase = getSupabaseBrowserClient()
 
     // Check if user is authenticated
-    if (!session || !session.user) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
       return NextResponse.json({ success: false, message: "Authentication required" }, { status: 401 })
     }
 
@@ -67,7 +71,8 @@ export async function POST(request: NextRequest) {
       title: data.title,
       description: data.description,
       code: data.code,
-      author: data.author || session.user.name || "Unknown",
+      author: data.author || session.user.user_metadata.full_name || "Unknown",
+      authorId: session.user.id,
       isPremium: data.isPremium || false,
       isNexusTeam: data.isNexusTeam || false,
       keySystem: data.keySystem || false,

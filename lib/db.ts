@@ -1,5 +1,5 @@
-import { prisma } from "./prisma"
 import { supabase, supabaseAdmin } from "./supabase"
+import { v4 as uuidv4 } from "uuid"
 
 // Script-related database operations
 export const scriptDb = {
@@ -12,103 +12,93 @@ export const scriptDb = {
     keySystem = false,
     free = false,
     paid = false,
-    sortBy = "createdAt",
+    sortBy = "created_at",
     sortOrder = "desc",
     page = 1,
     limit = 20,
   }) => {
-    const skip = (page - 1) * limit
+    const offset = (page - 1) * limit
 
-    // Build the where clause for filtering
-    const where: any = {}
+    // Build the query
+    let query = supabase.from("scripts").select("*", { count: "exact" })
 
+    // Apply filters
     if (searchFilter) {
-      where.OR = [
-        { title: { contains: searchFilter, mode: "insensitive" } },
-        { description: { contains: searchFilter, mode: "insensitive" } },
-        { author: { contains: searchFilter, mode: "insensitive" } },
-        { gameName: { contains: searchFilter, mode: "insensitive" } },
-      ]
+      query = query.or(
+        `title.ilike.%${searchFilter}%,description.ilike.%${searchFilter}%,author.ilike.%${searchFilter}%,game_name.ilike.%${searchFilter}%`,
+      )
     }
 
     if (category) {
-      where.categoriesJson = { contains: category }
+      query = query.ilike("categories_json", `%${category}%`)
     }
 
     if (gameId) {
-      where.gameId = gameId
+      query = query.eq("game_id", gameId)
     }
 
     if (verified) {
-      where.isVerified = true
+      query = query.eq("is_verified", true)
     }
 
     if (keySystem) {
-      where.keySystem = true
+      query = query.eq("key_system", true)
     }
 
     if (free && !paid) {
-      where.isPremium = false
+      query = query.eq("is_premium", false)
     } else if (paid && !free) {
-      where.isPremium = true
+      query = query.eq("is_premium", true)
     }
 
-    // Build the orderBy clause for sorting
-    const orderBy: any = {}
-    orderBy[sortBy] = sortOrder
+    // Apply sorting and pagination
+    const {
+      data: scripts,
+      error,
+      count,
+    } = await query.order(sortBy, { ascending: sortOrder === "asc" }).range(offset, offset + limit - 1)
 
-    try {
-      const [scripts, total] = await Promise.all([
-        prisma.script.findMany({
-          where,
-          orderBy,
-          skip,
-          take: limit,
-        }),
-        prisma.script.count({ where }),
-      ])
-
-      return {
-        scripts: scripts.map((script) => ({
-          ...script,
-          categories: script.categoriesJson ? JSON.parse(script.categoriesJson) : [],
-          game: {
-            id: script.id,
-            gameId: script.gameId || "unknown",
-            name: script.gameName || "Unknown Game",
-            imageUrl: script.gameImage || "/placeholder.svg?height=160&width=320",
-          },
-        })),
-        pagination: {
-          total,
-          page,
-          limit,
-          pages: Math.ceil(total / limit),
-        },
-      }
-    } catch (error) {
+    if (error) {
       console.error("Error fetching scripts:", error)
       throw error
+    }
+
+    return {
+      scripts: scripts.map((script) => ({
+        ...script,
+        categories: script.categories_json ? JSON.parse(script.categories_json) : [],
+        game: {
+          id: script.id,
+          gameId: script.game_id || "unknown",
+          name: script.game_name || "Unknown Game",
+          imageUrl: script.game_image || "/placeholder.svg?height=160&width=320",
+        },
+      })),
+      pagination: {
+        total: count || 0,
+        page,
+        limit,
+        pages: Math.ceil((count || 0) / limit),
+      },
     }
   },
 
   // Get a single script by ID
   getScriptById: async (id: string) => {
     try {
-      const script = await prisma.script.findUnique({
-        where: { id },
-      })
+      const { data: script, error } = await supabase.from("scripts").select("*").eq("id", id).single()
 
+      if (error) throw error
       if (!script) return null
 
       return {
         ...script,
-        categories: script.categoriesJson ? JSON.parse(script.categoriesJson) : [],
+        categories: script.categories_json ? JSON.parse(script.categories_json) : [],
         game: {
           id: script.id,
-          gameId: script.gameId || "unknown",
-          name: script.gameName || "Unknown Game",
-          imageUrl: script.gameImage || "/placeholder.svg?height=160&width=320",
+          gameId: script.game_id || "unknown",
+          name: script.game_name || "Unknown Game",
+          imageUrl: script.game_image || "/placeholder.svg?height=160&width=320",
         },
       }
     } catch (error) {
@@ -120,34 +110,46 @@ export const scriptDb = {
   // Create a new script
   createScript: async (data: any) => {
     try {
-      const newScript = await prisma.script.create({
-        data: {
-          title: data.title,
-          description: data.description,
-          code: data.code,
-          author: data.author,
-          isPremium: data.isPremium || false,
-          isNexusTeam: data.isNexusTeam || false,
-          isVerified: false,
-          keySystem: data.keySystem || false,
-          gameId: data.game?.gameId || "unknown",
-          gameName: data.game?.name || "Unknown Game",
-          gameImage: data.game?.imageUrl || "/placeholder.svg?height=160&width=320",
-          categoriesJson: JSON.stringify(data.categories || []),
-          views: 0,
-          likesCount: 0,
-          dislikesCount: 0,
-        },
-      })
+      const scriptId = uuidv4()
+
+      const { data: newScript, error } = await supabaseAdmin
+        .from("scripts")
+        .insert([
+          {
+            id: scriptId,
+            title: data.title,
+            description: data.description,
+            code: data.code,
+            author: data.author,
+            author_id: data.authorId,
+            is_premium: data.isPremium || false,
+            is_nexus_team: data.isNexusTeam || false,
+            is_verified: false,
+            key_system: data.keySystem || false,
+            game_id: data.game?.gameId || "unknown",
+            game_name: data.game?.name || "Unknown Game",
+            game_image: data.game?.imageUrl || "/placeholder.svg?height=160&width=320",
+            categories_json: JSON.stringify(data.categories || []),
+            views: 0,
+            likes_count: 0,
+            dislikes_count: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single()
+
+      if (error) throw error
 
       return {
         ...newScript,
         categories: data.categories || [],
         game: {
           id: newScript.id,
-          gameId: newScript.gameId || "unknown",
-          name: newScript.gameName || "Unknown Game",
-          imageUrl: newScript.gameImage || "/placeholder.svg?height=160&width=320",
+          gameId: newScript.game_id || "unknown",
+          name: newScript.game_name || "Unknown Game",
+          imageUrl: newScript.game_image || "/placeholder.svg?height=160&width=320",
         },
       }
     } catch (error) {
@@ -159,14 +161,12 @@ export const scriptDb = {
   // Update script views
   incrementViews: async (id: string) => {
     try {
-      await prisma.script.update({
-        where: { id },
-        data: {
-          views: {
-            increment: 1,
-          },
-        },
-      })
+      const { error } = await supabaseAdmin
+        .from("scripts")
+        .update({ views: supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "views" }) })
+        .eq("id", id)
+
+      if (error) throw error
       return true
     } catch (error) {
       console.error("Error incrementing script views:", error)
@@ -178,78 +178,98 @@ export const scriptDb = {
   updateScriptRating: async (id: string, userId: string, isLike: boolean) => {
     try {
       // First check if user has already rated this script
-      const existingRating = await prisma.scriptRating.findUnique({
-        where: {
-          scriptId_userId: {
-            scriptId: id,
-            userId,
-          },
-        },
-      })
+      const { data: existingRating, error: fetchError } = await supabase
+        .from("script_ratings")
+        .select("*")
+        .eq("script_id", id)
+        .eq("user_id", userId)
+        .single()
+
+      if (fetchError && fetchError.code !== "PGRST116") throw fetchError // PGRST116 is "no rows returned"
 
       if (existingRating) {
         // If rating type is the same, remove the rating
-        if (existingRating.isLike === isLike) {
-          await prisma.scriptRating.delete({
-            where: {
-              scriptId_userId: {
-                scriptId: id,
-                userId,
-              },
-            },
-          })
+        if (existingRating.is_like === isLike) {
+          const { error: deleteError } = await supabaseAdmin
+            .from("script_ratings")
+            .delete()
+            .eq("script_id", id)
+            .eq("user_id", userId)
+
+          if (deleteError) throw deleteError
 
           // Update the script's like/dislike count
-          await prisma.script.update({
-            where: { id },
-            data: {
-              likesCount: isLike ? { decrement: 1 } : { increment: 0 },
-              dislikesCount: isLike ? { increment: 0 } : { decrement: 1 },
-            },
-          })
+          const { error: updateError } = await supabaseAdmin
+            .from("scripts")
+            .update({
+              likes_count: isLike
+                ? supabase.rpc("decrement", { row_id: id, table_name: "scripts", column_name: "likes_count" })
+                : supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "likes_count" }),
+              dislikes_count: isLike
+                ? supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "dislikes_count" })
+                : supabase.rpc("decrement", { row_id: id, table_name: "scripts", column_name: "dislikes_count" }),
+            })
+            .eq("id", id)
+
+          if (updateError) throw updateError
 
           return { action: "removed" }
         } else {
           // If rating type is different, update the rating
-          await prisma.scriptRating.update({
-            where: {
-              scriptId_userId: {
-                scriptId: id,
-                userId,
-              },
-            },
-            data: { isLike },
-          })
+          const { error: updateRatingError } = await supabaseAdmin
+            .from("script_ratings")
+            .update({ is_like: isLike })
+            .eq("script_id", id)
+            .eq("user_id", userId)
+
+          if (updateRatingError) throw updateRatingError
 
           // Update the script's like/dislike count
-          await prisma.script.update({
-            where: { id },
-            data: {
-              likesCount: isLike ? { increment: 1 } : { decrement: 1 },
-              dislikesCount: isLike ? { decrement: 1 } : { increment: 1 },
-            },
-          })
+          const { error: updateScriptError } = await supabaseAdmin
+            .from("scripts")
+            .update({
+              likes_count: isLike
+                ? supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "likes_count" })
+                : supabase.rpc("decrement", { row_id: id, table_name: "scripts", column_name: "likes_count" }),
+              dislikes_count: isLike
+                ? supabase.rpc("decrement", { row_id: id, table_name: "scripts", column_name: "dislikes_count" })
+                : supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "dislikes_count" }),
+            })
+            .eq("id", id)
+
+          if (updateScriptError) throw updateScriptError
 
           return { action: "changed" }
         }
       } else {
         // Create a new rating
-        await prisma.scriptRating.create({
-          data: {
-            scriptId: id,
-            userId,
-            isLike,
+        const { error: insertError } = await supabaseAdmin.from("script_ratings").insert([
+          {
+            id: uuidv4(),
+            script_id: id,
+            user_id: userId,
+            is_like: isLike,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           },
-        })
+        ])
+
+        if (insertError) throw insertError
 
         // Update the script's like/dislike count
-        await prisma.script.update({
-          where: { id },
-          data: {
-            likesCount: isLike ? { increment: 1 } : { increment: 0 },
-            dislikesCount: isLike ? { increment: 0 } : { increment: 1 },
-          },
-        })
+        const { error: updateError } = await supabaseAdmin
+          .from("scripts")
+          .update({
+            likes_count: isLike
+              ? supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "likes_count" })
+              : supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "likes_count" }),
+            dislikes_count: isLike
+              ? supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "dislikes_count" })
+              : supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "dislikes_count" }),
+          })
+          .eq("id", id)
+
+        if (updateError) throw updateError
 
         return { action: "added" }
       }
@@ -265,25 +285,9 @@ export const gatewayDb = {
   // Get a gateway by ID
   getGatewayById: async (id: string) => {
     try {
-      // First try to get from Prisma
-      try {
-        const gateway = await prisma.gateway.findUnique({
-          where: { id },
-        })
-
-        if (gateway) return gateway
-      } catch (prismaError) {
-        console.warn("Prisma gateway fetch failed, falling back to Supabase:", prismaError)
-      }
-
-      // Fallback to Supabase if Prisma fails
       const { data, error } = await supabase.from("gateways").select("*").eq("id", id).single()
 
-      if (error) {
-        console.error("Supabase gateway fetch error:", error)
-        throw error
-      }
-
+      if (error) throw error
       return data
     } catch (error) {
       console.error("Error fetching gateway:", error)
@@ -294,26 +298,22 @@ export const gatewayDb = {
   // Create a new gateway
   createGateway: async (gatewayData: any) => {
     try {
-      // First try to create with Prisma
-      try {
-        const gateway = await prisma.gateway.create({
-          data: gatewayData,
-        })
+      const gatewayId = uuidv4()
+      const { data, error } = await supabaseAdmin
+        .from("gateways")
+        .insert([
+          {
+            id: gatewayId,
+            ...gatewayData,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single()
 
-        return gateway
-      } catch (prismaError) {
-        console.warn("Prisma gateway creation failed, falling back to Supabase:", prismaError)
-      }
-
-      // Fallback to Supabase if Prisma fails
-      const { data, error } = await supabaseAdmin.from("gateways").insert([gatewayData]).select()
-
-      if (error) {
-        console.error("Supabase gateway creation error:", error)
-        throw error
-      }
-
-      return data[0]
+      if (error) throw error
+      return data
     } catch (error) {
       console.error("Error creating gateway:", error)
       throw error
@@ -323,27 +323,18 @@ export const gatewayDb = {
   // Update a gateway
   updateGateway: async (id: string, updates: any) => {
     try {
-      // First try to update with Prisma
-      try {
-        const gateway = await prisma.gateway.update({
-          where: { id },
-          data: updates,
+      const { data, error } = await supabaseAdmin
+        .from("gateways")
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
         })
+        .eq("id", id)
+        .select()
+        .single()
 
-        return gateway
-      } catch (prismaError) {
-        console.warn("Prisma gateway update failed, falling back to Supabase:", prismaError)
-      }
-
-      // Fallback to Supabase if Prisma fails
-      const { data, error } = await supabaseAdmin.from("gateways").update(updates).eq("id", id).select()
-
-      if (error) {
-        console.error("Supabase gateway update error:", error)
-        throw error
-      }
-
-      return data[0]
+      if (error) throw error
+      return data
     } catch (error) {
       console.error("Error updating gateway:", error)
       throw error
@@ -385,25 +376,16 @@ export const gatewayDb = {
   // Track detailed gateway analytics
   logGatewayAnalytics: async (data: any) => {
     try {
-      // First try to create with Prisma
-      try {
-        await prisma.gatewayAnalytics.create({
-          data,
-        })
+      const analyticsId = uuidv4()
+      const { error } = await supabaseAdmin.from("gateway_analytics").insert([
+        {
+          id: analyticsId,
+          ...data,
+          timestamp: new Date().toISOString(),
+        },
+      ])
 
-        return true
-      } catch (prismaError) {
-        console.warn("Prisma analytics logging failed, falling back to Supabase:", prismaError)
-      }
-
-      // Fallback to Supabase if Prisma fails
-      const { error } = await supabaseAdmin.from("gateway_analytics").insert([data])
-
-      if (error) {
-        console.error("Supabase analytics logging error:", error)
-        throw error
-      }
-
+      if (error) throw error
       return true
     } catch (error) {
       console.error("Error logging gateway analytics:", error)
@@ -417,42 +399,24 @@ export const sessionDb = {
   // Create or update a gateway session
   saveGatewaySession: async (sessionData: any) => {
     try {
-      // First try to upsert with Prisma
-      try {
-        const session = await prisma.gatewaySession.upsert({
-          where: { id: sessionData.id || "" },
-          update: {
-            ...sessionData,
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes from now
-          },
-          create: {
-            ...sessionData,
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes from now
-          },
-        })
+      const sessionId = sessionData.id || uuidv4()
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes from now
 
-        return session
-      } catch (prismaError) {
-        console.warn("Prisma session save failed, falling back to Supabase:", prismaError)
-      }
-
-      // Fallback to Supabase if Prisma fails
       const { data, error } = await supabaseAdmin
         .from("gateway_sessions")
         .upsert([
           {
+            id: sessionId,
             ...sessionData,
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 minutes from now
+            expires_at: expiresAt,
+            updated_at: new Date().toISOString(),
           },
         ])
         .select()
+        .single()
 
-      if (error) {
-        console.error("Supabase session save error:", error)
-        throw error
-      }
-
-      return data[0]
+      if (error) throw error
+      return data
     } catch (error) {
       console.error("Error saving gateway session:", error)
       throw error
@@ -462,33 +426,12 @@ export const sessionDb = {
   // Get a gateway session
   getGatewaySession: async (sessionId: string) => {
     try {
-      // First try to get from Prisma
-      try {
-        const session = await prisma.gatewaySession.findUnique({
-          where: { id: sessionId },
-        })
-
-        if (session) {
-          // Check if session is expired
-          if (new Date(session.expiresAt) < new Date()) {
-            return null
-          }
-          return session
-        }
-      } catch (prismaError) {
-        console.warn("Prisma session fetch failed, falling back to Supabase:", prismaError)
-      }
-
-      // Fallback to Supabase if Prisma fails
       const { data, error } = await supabase.from("gateway_sessions").select("*").eq("id", sessionId).single()
 
-      if (error) {
-        console.error("Supabase session fetch error:", error)
-        throw error
-      }
+      if (error) throw error
 
       // Check if session is expired
-      if (new Date(data.expiresAt) < new Date()) {
+      if (new Date(data.expires_at) < new Date()) {
         return null
       }
 
@@ -505,10 +448,10 @@ export const userDb = {
   // Get user by ID
   getUserById: async (id: string) => {
     try {
-      const user = await prisma.user.findUnique({
-        where: { id },
-      })
-      return user
+      const { data, error } = await supabase.from("profiles").select("*").eq("id", id).single()
+
+      if (error) throw error
+      return data
     } catch (error) {
       console.error("Error fetching user by ID:", error)
       throw error
@@ -518,10 +461,10 @@ export const userDb = {
   // Get user by username
   getUserByUsername: async (username: string) => {
     try {
-      const user = await prisma.user.findUnique({
-        where: { username },
-      })
-      return user
+      const { data, error } = await supabase.from("profiles").select("*").eq("username", username).single()
+
+      if (error) throw error
+      return data
     } catch (error) {
       console.error("Error fetching user by username:", error)
       throw error
@@ -531,10 +474,10 @@ export const userDb = {
   // Create a new user
   createUser: async (userData: any) => {
     try {
-      const newUser = await prisma.user.create({
-        data: userData,
-      })
-      return newUser
+      const { data, error } = await supabaseAdmin.from("profiles").insert([userData]).select().single()
+
+      if (error) throw error
+      return data
     } catch (error) {
       console.error("Error creating user:", error)
       throw error
@@ -544,11 +487,10 @@ export const userDb = {
   // Update user
   updateUser: async (id: string, updates: any) => {
     try {
-      const updatedUser = await prisma.user.update({
-        where: { id },
-        data: updates,
-      })
-      return updatedUser
+      const { data, error } = await supabaseAdmin.from("profiles").update(updates).eq("id", id).select().single()
+
+      if (error) throw error
+      return data
     } catch (error) {
       console.error("Error updating user:", error)
       throw error

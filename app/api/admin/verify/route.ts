@@ -1,22 +1,37 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { checkIsAdmin } from "@/lib/admin-server"
+import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth-options"
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { username } = await request.json()
+    const session = await getServerSession(authOptions)
 
-    if (!username) {
-      return NextResponse.json({ isAdmin: false }, { status: 400 })
+    // Check if user is authenticated and is an admin
+    if (!session || !session.user) {
+      return NextResponse.json({ success: false, message: "Authentication required" }, { status: 401 })
     }
 
-    const isAdmin = await checkIsAdmin(username)
+    // Mock admin check for initial deployment
+    const isAdmin = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"].includes(
+      session.user.name || "",
+    )
 
-    // Add a random delay to prevent timing attacks
-    await new Promise((resolve) => setTimeout(resolve, Math.random() * 200 + 100))
+    if (!isAdmin) {
+      return NextResponse.json({ success: false, message: "Admin access required" }, { status: 403 })
+    }
 
-    return NextResponse.json({ isAdmin })
+    const data = await request.json()
+
+    // Mock verification for initial deployment
+    return NextResponse.json({
+      success: true,
+      message: "Script verified successfully",
+    })
   } catch (error) {
-    console.error("Error verifying admin status:", error)
-    return NextResponse.json({ isAdmin: false }, { status: 500 })
+    console.error("Error verifying script:", error)
+    return NextResponse.json(
+      { success: false, message: "An error occurred while verifying the script" },
+      { status: 500 },
+    )
   }
 }

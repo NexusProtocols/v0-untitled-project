@@ -1,8 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import crypto from "crypto"
-
-// Secret key for token decryption (in a real app, this would be in environment variables)
-const SECRET_KEY = process.env.API_ENCRYPTION_KEY || "your-secret-key-for-encryption-minimum-32-chars"
+import { decryptData, generateEncryptionKey } from "@/lib/ad-utils"
+import { env } from "@/lib/env"
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,73 +18,54 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "API key is required" }, { status: 401 })
     }
 
-    // Verify the API key (in a real app, this would check against a database)
-    const validApiKeys = process.env.CREATOR_API_KEYS?.split(",") || ["test-api-key-1", "test-api-key-2"]
+    // Verify the API key
+    // In a real implementation, this would check against a database
+    // For now, we'll use a simple check against environment variables or stored keys
+    const creatorApiKeys = process.env.CREATOR_API_KEYS ? JSON.parse(process.env.CREATOR_API_KEYS) : {}
+    const creatorId = Object.keys(creatorApiKeys).find((id) => creatorApiKeys[id] === apiKey)
 
-    if (!validApiKeys.includes(apiKey)) {
+    if (!creatorId) {
       return NextResponse.json({ success: false, error: "Invalid API key" }, { status: 401 })
     }
 
     // Decrypt the token
-    const decryptedData = decryptToken(token)
+    try {
+      const encryptionKey = generateEncryptionKey(env.API_ENCRYPTION_KEY)
+      const decryptedData = decryptData(token, encryptionKey)
+      const sessionData = JSON.parse(decryptedData)
 
-    if (!decryptedData) {
+      // Check if token is expired
+      if (sessionData.expiresAt < Date.now()) {
+        return NextResponse.json({ success: false, error: "Token has expired" }, { status: 401 })
+      }
+
+      // Check if the token belongs to the creator
+      if (sessionData.creatorId && sessionData.creatorId !== creatorId) {
+        return NextResponse.json({ success: false, error: "Token does not belong to this creator" }, { status: 403 })
+      }
+
+      // Return the session data
+      return NextResponse.json({
+        success: true,
+        data: {
+          CreatorId: sessionData.creatorId,
+          GatewayID: sessionData.gatewayId,
+          UserHWID: sessionData.hwid || "unknown",
+          UserIP: sessionData.ip,
+          AdLevel: sessionData.adLevel || 3,
+          TaskLevel: sessionData.taskLevel || 2,
+          TotalStages: sessionData.totalStages || 4,
+          TokenCreatedDate: new Date(sessionData.timestamp).toISOString(),
+          TokenExpirationDate: new Date(sessionData.expiresAt).toISOString(),
+          Completed: sessionData.completed || false,
+        },
+      })
+    } catch (error) {
+      console.error("Error decrypting token:", error)
       return NextResponse.json({ success: false, error: "Invalid token" }, { status: 400 })
     }
-
-    // Check if the token is expired (24 hours)
-    const tokenTimestamp = decryptedData.timestamp
-    const currentTime = Date.now()
-    const tokenAge = currentTime - tokenTimestamp
-
-    if (tokenAge > 24 * 60 * 60 * 1000) {
-      return NextResponse.json({ success: false, error: "Token expired" }, { status: 400 })
-    }
-
-    // Return the decrypted data
-    return NextResponse.json({
-      success: true,
-      data: {
-        CreatorId: decryptedData.creatorId || "unknown",
-        GatewayID: decryptedData.gatewayId,
-        UserHWID: "not-implemented", // In a real app, this would be the actual HWID
-        UserIP: decryptedData.ip,
-        AdLevel: 3, // Default ad level
-        TaskLevel: 2, // Default task level
-        TotalStages: decryptedData.stages || 5,
-        TokenCreatedDate: new Date(tokenTimestamp).toISOString(),
-        TokenExpirationDate: new Date(tokenTimestamp + 24 * 60 * 60 * 1000).toISOString(),
-      },
-    })
   } catch (error) {
     console.error("Error verifying token:", error)
     return NextResponse.json({ success: false, error: "An error occurred while verifying the token" }, { status: 500 })
-  }
-}
-
-// Function to decrypt token
-function decryptToken(token: string): any {
-  try {
-    // Split the token into IV and encrypted data
-    const parts = token.split(":")
-    if (parts.length !== 2) {
-      throw new Error("Invalid token format")
-    }
-
-    const iv = Buffer.from(parts[0], "hex")
-    const encrypted = parts[1]
-
-    // Create decipher
-    const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(SECRET_KEY.slice(0, 32)), iv)
-
-    // Decrypt the data
-    let decrypted = decipher.update(encrypted, "base64", "utf8")
-    decrypted += decipher.final("utf8")
-
-    // Parse the JSON data
-    return JSON.parse(decrypted)
-  } catch (error) {
-    console.error("Error decrypting token:", error)
-    return null
   }
 }

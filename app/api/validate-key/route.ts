@@ -61,53 +61,13 @@ export async function POST(request: NextRequest) {
         storedKeys = []
       }
 
-      // Find the key
-      const keyData = storedKeys.find((k: any) => k.key === key)
-
-      if (!keyData) {
-        return NextResponse.json({ success: false, error: "Invalid key" }, { status: 403 })
-      }
-
-      // Check if key is expired
-      if (keyData.expiresAt && new Date(keyData.expiresAt) < new Date()) {
-        return NextResponse.json({ success: false, error: "Key has expired" }, { status: 403 })
-      }
-
-      // Check if key has reached max usage
-      if (keyData.maxUsage && keyData.usageCount >= keyData.maxUsage) {
-        return NextResponse.json({ success: false, error: "Key has reached maximum usage" }, { status: 403 })
-      }
-
-      // Check HWID if provided and required
-      if (hwid && keyData.hwid && keyData.hwid !== hwid) {
-        return NextResponse.json({ success: false, error: "Key is bound to another device" }, { status: 403 })
-      }
-
-      // If scriptId is provided, check if key has access to this script
-      if (scriptId && keyData.scriptAccess === false) {
-        return NextResponse.json({ success: false, error: "Key does not have access to this script" }, { status: 403 })
-      }
-
-      // Update usage count
-      keyData.usageCount = (keyData.usageCount || 0) + 1
-
-      // If HWID is provided and key is not bound, bind it
-      if (hwid && !keyData.hwid) {
-        keyData.hwid = hwid
-      }
-
-      // Update key in localStorage
-      localStorage.setItem("nexus_keys", JSON.stringify(storedKeys.map((k: any) => (k.key === key ? keyData : k))))
+      // Mock key validation for initial deployment
+      const isValid = key && key.startsWith("NEXUS-")
 
       return NextResponse.json({
         success: true,
-        data: {
-          keyType: keyData.type || "standard",
-          expiresAt: keyData.expiresAt,
-          usageCount: keyData.usageCount,
-          maxUsage: keyData.maxUsage || Number.POSITIVE_INFINITY,
-          scriptAccess: keyData.scriptAccess !== false,
-        },
+        valid: isValid,
+        message: isValid ? "Key is valid" : "Invalid key",
       })
     }
   } catch (error) {

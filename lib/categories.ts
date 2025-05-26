@@ -1,15 +1,8 @@
 export const scriptCategories = [
-  { id: "combat", name: "Combat" },
-  { id: "utility", name: "Utility" },
-  { id: "gui", name: "GUI" },
-  { id: "admin", name: "Admin" },
-  { id: "trolling", name: "Trolling" },
-  { id: "simulator", name: "Simulator" },
-  { id: "tycoon", name: "Tycoon" },
-  { id: "fps", name: "FPS" },
-  { id: "rpg", name: "RPG" },
-  { id: "adventure", name: "Adventure" },
-  { id: "racing", name: "Racing" },
-  { id: "horror", name: "Horror" },
-  { id: "misc", name: "Miscellaneous" },
+  { id: "universal", name: "Universal", description: "Scripts that work across multiple games" },
+  { id: "autofarm", name: "Autofarm", description: "Autofarm Script" },
+  { id: "macros", name: "Macros", description: "Scripts for farming resources or currency" },
+  { id: "FPS Booster", name: "Fps Booster", description: "Script Macros" },
+  { id: "other", name: "Other", description: "Other types of scripts" },
+
 ]

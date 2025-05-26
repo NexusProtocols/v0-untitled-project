@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
@@ -19,12 +19,12 @@ export default function SupportPage() {
   const [isAdmin, setIsAdmin] = useState(false)
 
   // Check if user is admin
-  useEffect(() => {
+  useState(() => {
     if (user) {
       const adminUsernames = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"]
       setIsAdmin(adminUsernames.includes(user.username))
     }
-  }, [user])
+  })
 
   const handleOptionSelect = (option: "ai" | "human") => {
     if (option === "ai") {
@@ -179,78 +179,6 @@ export default function SupportPage() {
             >
               <i className="fas fa-comments mr-2"></i> Chat with AI
             </button>
-          </div>
-        </div>
-
-        <div className="mt-12 rounded-lg border border-white/10 bg-[#1a1a1a] p-6">
-          <h2 className="mb-4 text-xl font-bold text-white">Support Requests</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b border-white/10 text-left">
-                  <th className="px-4 py-2 text-blue-400">ID</th>
-                  <th className="px-4 py-2 text-blue-400">User</th>
-                  <th className="px-4 py-2 text-blue-400">Date</th>
-                  <th className="px-4 py-2 text-blue-400">Status</th>
-                  <th className="px-4 py-2 text-blue-400">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  try {
-                    const allRequests = JSON.parse(localStorage.getItem("nexus_support_requests") || "[]")
-
-                    if (allRequests.length === 0) {
-                      return (
-                        <tr>
-                          <td colSpan={5} className="px-4 py-4 text-center text-gray-400">
-                            No support requests found
-                          </td>
-                        </tr>
-                      )
-                    }
-
-                    return allRequests.map((req: any) => (
-                      <tr key={req.id} className="border-b border-white/5 hover:bg-[#0a0a0a]">
-                        <td className="px-4 py-3 text-white">{req.id}</td>
-                        <td className="px-4 py-3 text-gray-400">{req.userId}</td>
-                        <td className="px-4 py-3 text-gray-400">{new Date(req.timestamp).toLocaleDateString()}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`rounded px-2 py-1 text-xs font-medium ${
-                              req.status === "resolved"
-                                ? "bg-green-500/20 text-green-400"
-                                : req.status === "active"
-                                  ? "bg-blue-500/20 text-blue-400"
-                                  : "bg-yellow-500/20 text-yellow-400"
-                            }`}
-                          >
-                            {req.status.charAt(0).toUpperCase() + req.status.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Link
-                            href={`/support/chat/${req.id}`}
-                            className="rounded bg-blue-500/20 px-3 py-1 text-sm text-blue-400 hover:bg-blue-500/30"
-                          >
-                            View
-                          </Link>
-                        </td>
-                      </tr>
-                    ))
-                  } catch (error) {
-                    console.error("Error loading support requests:", error)
-                    return (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-4 text-center text-red-400">
-                          Error loading support requests
-                        </td>
-                      </tr>
-                    )
-                  }
-                })()}
-              </tbody>
-            </table>
           </div>
         </div>
 

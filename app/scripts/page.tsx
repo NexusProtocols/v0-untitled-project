@@ -45,6 +45,72 @@ type SortOptions = {
   sortOrder: "ascending" | "descending"
 }
 
+const FilterToggle = ({
+  label,
+  checked,
+  onChange,
+  icon,
+}: {
+  label: string
+  checked: boolean
+  onChange: () => void
+  icon: string
+}) => (
+  <motion.label
+    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
+      ${checked ? "bg-red-500/10 border-red-500/50" : "bg-white/5 border-white/10"} border`}
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+  >
+    <div className="relative flex items-center">
+      <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
+      <div
+        className={`w-5 h-5 rounded flex items-center justify-center transition-all
+        ${checked ? "bg-red-500" : "bg-white/10 border border-white/20"}`}
+      >
+        {checked && <i className="fas fa-check text-xs text-white"></i>}
+      </div>
+    </div>
+    <div className="flex items-center gap-2">
+      <i className={`fas ${icon} ${checked ? "text-red-400" : "text-gray-400"}`}></i>
+      <span className={`text-sm ${checked ? "text-white" : "text-gray-300"}`}>{label}</span>
+    </div>
+  </motion.label>
+)
+
+const SortOption = ({
+  label,
+  selected,
+  onChange,
+  icon,
+}: {
+  label: string
+  selected: boolean
+  onChange: () => void
+  icon: string
+}) => (
+  <motion.label
+    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
+      ${selected ? "bg-red-500/10 border-red-500/50" : "bg-white/5 border-white/10"} border`}
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+  >
+    <div className="relative flex items-center">
+      <input type="radio" checked={selected} onChange={onChange} className="sr-only" />
+      <div
+        className={`w-5 h-5 rounded-full flex items-center justify-center transition-all
+        ${selected ? "border-red-500" : "border-white/20"} border`}
+      >
+        {selected && <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>}
+      </div>
+    </div>
+    <div className="flex items-center gap-2">
+      <i className={`fas ${icon} ${selected ? "text-red-400" : "text-gray-400"}`}></i>
+      <span className={`text-sm ${selected ? "text-white" : "text-gray-300"}`}>{label}</span>
+    </div>
+  </motion.label>
+)
+
 export default function ScriptsPage() {
   const { user } = useAuth()
   const [scripts, setScripts] = useState<Script[]>([])
@@ -69,8 +135,6 @@ export default function ScriptsPage() {
     sortBy: "",
     sortOrder: "descending",
   })
-  const [fetchError, setFetchError] = useState<string | null>(null)
-  const [noScripts, setNoScripts] = useState(false)
 
   const handleImageError = (scriptId: string) => {
     console.log(`Image error for script: ${scriptId}`)
@@ -78,6 +142,26 @@ export default function ScriptsPage() {
       ...prev,
       [scriptId]: true,
     }))
+
+    // Update the script in localStorage to use placeholder image for future loads
+    try {
+      const storedScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
+      const updatedScripts = storedScripts.map((script: Script) => {
+        if (script.id === scriptId && script.game) {
+          return {
+            ...script,
+            game: {
+              ...script.game,
+              imageUrl: "/placeholder.svg?height=160&width=320",
+            },
+          }
+        }
+        return script
+      })
+      localStorage.setItem("nexus_scripts", JSON.stringify(updatedScripts))
+    } catch (error) {
+      console.error("Error updating script image:", error)
+    }
   }
 
   const toggleFilter = (filterName: keyof FilterOptions) => {
@@ -120,72 +204,122 @@ export default function ScriptsPage() {
 
   useEffect(() => {
     setIsLoading(true)
-    setFetchError(null)
-    setNoScripts(false)
+    try {
+      let storedScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
 
-    // Build the API URL with search parameters
-    let apiUrl = "/api/scripts"
-    const params = new URLSearchParams()
-
-    if (searchQuery) {
-      params.append("searchFilter", searchQuery)
-    }
-
-    if (selectedCategory) {
-      params.append("category", selectedCategory)
-    }
-
-    if (selectedGame) {
-      params.append("gameId", selectedGame.toString())
-    }
-
-    // Add filter parameters
-    if (filters.verified) params.append("verified", "true")
-    if (filters.keySystem) params.append("keySystem", "true")
-    if (filters.free) params.append("free", "true")
-    if (filters.paid) params.append("paid", "true")
-
-    // Add sort parameters
-    if (sortOptions.sortBy) {
-      params.append("sortBy", sortOptions.sortBy)
-      params.append("sortOrder", sortOptions.sortOrder)
-    }
-
-    // Append params to URL if there are any
-    if (params.toString()) {
-      apiUrl += `?${params.toString()}`
-    }
-
-    console.log("Fetching scripts from:", apiUrl)
-
-    // Fetch scripts from API
-    fetch(apiUrl)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Server responded with status: ${response.status}`)
-        }
-        return response.json()
-      })
-      .then((data) => {
-        if (data.success && Array.isArray(data.scripts)) {
-          if (data.scripts.length === 0) {
-            setNoScripts(true)
-          } else {
-            setScripts(data.scripts)
-            console.log(`Loaded ${data.scripts.length} scripts`)
+      // Sanitize image URLs
+      storedScripts = storedScripts.map((script: Script) => {
+        if (script.game && (!script.game.imageUrl || !script.game.imageUrl.startsWith("http"))) {
+          return {
+            ...script,
+            game: {
+              ...script.game,
+              imageUrl: "/placeholder.svg?height=160&width=320",
+            },
           }
-        } else {
-          throw new Error("Invalid response format")
         }
+        return script
       })
-      .catch((error) => {
-        console.error("Error loading scripts:", error)
-        setFetchError(`Failed to fetch scripts. ${error.message}`)
-        setNoScripts(true)
+
+      // Apply filters
+      if (filters.verified) {
+        storedScripts = storedScripts.filter((script: Script) => script.isVerified)
+      }
+      if (filters.keySystem) {
+        storedScripts = storedScripts.filter((script: Script) => script.keySystem)
+      }
+      if (filters.free) {
+        storedScripts = storedScripts.filter((script: Script) => !script.isPremium)
+      }
+      if (filters.paid) {
+        storedScripts = storedScripts.filter((script: Script) => script.isPremium)
+      }
+
+      // Apply sorting
+      if (sortOptions.sortBy) {
+        storedScripts.sort((a: Script, b: Script) => {
+          let aValue, bValue
+
+          switch (sortOptions.sortBy) {
+            case "views":
+              aValue = a.views || 0
+              bValue = b.views || 0
+              break
+            case "likes":
+              aValue = a.likes?.length || 0
+              bValue = b.likes?.length || 0
+              break
+            case "createdAt":
+              aValue = new Date(a.createdAt).getTime()
+              bValue = new Date(b.createdAt).getTime()
+              break
+            case "updatedAt":
+              aValue = a.updatedAt ? new Date(a.updatedAt).getTime() : new Date(a.createdAt).getTime()
+              bValue = b.updatedAt ? new Date(b.updatedAt).getTime() : new Date(b.createdAt).getTime()
+              break
+            default:
+              return 0
+          }
+
+          return sortOptions.sortOrder === "ascending" ? aValue - bValue : bValue - aValue
+        })
+      }
+
+      // Apply search filter if search query exists
+      if (searchQuery) {
+        storedScripts = storedScripts.filter(
+          (script: Script) =>
+            script.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            script.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            script.game?.name.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+      }
+
+      // Apply category filter if selected
+      if (selectedCategory) {
+        storedScripts = storedScripts.filter((script: Script) => script.categories?.includes(selectedCategory))
+      }
+
+      // Apply game filter if selected
+      if (selectedGame) {
+        storedScripts = storedScripts.filter((script: Script) => script.game?.id === selectedGame)
+      }
+
+      // Sort scripts based on criteria
+      storedScripts.sort((a: Script, b: Script) => {
+        // First, prioritize Nexus team scripts
+        const aIsNexusTeam = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"].includes(
+          a.author,
+        )
+        const bIsNexusTeam = ["admin", "owner", "nexus", "volt", "Nexus", "Voltrex", "Furky", "Ocean"].includes(
+          b.author,
+        )
+
+        if (aIsNexusTeam && !bIsNexusTeam) return -1
+        if (!aIsNexusTeam && bIsNexusTeam) return 1
+
+        // Then sort by likes
+        const aLikes = a.likes?.length || 0
+        const bLikes = b.likes?.length || 0
+
+        if (aLikes !== bLikes) return bLikes - aLikes
+
+        // Then by views
+        const aViews = a.views || 0
+        const bViews = b.views || 0
+
+        if (aViews !== bViews) return bViews - aViews
+
+        // Finally by date (newest first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       })
-      .finally(() => {
-        setIsLoading(false)
-      })
+
+      setScripts(storedScripts)
+    } catch (error) {
+      console.error("Error loading scripts:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }, [searchQuery, selectedCategory, selectedGame, filters, sortOptions])
 
   // Close categories dropdown when clicking outside
@@ -354,16 +488,6 @@ export default function ScriptsPage() {
           </Link>
         )}
       </div>
-
-      {fetchError && (
-        <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-red-400">
-          <div className="flex items-center">
-            <i className="fas fa-exclamation-triangle mr-2"></i>
-            <span>{fetchError}</span>
-          </div>
-          <div className="mt-1 text-sm text-gray-400">Please try refreshing the page or check your connection.</div>
-        </div>
-      )}
 
       {/* Compact Advanced Search Toggle */}
       <div className="mb-4 flex justify-end">
@@ -609,7 +733,7 @@ export default function ScriptsPage() {
         </div>
       </div>
 
-      {noScripts || organizedScripts.length === 0 ? (
+      {organizedScripts.length === 0 ? (
         <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-8 text-center">
           <div className="mb-4 text-5xl text-red-500">
             <i className="fas fa-code"></i>
@@ -758,69 +882,3 @@ export default function ScriptsPage() {
     </div>
   )
 }
-
-const FilterToggle = ({
-  label,
-  checked,
-  onChange,
-  icon,
-}: {
-  label: string
-  checked: boolean
-  onChange: () => void
-  icon: string
-}) => (
-  <motion.label
-    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
-      ${checked ? "bg-red-500/10 border-red-500/50" : "bg-white/5 border-white/10"} border`}
-    whileHover={{ scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
-  >
-    <div className="relative flex items-center">
-      <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
-      <div
-        className={`w-5 h-5 rounded flex items-center justify-center transition-all
-        ${checked ? "bg-red-500" : "bg-white/10 border border-white/20"}`}
-      >
-        {checked && <i className="fas fa-check text-xs text-white"></i>}
-      </div>
-    </div>
-    <div className="flex items-center gap-2">
-      <i className={`fas ${icon} ${checked ? "text-red-400" : "text-gray-400"}`}></i>
-      <span className={`text-sm ${checked ? "text-white" : "text-gray-300"}`}>{label}</span>
-    </div>
-  </motion.label>
-)
-
-const SortOption = ({
-  label,
-  selected,
-  onChange,
-  icon,
-}: {
-  label: string
-  selected: boolean
-  onChange: () => void
-  icon: string
-}) => (
-  <motion.label
-    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
-      ${selected ? "bg-red-500/10 border-red-500/50" : "bg-white/5 border-white/10"} border`}
-    whileHover={{ scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
-  >
-    <div className="relative flex items-center">
-      <input type="radio" checked={selected} onChange={onChange} className="sr-only" />
-      <div
-        className={`w-5 h-5 rounded-full flex items-center justify-center transition-all
-        ${selected ? "border-red-500" : "border-white/20"} border`}
-      >
-        {selected && <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>}
-      </div>
-    </div>
-    <div className="flex items-center gap-2">
-      <i className={`fas ${icon} ${selected ? "text-red-400" : "text-gray-400"}`}></i>
-      <span className={`text-sm ${selected ? "text-white" : "text-gray-300"}`}>{label}</span>
-    </div>
-  </motion.label>
-)

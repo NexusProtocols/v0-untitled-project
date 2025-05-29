@@ -4,22 +4,16 @@ import { gatewayDb } from "@/lib/db"
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const gatewayId = params.id
-    const { searchParams } = new URL(request.url)
-    const creatorId = searchParams.get("creatorId")
 
     if (!gatewayId) {
       return NextResponse.json({ success: false, message: "Gateway ID is required" }, { status: 400 })
     }
 
-    if (!creatorId) {
-      return NextResponse.json({ success: false, message: "Creator ID is required" }, { status: 400 })
-    }
-
     // Get gateway from database with improved error handling
     const gateway = await gatewayDb.getGatewayById(gatewayId)
 
-    if (!gateway || gateway.creatorId !== creatorId) {
-      console.error(`Gateway not found with ID: ${gatewayId} and Creator ID: ${creatorId}`)
+    if (!gateway) {
+      console.error(`Gateway not found with ID: ${gatewayId}`)
       return NextResponse.json({ success: false, message: "Gateway not found" }, { status: 404 })
     }
 

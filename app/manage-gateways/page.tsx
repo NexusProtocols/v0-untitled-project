@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
-import { supabase } from "@/lib/supabase"
 
 type Gateway = {
   id: string
@@ -44,53 +43,87 @@ export default function ManageGatewaysPage() {
 
     // Load gateways from localStorage
     if (user) {
-      const loadGateways = async () => {
+      const loadGateways = () => {
         try {
-          setIsLoadingGateways(true)
+          // Initialize with empty array if localStorage item doesn't exist
+          const storedGateways = localStorage.getItem("nexus_gateways")
+          const allGateways = storedGateways ? JSON.parse(storedGateways) : []
 
-          // Load gateways from Supabase
-          let query = supabase.from("gateways").select("*")
+          // If admin, show all gateways, otherwise filter by creator
+          const filteredGateways = isAdmin
+            ? allGateways
+            : allGateways.filter((gateway: Gateway) => gateway.creatorId === user.id)
 
-          // If not admin, filter by creator
-          if (!isAdmin && user?.id) {
-            // Try to match by user ID or creator name
-            query = query.or(`creator_id.eq.${user.id},creator_name.eq.${user.username}`)
-          }
+          // Ensure all gateways have proper stats and steps
+          const gatewaysWithStats = filteredGateways.map((gateway: Gateway) => {
+            // Ensure gateway has steps array
+            const gatewayWithSteps = {
+              ...gateway,
+              steps: gateway.steps || [],
+            }
 
-          const { data: gatewaysData, error } = await query.order("created_at", { ascending: false })
+            // If gateway doesn't have stats, add them
+            if (!gatewayWithSteps.stats) {
+              // Generate realistic stats based on gateway age and activity
+              const creationDate =
+                new Date(gatewayWithSteps.id).getTime() || Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
+              const daysSinceCreation = Math.max(1, Math.floor((Date.now() - creationDate) / (24 * 60 * 60 * 1000)))
 
-          if (error) {
-            console.error("Error loading gateways from Supabase:", error)
-            // Fall back to localStorage if Supabase fails
-            const storedGateways = localStorage.getItem("nexus_gateways")
-            const allGateways = storedGateways ? JSON.parse(storedGateways) : []
-            const filteredGateways = isAdmin
-              ? allGateways
-              : allGateways.filter((gateway: Gateway) => gateway.creatorId === user?.id)
-            setGateways(filteredGateways)
-            return
-          }
+              const baseVisits = Math.floor(Math.random() * 50) + 10 // Base visits per day
+              const totalVisits = baseVisits * daysSinceCreation
 
-          // Process the gateways data
-          const processedGateways = (gatewaysData || []).map((gateway: any) => ({
-            id: gateway.id,
-            title: gateway.title,
-            description: gateway.description,
-            imageUrl: gateway.image_url,
-            creatorId: gateway.creator_id,
-            isActive: true, // Default to active
-            steps: gateway.stages ? gateway.stages.flatMap((stage: any) => stage.steps || []) : [],
-            stats: gateway.stats || {
-              visits: Math.floor(Math.random() * 100),
-              completions: Math.floor(Math.random() * 50),
-              conversionRate: Math.random() * 30 + 10,
-              revenue: Math.random() * 100,
-            },
-          }))
+              const conversionRate = Math.random() * 0.3 + 0.1 // 10-40% conversion rate
+              const totalCompletions = Math.floor(totalVisits * conversionRate)
 
-          setGateways(processedGateways)
+              // Calculate revenue
+              const adLevel = gatewayWithSteps.settings?.adLevel || 3
+              const baseCPM = 2.5 // Base CPM rate ($ per 1000 visits)
+              const adLevelMultiplier = 0.8 + adLevel * 0.2
+              const completionMultiplier = 1 + conversionRate * 0.5
+              const revenue = (totalVisits / 1000) * baseCPM * adLevelMultiplier * completionMultiplier
+
+              return {
+                ...gatewayWithSteps,
+                stats: {
+                  visits: totalVisits,
+                  completions: totalCompletions,
+                  conversionRate: conversionRate * 100,
+                  revenue: Number.parseFloat(revenue.toFixed(2)),
+                },
+              }
+            } else {
+              // Ensure conversion rate is calculated correctly
+              const visits = gatewayWithSteps.stats.visits || 0
+              const completions = gatewayWithSteps.stats.completions || 0
+              const conversionRate = visits > 0 ? (completions / visits) * 100 : 0
+
+              // Calculate revenue if not present
+              let revenue = gatewayWithSteps.stats.revenue
+              if (revenue === undefined) {
+                const adLevel = gatewayWithSteps.settings?.adLevel || 3
+                const baseCPM = 2.5 // Base CPM rate ($ per 1000 visits)
+                const adLevelMultiplier = 0.8 + adLevel * 0.2
+                const completionRate = visits > 0 ? completions / visits : 0
+                const completionMultiplier = 1 + completionRate * 0.5
+                revenue = (visits / 1000) * baseCPM * adLevelMultiplier * completionMultiplier
+                revenue = Number.parseFloat(revenue.toFixed(2))
+              }
+
+              return {
+                ...gatewayWithSteps,
+                stats: {
+                  ...gatewayWithSteps.stats,
+                  conversionRate,
+                  revenue,
+                },
+              }
+            }
+          })
+
+          setGateways(gatewaysWithStats)
         } catch (error) {
           console.error("Error loading gateways:", error)
+          // Set empty array on error
           setGateways([])
         } finally {
           setIsLoadingGateways(false)
@@ -101,14 +134,14 @@ export default function ManageGatewaysPage() {
     }
   }, [user, isLoading, router, isAdmin])
 
-  const handleCopyLink = (gateway: Gateway) => {
-    const url = `${window.location.origin}/${gateway.creatorId}/${gateway.id}`
+  const handleCopyLink = (gatewayId: string) => {
+    const url = `${window.location.origin}/gateway/${gatewayId}`
     navigator.clipboard.writeText(url)
     alert("Gateway URL copied to clipboard!")
   }
 
-  const handleViewGateway = (gateway: Gateway) => {
-    router.push(`/${gateway.creatorId}/${gateway.id}`)
+  const handleViewGateway = (gatewayId: string) => {
+    router.push(`/gateway/${gatewayId}`)
   }
 
   if (isLoading || isLoadingGateways) {
@@ -155,7 +188,7 @@ export default function ManageGatewaysPage() {
             <div
               key={gateway.id}
               className="interactive-element rounded-lg border border-white/10 bg-[#1a1a1a] overflow-hidden transition-all hover:border-[#ff3e3e]/50 hover:shadow-lg hover:shadow-[#ff3e3e]/5 cursor-pointer"
-              onClick={() => handleViewGateway(gateway)}
+              onClick={() => handleViewGateway(gateway.id)}
             >
               <div className="relative h-40 w-full overflow-hidden">
                 <img
@@ -206,7 +239,7 @@ export default function ManageGatewaysPage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleCopyLink(gateway)
+                      handleCopyLink(gateway.id)
                     }}
                     className="interactive-element flex-1 rounded border border-white/10 bg-[#050505] px-3 py-2 text-center text-sm font-medium text-white transition-all hover:bg-[#0a0a0a] hover:scale-105 transform duration-200"
                   >

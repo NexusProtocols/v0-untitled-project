@@ -1,8 +1,226 @@
 import { supabase, supabaseAdmin } from "./supabase"
 import { v4 as uuidv4 } from "uuid"
 
+// Gateway-related database operations
+const gatewayDbModule = {
+  // Get a gateway by ID
+  getGatewayById: async (id: string) => {
+    try {
+      const { data, error } = await supabase.from("gateways").select("*").eq("id", id).single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error fetching gateway:", error)
+      return null
+    }
+  },
+
+  // Create a new gateway
+  createGateway: async (gatewayData: any) => {
+    try {
+      const gatewayId = uuidv4()
+      const { data, error } = await supabaseAdmin
+        .from("gateways")
+        .insert([
+          {
+            id: gatewayId,
+            ...gatewayData,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error creating gateway:", error)
+      throw error
+    }
+  },
+
+  // Update a gateway
+  updateGateway: async (id: string, updates: any) => {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("gateways")
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error updating gateway:", error)
+      throw error
+    }
+  },
+
+  // Track gateway visits and completions
+  trackGatewayActivity: async (gatewayId: string, activity: "visit" | "completion") => {
+    try {
+      // First get the current gateway stats
+      const gateway = await gatewayDbModule.getGatewayById(gatewayId)
+
+      if (!gateway) {
+        throw new Error(`Gateway with ID ${gatewayId} not found`)
+      }
+
+      // Update the stats
+      const stats = gateway.stats || { visits: 0, completions: 0, conversionRate: 0 }
+
+      if (activity === "visit") {
+        stats.visits += 1
+      } else if (activity === "completion") {
+        stats.completions += 1
+      }
+
+      // Calculate conversion rate
+      stats.conversionRate = stats.visits > 0 ? (stats.completions / stats.visits) * 100 : 0
+
+      // Update the gateway with new stats
+      await gatewayDbModule.updateGateway(gatewayId, { stats })
+
+      return true
+    } catch (error) {
+      console.error(`Error tracking gateway ${activity}:`, error)
+      return false
+    }
+  },
+
+  // Track detailed gateway analytics
+  logGatewayAnalytics: async (data: any) => {
+    try {
+      const analyticsId = uuidv4()
+      const { error } = await supabaseAdmin.from("gateway_analytics").insert([
+        {
+          id: analyticsId,
+          ...data,
+          timestamp: new Date().toISOString(),
+        },
+      ])
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error("Error logging gateway analytics:", error)
+      return false
+    }
+  },
+}
+
+// Session-related database operations
+const sessionDbModule = {
+  // Create or update a gateway session
+  saveGatewaySession: async (sessionData: any) => {
+    try {
+      const sessionId = sessionData.id || uuidv4()
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes from now
+
+      const { data, error } = await supabaseAdmin
+        .from("gateway_sessions")
+        .upsert([
+          {
+            id: sessionId,
+            ...sessionData,
+            expires_at: expiresAt,
+            updated_at: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error saving gateway session:", error)
+      throw error
+    }
+  },
+
+  // Get a gateway session
+  getGatewaySession: async (sessionId: string) => {
+    try {
+      const { data, error } = await supabase.from("gateway_sessions").select("*").eq("id", sessionId).single()
+
+      if (error) throw error
+
+      // Check if session is expired
+      if (new Date(data.expires_at) < new Date()) {
+        return null
+      }
+
+      return data
+    } catch (error) {
+      console.error("Error fetching gateway session:", error)
+      return null
+    }
+  },
+}
+
+// User-related database operations
+const userDbModule = {
+  // Get user by ID
+  getUserById: async (id: string) => {
+    try {
+      const { data, error } = await supabase.from("profiles").select("*").eq("id", id).single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error fetching user by ID:", error)
+      throw error
+    }
+  },
+
+  // Get user by username
+  getUserByUsername: async (username: string) => {
+    try {
+      const { data, error } = await supabase.from("profiles").select("*").eq("username", username).single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error fetching user by username:", error)
+      throw error
+    }
+  },
+
+  // Create a new user
+  createUser: async (userData: any) => {
+    try {
+      const { data, error } = await supabaseAdmin.from("profiles").insert([userData]).select().single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error creating user:", error)
+      throw error
+    }
+  },
+
+  // Update user
+  updateUser: async (id: string, updates: any) => {
+    try {
+      const { data, error } = await supabaseAdmin.from("profiles").update(updates).eq("id", id).select().single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error("Error updating user:", error)
+      throw error
+    }
+  },
+}
+
 // Script-related database operations
-export const scriptDb = {
+const scriptDbModule = {
   // Get all scripts with filtering and pagination
   getScripts: async ({
     searchFilter = "",
@@ -163,7 +381,7 @@ export const scriptDb = {
     try {
       const { error } = await supabaseAdmin
         .from("scripts")
-        .update({ views: supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "views" }) })
+        .update({ views: supabase.rpc("increment_views", { row_id: id }) })
         .eq("id", id)
 
       if (error) throw error
@@ -203,11 +421,11 @@ export const scriptDb = {
             .from("scripts")
             .update({
               likes_count: isLike
-                ? supabase.rpc("decrement", { row_id: id, table_name: "scripts", column_name: "likes_count" })
-                : supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "likes_count" }),
+                ? supabase.rpc("decrement_likes", { row_id: id })
+                : supabase.rpc("increment_likes", { row_id: id }),
               dislikes_count: isLike
-                ? supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "dislikes_count" })
-                : supabase.rpc("decrement", { row_id: id, table_name: "scripts", column_name: "dislikes_count" }),
+                ? supabase.rpc("increment_dislikes", { row_id: id })
+                : supabase.rpc("decrement_dislikes", { row_id: id }),
             })
             .eq("id", id)
 
@@ -229,11 +447,11 @@ export const scriptDb = {
             .from("scripts")
             .update({
               likes_count: isLike
-                ? supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "likes_count" })
-                : supabase.rpc("decrement", { row_id: id, table_name: "scripts", column_name: "likes_count" }),
+                ? supabase.rpc("increment_likes", { row_id: id })
+                : supabase.rpc("decrement_likes", { row_id: id }),
               dislikes_count: isLike
-                ? supabase.rpc("decrement", { row_id: id, table_name: "scripts", column_name: "dislikes_count" })
-                : supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "dislikes_count" }),
+                ? supabase.rpc("decrement_dislikes", { row_id: id })
+                : supabase.rpc("increment_dislikes", { row_id: id }),
             })
             .eq("id", id)
 
@@ -261,11 +479,11 @@ export const scriptDb = {
           .from("scripts")
           .update({
             likes_count: isLike
-              ? supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "likes_count" })
-              : supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "likes_count" }),
+              ? supabase.rpc("increment_likes", { row_id: id })
+              : supabase.rpc("increment_likes", { row_id: id }),
             dislikes_count: isLike
-              ? supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "dislikes_count" })
-              : supabase.rpc("increment", { row_id: id, table_name: "scripts", column_name: "dislikes_count" }),
+              ? supabase.rpc("increment_dislikes", { row_id: id })
+              : supabase.rpc("increment_dislikes", { row_id: id }),
           })
           .eq("id", id)
 
@@ -280,220 +498,16 @@ export const scriptDb = {
   },
 }
 
-// Gateway-related database operations
-export const gatewayDb = {
-  // Get a gateway by ID
-  getGatewayById: async (id: string) => {
-    try {
-      const { data, error } = await supabase.from("gateways").select("*").eq("id", id).single()
+// Re-export all database operations from their respective modules
+export const gatewayDb = gatewayDbModule
+export const sessionDb = sessionDbModule
+export const scriptDb = scriptDbModule
+export const userDb = userDbModule
 
-      if (error) throw error
-      return data
-    } catch (error) {
-      console.error("Error fetching gateway:", error)
-      return null
-    }
-  },
-
-  // Create a new gateway
-  createGateway: async (gatewayData: any) => {
-    try {
-      const gatewayId = uuidv4()
-      const { data, error } = await supabaseAdmin
-        .from("gateways")
-        .insert([
-          {
-            id: gatewayId,
-            ...gatewayData,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ])
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      console.error("Error creating gateway:", error)
-      throw error
-    }
-  },
-
-  // Update a gateway
-  updateGateway: async (id: string, updates: any) => {
-    try {
-      const { data, error } = await supabaseAdmin
-        .from("gateways")
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id)
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      console.error("Error updating gateway:", error)
-      throw error
-    }
-  },
-
-  // Track gateway visits and completions
-  trackGatewayActivity: async (gatewayId: string, activity: "visit" | "completion") => {
-    try {
-      // First get the current gateway stats
-      const gateway = await gatewayDb.getGatewayById(gatewayId)
-
-      if (!gateway) {
-        throw new Error(`Gateway with ID ${gatewayId} not found`)
-      }
-
-      // Update the stats
-      const stats = gateway.stats || { visits: 0, completions: 0, conversionRate: 0 }
-
-      if (activity === "visit") {
-        stats.visits += 1
-      } else if (activity === "completion") {
-        stats.completions += 1
-      }
-
-      // Calculate conversion rate
-      stats.conversionRate = stats.visits > 0 ? (stats.completions / stats.visits) * 100 : 0
-
-      // Update the gateway with new stats
-      await gatewayDb.updateGateway(gatewayId, { stats })
-
-      return true
-    } catch (error) {
-      console.error(`Error tracking gateway ${activity}:`, error)
-      return false
-    }
-  },
-
-  // Track detailed gateway analytics
-  logGatewayAnalytics: async (data: any) => {
-    try {
-      const analyticsId = uuidv4()
-      const { error } = await supabaseAdmin.from("gateway_analytics").insert([
-        {
-          id: analyticsId,
-          ...data,
-          timestamp: new Date().toISOString(),
-        },
-      ])
-
-      if (error) throw error
-      return true
-    } catch (error) {
-      console.error("Error logging gateway analytics:", error)
-      return false
-    }
-  },
-}
-
-// Session-related database operations
-export const sessionDb = {
-  // Create or update a gateway session
-  saveGatewaySession: async (sessionData: any) => {
-    try {
-      const sessionId = sessionData.id || uuidv4()
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 minutes from now
-
-      const { data, error } = await supabaseAdmin
-        .from("gateway_sessions")
-        .upsert([
-          {
-            id: sessionId,
-            ...sessionData,
-            expires_at: expiresAt,
-            updated_at: new Date().toISOString(),
-          },
-        ])
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      console.error("Error saving gateway session:", error)
-      throw error
-    }
-  },
-
-  // Get a gateway session
-  getGatewaySession: async (sessionId: string) => {
-    try {
-      const { data, error } = await supabase.from("gateway_sessions").select("*").eq("id", sessionId).single()
-
-      if (error) throw error
-
-      // Check if session is expired
-      if (new Date(data.expires_at) < new Date()) {
-        return null
-      }
-
-      return data
-    } catch (error) {
-      console.error("Error fetching gateway session:", error)
-      return null
-    }
-  },
-}
-
-// User-related database operations
-export const userDb = {
-  // Get user by ID
-  getUserById: async (id: string) => {
-    try {
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", id).single()
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      console.error("Error fetching user by ID:", error)
-      throw error
-    }
-  },
-
-  // Get user by username
-  getUserByUsername: async (username: string) => {
-    try {
-      const { data, error } = await supabase.from("profiles").select("*").eq("username", username).single()
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      console.error("Error fetching user by username:", error)
-      throw error
-    }
-  },
-
-  // Create a new user
-  createUser: async (userData: any) => {
-    try {
-      const { data, error } = await supabaseAdmin.from("profiles").insert([userData]).select().single()
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      console.error("Error creating user:", error)
-      throw error
-    }
-  },
-
-  // Update user
-  updateUser: async (id: string, updates: any) => {
-    try {
-      const { data, error } = await supabaseAdmin.from("profiles").update(updates).eq("id", id).select().single()
-
-      if (error) throw error
-      return data
-    } catch (error) {
-      console.error("Error updating user:", error)
-      throw error
-    }
-  },
+// For backward compatibility, also export as default
+export default {
+  gatewayDb,
+  sessionDb,
+  scriptDb,
+  userDb,
 }

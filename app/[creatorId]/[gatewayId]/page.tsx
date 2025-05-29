@@ -7,6 +7,7 @@ import { SecureAd } from "@/components/secure-ad"
 import { CaptchaValidator } from "@/components/captcha-validator"
 import { GatewayTaskButton } from "@/components/gateway-task-button"
 import { v4 as uuidv4 } from "uuid"
+import { supabase } from "@/lib/supabase"
 
 // Gateway step types
 type StepType = "redirect" | "article" | "operagx" | "youtube" | "direct"
@@ -121,30 +122,45 @@ export default function GatewayPage() {
 
       createSession()
     }
-  }, [params.gatewayId, searchParams, stagesCompleted])
+  }, [params.gatewayId, searchParams]) // Removed stagesCompleted from dependency array
 
   // Fetch gateway data
   useEffect(() => {
     const fetchGateway = async () => {
       try {
-        // Fetch gateway data from API with improved error handling
-        const response = await fetch(`/api/gateway/${params.gatewayId}`)
+        // Try to load from Supabase first
+        const { creatorId, gatewayId } = params
 
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.message || `HTTP error! Status: ${response.status}`)
-        }
-
-        const data = await response.json()
-
-        if (!data.success) {
-          setError(data.message || "Failed to fetch gateway")
-          setIsLoading(false)
+        if (!creatorId || !gatewayId) {
+          setError("Invalid gateway URL")
           return
         }
 
-        setGateway(data.gateway)
-        console.log("Gateway data loaded:", data.gateway)
+        const { data, error: supabaseError } = await supabase
+          .from("gateways")
+          .select("*")
+          .eq("id", gatewayId)
+          .eq("creator_id", creatorId)
+          .single()
+
+        if (supabaseError) {
+          console.error("Error loading gateway from Supabase:", supabaseError)
+          // Fall back to localStorage
+          const storedGateways = localStorage.getItem("nexus_gateways")
+          if (storedGateways) {
+            const gateways = JSON.parse(storedGateways)
+            const foundGateway = gateways.find((g: any) => g.id === gatewayId && g.creatorId === creatorId)
+            if (foundGateway) {
+              setGateway(foundGateway)
+            } else {
+              setError("Gateway not found")
+            }
+          } else {
+            setError("Gateway not found")
+          }
+        } else {
+          setGateway(data)
+        }
 
         // Check if user has a valid CAPTCHA token
         const captchaToken = localStorage.getItem("captchaToken")
@@ -182,16 +198,16 @@ export default function GatewayPage() {
         }
       } catch (error) {
         console.error("Error fetching gateway:", error)
-        setError(error instanceof Error ? error.message : "An error occurred while fetching the gateway")
+        setError(error instanceof Error ? error.message : "Gateway not found")
       } finally {
         setIsLoading(false)
       }
     }
 
-    if (params.gatewayId) {
+    if (params.gatewayId && params.creatorId) {
       fetchGateway()
     }
-  }, [params.gatewayId, searchParams, completedTasks, currentStage, stagesCompleted])
+  }, [params.gatewayId, params.creatorId, searchParams]) // Removed completedTasks, currentStage, and stagesCompleted from dependency array
 
   // Check if all tasks are completed
   useEffect(() => {
@@ -218,7 +234,7 @@ export default function GatewayPage() {
     } else {
       setAllTasksCompleted(false)
     }
-  }, [completedTasks, gateway, showTasks, currentStage, totalStages, stagesCompleted])
+  }, [completedTasks, gateway, showTasks, currentStage, totalStages]) // Removed stagesCompleted from dependency array
 
   // Function to update session in the database
   const updateSession = async (tasks: string[], stage: number) => {
@@ -313,6 +329,7 @@ export default function GatewayPage() {
         },
         body: JSON.stringify({
           gatewayId: params.gatewayId,
+          creatorId: params.creatorId,
           sessionId,
         }),
       })
@@ -381,31 +398,27 @@ export default function GatewayPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-5 py-16">
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-[#ff3e3e]"></div>
-        </div>
+      <div className="min-h-screen bg-[#050505] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1a1a1a] to-[#050505] flex items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-[#ff3e3e]"></div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-5 py-16">
-        <div className="mx-auto max-w-2xl">
-          <div className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-8 text-center">
-            <div className="mb-4 text-5xl text-[#ff3e3e]">
-              <i className="fas fa-exclamation-circle"></i>
-            </div>
-            <h2 className="mb-2 text-xl font-bold text-white">Error</h2>
-            <p className="mb-6 text-gray-400">{error}</p>
-            <Link
-              href="/"
-              className="interactive-element button-glow button-3d inline-flex items-center rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
-            >
-              <i className="fas fa-home mr-2"></i> Back to Home
-            </Link>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 text-5xl text-[#ff3e3e]">
+            <i className="fas fa-exclamation-triangle"></i>
           </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Gateway Not Found</h1>
+          <p className="text-gray-400 mb-6">{error || "The requested gateway could not be found."}</p>
+          <a
+            href="/"
+            className="inline-flex items-center rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
+          >
+            <i className="fas fa-home mr-2"></i> Go Home
+          </a>
         </div>
       </div>
     )

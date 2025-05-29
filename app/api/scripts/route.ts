@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { scriptDb } from "@/lib/db"
-import { getSupabaseBrowserClient } from "@/lib/supabase"
+import { scriptDb } from "@/lib/db/script"
+import { userDb } from "@/lib/db/user"
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,19 +47,25 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the Supabase client
-    const supabase = getSupabaseBrowserClient()
+    const data = await request.json()
 
-    // Check if user is authenticated
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
+    // Check for upload token authentication
+    const uploadToken = request.headers.get("x-upload-token") || data.uploadToken
 
-    if (!session) {
-      return NextResponse.json({ success: false, message: "Authentication required" }, { status: 401 })
+    if (!uploadToken) {
+      return NextResponse.json({ success: false, message: "Upload token required" }, { status: 401 })
     }
 
-    const data = await request.json()
+    // Verify upload token and get user
+    const user = await userDb.getUserByUploadToken(uploadToken)
+    if (!user) {
+      return NextResponse.json({ success: false, message: "Invalid upload token" }, { status: 401 })
+    }
+
+    // Check if user is banned
+    if (user.is_banned) {
+      return NextResponse.json({ success: false, message: "User is banned" }, { status: 403 })
+    }
 
     // Validate required fields
     if (!data.title || !data.description || !data.code) {
@@ -71,10 +77,10 @@ export async function POST(request: NextRequest) {
       title: data.title,
       description: data.description,
       code: data.code,
-      author: data.author || session.user.user_metadata.full_name || "Unknown",
-      authorId: session.user.id,
+      author: user.username,
+      authorId: user.id,
       isPremium: data.isPremium || false,
-      isNexusTeam: data.isNexusTeam || false,
+      isNexusTeam: user.is_admin || false,
       keySystem: data.keySystem || false,
       game: data.game,
       categories: data.categories || [],

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discord Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #0a0a0a;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      text-align: center;
+      max-width: 500px;
+      padding: 2rem;
+      background-color: #1a1a1a;
+      border-left: 4px solid #00ff9d;
+      border-radius: 8px;
+    }
+    h1 {
+      color: #00ff9d;
+      margin-bottom: 1rem;
+    }
+    p {
+      margin-bottom: 2rem;
+      color: #ccc;
+    }
+    .redirect-text {
+      font-size: 0.9rem;
+      margin-top: 1rem;
+      color: #888;
+    }
+    .spinner {
+      border: 4px solid rgba(0, 255, 157, 0.1);
+      border-radius: 50%;
+      border-top: 4px solid #00ff9d;
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 1rem;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <h1>Redirecting to Discord...</h1>
+    <p>You'll be redirected to Discord to authorize access to your account.</p>
+    <p class="redirect-text">If you're not redirected automatically, <a href="#" id="discord-link">click here</a>.</p>
+  </div>
+
+  <script>
+    // Discord OAuth URL
+    const discordAuthUrl = "https://discord.com/oauth2/authorize?client_id=1366950971334459484&redirect_uri=https%3A%2F%2Fv0-hi-sigma-fawn.vercel.app%2Fdiscord%2Fcallback&response_type=code&scope=identify%20guilds%20guilds.join%20email";
+    
+    // Get the link element
+    const discordLink = document.getElementById('discord-link');
+    discordLink.href = discordAuthUrl;
+    
+    // Redirect automatically after a short delay
+    window.onload = function() {
+      setTimeout(function() {
+        window.location.href = discordAuthUrl;
+      }, 1500);
+    };
+  </script>
+</body>
+</html>

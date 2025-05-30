@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discord Authentication</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #0a0a0a;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      text-align: center;
+      max-width: 500px;
+      padding: 2rem;
+      background-color: #1a1a1a;
+      border-left: 4px solid #00ff9d;
+      border-radius: 8px;
+    }
+    h1 {
+      color: #00ff9d;
+      margin-bottom: 1rem;
+    }
+    p {
+      margin-bottom: 2rem;
+      color: #ccc;
+    }
+    .spinner {
+      border: 4px solid rgba(0, 255, 157, 0.1);
+      border-radius: 50%;
+      border-top: 4px solid #00ff9d;
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 1rem;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .success {
+      color: #00ff9d;
+    }
+    .error {
+      color: #ff4d4d;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(to right, #00ff9d, #00b8ff);
+      color: #050505;
+      font-weight: bold;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      text-decoration: none;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loading">
+      <div class="spinner"></div>
+      <h1>Processing Discord Authentication</h1>
+      <p>Please wait while we process your Discord authentication...</p>
+    </div>
+    
+    <div id="success" style="display: none;">
+      <h1 class="success">Authentication Successful!</h1>
+      <p>Your Discord account has been successfully linked to your NEXUS account.</p>
+      <a href="/profile" class="btn">Go to Profile</a>
+    </div>
+    
+    <div id="error" style="display: none;">
+      <h1 class="error">Authentication Failed</h1>
+      <p id="error-message">There was an error processing your Discord authentication.</p>
+      <a href="/settings" class="btn">Back to Settings</a>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Get the code from the URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const error = urlParams.get('error');
+      
+      if (error) {
+        showError("Discord authentication was denied or failed.");
+        return;
+      }
+      
+      if (!code) {
+        showError("No authentication code received from Discord.");
+        return;
+      }
+      
+      // Process the Discord authentication
+      processDiscordAuth(code);
+    });
+    
+    function processDiscordAuth(code) {
+      // In a real implementation, you would send this code to your backend
+      // For this demo, we'll simulate the process with localStorage
+      
+      // Simulate API call delay
+      setTimeout(function() {
+        try {
+          // Get current user
+          const currentUser = localStorage.getItem('nexus_current_user');
+          
+          if (!currentUser) {
+            showError("You must be logged in to link your Discord account.");
+            return;
+          }
+          
+          // Simulate Discord user data
+          const discordUser = {
+            id: "discord_" + Math.random().toString(36).substring(2, 10),
+            username: "Discord_User_" + Math.floor(Math.random() * 1000),
+            email: "discord_user@example.com",
+            verified: true
+          };
+          
+          // Update user data with Discord info
+          const userData = JSON.parse(localStorage.getItem(`nexus_user_${currentUser}`) || "{}");
+          userData.discord_id = discordUser.id;
+          userData.discord_username = discordUser.username;
+          localStorage.setItem(`nexus_user_${currentUser}`, JSON.stringify(userData));
+          
+          // Show success message
+          showSuccess();
+        } catch (error) {
+          console.error("Error processing Discord auth:", error);
+          showError("An error occurred while processing your Discord authentication.");
+        }
+      }, 2000);
+    }
+    
+    function showSuccess() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('success').style.display = 'block';
+    }
+    
+    function showError(message) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error-message').textContent = message;
+    }
+  </script>
+</body>
+</html>

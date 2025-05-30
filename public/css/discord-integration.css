@@ -1,0 +1,50 @@
+/* Discord integration styles */
+
+.discord-btn {
+  background-color: #5865f2;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.discord-btn:hover {
+  background-color: #4752c4;
+}
+
+.discord-btn i {
+  margin-right: 8px;
+}
+
+.discord-section {
+  border-left: 4px solid #5865f2;
+  background-color: #1a1a1a;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.discord-icon {
+  background-color: #5865f2;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+}
+
+.discord-connected {
+  color: #00ff9d;
+  font-weight: 500;
+}
+
+.discord-disconnected {
+  color: #ffcc00;
+  font-weight: 500;
+}

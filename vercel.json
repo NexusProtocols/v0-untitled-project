@@ -20,7 +20,10 @@
       "dest": "/api/$1",
       "headers": {
         "Connection": "keep-alive"
-      }
+
+        "Connection": "keep-alive"
+
+z/      }
     }
   ]
 }

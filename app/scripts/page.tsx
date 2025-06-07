@@ -45,73 +45,8 @@ type SortOptions = {
   sortOrder: "ascending" | "descending"
 }
 
-// Fallback data for when API fails
-const fallbackScripts: Script[] = [
-  {
-    id: "script-1",
-    title: "Universal ESP Script",
-    description:
-      "A universal ESP script that works with most games. Highlights players, items, and other important objects.",
-    code: "-- ESP code here",
-    author: "NexusTeam",
-    createdAt: "2023-05-15T12:00:00Z",
-    views: 1250,
-    likes: ["user1", "user2", "user3"],
-    isPremium: false,
-    isNexusTeam: true,
-    isVerified: true,
-    keySystem: false,
-    game: {
-      id: 1,
-      gameId: "universal",
-      name: "Universal",
-      imageUrl: "/placeholder.svg?height=160&width=320",
-    },
-    categories: ["utility", "visual"],
-  },
-  {
-    id: "script-2",
-    title: "Advanced Aimbot",
-    description: "Advanced aimbot with customizable settings including smoothness, FOV, and target selection.",
-    code: "-- Aimbot code here",
-    author: "ScriptMaster",
-    createdAt: "2023-06-20T15:30:00Z",
-    views: 980,
-    likes: ["user1", "user4"],
-    isPremium: true,
-    isNexusTeam: false,
-    isVerified: true,
-    keySystem: true,
-    game: {
-      id: 2,
-      gameId: "fps-games",
-      name: "FPS Games",
-      imageUrl: "/placeholder.svg?height=160&width=320",
-    },
-    categories: ["combat", "utility"],
-  },
-  {
-    id: "script-3",
-    title: "Auto Farm Script",
-    description: "Automatically farms resources and completes tasks in farming simulators.",
-    code: "-- Auto farm code here",
-    author: "FarmingPro",
-    createdAt: "2023-07-10T09:45:00Z",
-    views: 750,
-    likes: ["user2", "user5", "user6"],
-    isPremium: false,
-    isNexusTeam: false,
-    isVerified: false,
-    keySystem: false,
-    game: {
-      id: 3,
-      gameId: "farming-simulator",
-      name: "Farming Simulator",
-      imageUrl: "/placeholder.svg?height=160&width=320",
-    },
-    categories: ["automation", "farming"],
-  },
-]
+// Remove fallback data - always show real user scripts
+const fallbackScripts: Script[] = []
 
 const FilterToggle = ({
   label,
@@ -381,14 +316,13 @@ export default function ScriptsPage() {
 
             setScripts(storedScripts)
           } else {
-            // If no localStorage data, use fallback data
-            console.log("Using fallback script data")
-            setScripts(fallbackScripts)
+            // No localStorage data and no fallback - show empty
+            setScripts([])
           }
         } catch (error) {
           console.error("Error loading scripts from localStorage:", error)
-          // Use fallback data if localStorage fails
-          setScripts(fallbackScripts)
+          // No fallback data
+          setScripts([])
         }
       })
       .finally(() => {
@@ -494,8 +428,8 @@ export default function ScriptsPage() {
       (script) =>
         !script.isNexusTeam &&
         !highLikeRatioScripts.includes(script) &&
-        !highViewScripts.includes(script) &&
-        !newScripts.includes(script),
+        !newScripts.includes(script) &&
+        !highViewScripts.includes(script),
     )
 
     // Organize into rows with special placement

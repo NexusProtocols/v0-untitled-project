@@ -8,8 +8,8 @@ export async function GET(request: NextRequest) {
   const discordAuthUrl = new URL("https://discord.com/api/oauth2/authorize")
 
   // Add the required parameters
-  discordAuthUrl.searchParams.append("client_id", process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "")
-  discordAuthUrl.searchParams.append("redirect_uri", process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI || "")
+  discordAuthUrl.searchParams.append("client_id", "1366950971334459484")
+  discordAuthUrl.searchParams.append("redirect_uri", "https://nexuslive.vercel.app/discord/callback")
   discordAuthUrl.searchParams.append("response_type", "code")
   discordAuthUrl.searchParams.append("scope", "identify email guilds.join")
 

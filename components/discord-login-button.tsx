@@ -1,30 +1,44 @@
 "use client"
 
-import type React from "react"
-
-import { getDiscordOAuthURL } from "@/lib/discord-config"
+import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { FaDiscord } from "react-icons/fa"
+import { getDiscordAuthUrl } from "@/utils/discord-auth"
 
 interface DiscordLoginButtonProps {
-  type?: "login" | "linking"
+  isLinking?: boolean
   className?: string
-  children?: React.ReactNode
 }
 
-export function DiscordLoginButton({ type = "login", className = "", children }: DiscordLoginButtonProps) {
-  const handleDiscordAuth = () => {
-    const authUrl = getDiscordOAuthURL(type)
-    window.location.href = authUrl
+export function DiscordLoginButton({ isLinking = false, className = "" }: DiscordLoginButtonProps) {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleLogin = async () => {
+    setIsLoading(true)
+
+    try {
+      const state = isLinking ? "link" : "login"
+      const authUrl = getDiscordAuthUrl(state)
+      window.location.href = authUrl
+    } catch (error) {
+      console.error("Discord login error:", error)
+      setIsLoading(false)
+    }
   }
 
-  const defaultText = type === "login" ? "Continue with Discord" : "Link Discord Account"
-
   return (
-    <button
-      onClick={handleDiscordAuth}
-      className={`inline-flex items-center justify-center gap-3 px-6 py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#5865F2]/25 ${className}`}
+    <Button
+      variant="outline"
+      className={`flex items-center gap-2 bg-[#5865F2] text-white hover:bg-[#4752C4] border-[#5865F2] hover:border-[#4752C4] ${className}`}
+      onClick={handleLogin}
+      disabled={isLoading}
     >
-      <i className="fab fa-discord text-xl"></i>
-      {children || defaultText}
-    </button>
+      <FaDiscord className="h-5 w-5" />
+      {isLinking ? "Link Discord Account" : "Login with Discord"}
+    </Button>
   )
 }
+
+export default DiscordLoginButton

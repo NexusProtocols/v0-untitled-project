@@ -56,19 +56,6 @@ export function GatewayTaskButton({
 
     setIsLoading(true)
 
-    // Generate a secure completion token with AES-256
-    const completionData = {
-      gatewayId,
-      taskId: `task-${taskNumber}`,
-      creatorId,
-      timestamp: Date.now(),
-      userAgent: navigator.userAgent,
-      screenSize: `${window.innerWidth}x${window.innerHeight}`,
-    }
-
-    // Convert to string for encryption
-    const completionDataString = JSON.stringify(completionData)
-
     // If secure auth is enabled, validate with the creator's API
     if (secureAuth && apiEndpoint) {
       try {
@@ -82,7 +69,6 @@ export function GatewayTaskButton({
             creatorId,
             taskId: `task-${taskNumber}`,
             timestamp: Date.now(),
-            completionData: completionDataString,
           }),
         })
 
@@ -101,9 +87,9 @@ export function GatewayTaskButton({
       }
     }
 
-    // Track task completion with enhanced security
+    // Track task completion
     try {
-      const response = await fetch("/api/gateway/track", {
+      await fetch("/api/gateway/track", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -113,59 +99,22 @@ export function GatewayTaskButton({
           creatorId,
           action: "task_complete",
           taskId: `task-${taskNumber}`,
-          completionData: completionDataString,
         }),
       })
-
-      const data = await response.json()
-
-      if (!data.success) {
-        setIsLoading(false)
-        alert("Task tracking failed. Please try again.")
-        return
-      }
-
-      // Save to server first
-      try {
-        const response = await fetch("/api/gateway/tasks", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: localStorage.getItem("nexus_user_id"),
-            gatewayId: gatewayId,
-            tasks: [
-              ...JSON.parse(localStorage.getItem(`gateway_${gatewayId}_completed_tasks`) || "[]"),
-              `task-${taskNumber}`,
-            ],
-            securityToken: data.securityToken,
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error("Server validation failed")
-        }
-      } catch (error) {
-        console.error("Error saving tasks to server:", error)
-      }
-
-      // Then update local storage as fallback
-      const completedTasks = JSON.parse(localStorage.getItem(`gateway_${gatewayId}_completed_tasks`) || "[]")
-      const taskId = `task-${taskNumber}`
-      if (!completedTasks.includes(taskId)) {
-        completedTasks.push(taskId)
-        localStorage.setItem(`gateway_${gatewayId}_completed_tasks`, JSON.stringify(completedTasks))
-      }
-
-      setTaskCompleted(true)
-      setIsLoading(false)
-      onComplete()
     } catch (error) {
-      console.error("Error completing task:", error)
-      setIsLoading(false)
-      alert("An error occurred. Please try again.")
+      console.error("Error tracking task completion:", error)
     }
+
+    const completedTasks = JSON.parse(localStorage.getItem(`gateway_${gatewayId}_completed_tasks`) || "[]")
+    const taskId = `task-${taskNumber}`
+    if (!completedTasks.includes(taskId)) {
+      completedTasks.push(taskId)
+      localStorage.setItem(`gateway_${gatewayId}_completed_tasks`, JSON.stringify(completedTasks))
+    }
+
+    setTaskCompleted(true)
+    setIsLoading(false)
+    onComplete()
   }
 
   // Update the task handlers and timers
@@ -469,18 +418,30 @@ export function GatewayTaskButton({
             <p className="text-gray-400 text-sm mb-4 leading-relaxed">{getTaskDescription()}</p>
 
             {/* Task action */}
-            <button
-              onClick={getTaskHandler()}
-              className={`inline-flex items-center px-6 py-3 ${
-                taskCompleted
-                  ? "bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-green-500/25"
-                  : "bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] text-white font-semibold rounded-xl hover:from-[#ff0000] hover:to-[#cc0000] transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#ff3e3e]/25"
-              } group`}
-              disabled={taskCompleted || taskStarted}
-            >
-              <i className={`${getTaskIcon()} mr-3 group-hover:scale-110 transition-transform`}></i>
-              {taskCompleted ? "Completed" : "Start Task"}
-            </button>
+            {!taskCompleted && !taskStarted ? (
+              <button
+                onClick={getTaskHandler()}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] text-white font-semibold rounded-xl hover:from-[#ff0000] hover:to-[#cc0000] transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#ff3e3e]/25 group"
+              >
+                <i className={`${getTaskIcon()} mr-3 group-hover:scale-110 transition-transform`}></i>
+                Start Task
+              </button>
+            ) : !taskCompleted && taskStarted ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">Processing...</span>
+                </div>
+                {progress > 0 && <span className="text-xs text-gray-500">{Math.round(progress)}%</span>}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-green-400">
+                <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-check text-sm"></i>
+                </div>
+                <span className="font-medium">Task Completed</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

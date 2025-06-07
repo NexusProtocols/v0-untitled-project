@@ -610,11 +610,7 @@ export default function GatewayPage() {
                       {currentStage === -1 && (
                         <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-30"></div>
                       )}
-                      {stagesCompleted[0] ? (
-                        <i className="fas fa-check text-lg"></i>
-                      ) : (
-                        <i className="fas fa-shield-alt text-lg"></i>
-                      )}
+                      <i className="fas fa-shield-alt text-lg"></i>
                     </div>
                     <span className="text-xs text-gray-400 font-medium">Verify</span>
                   </div>
@@ -637,11 +633,7 @@ export default function GatewayPage() {
                         {index + 1 === currentStage && (
                           <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-30"></div>
                         )}
-                        {stagesCompleted[index + 1] ? (
-                          <i className="fas fa-check text-lg"></i>
-                        ) : (
-                          <span className="text-lg font-bold">{index + 1}</span>
-                        )}
+                        <span className="text-lg font-bold">{index + 1}</span>
                       </div>
                       <span className="text-xs text-gray-400 font-medium">Stage {index + 1}</span>
                       {index < totalStages - 1 && <div className="w-8 h-0.5 bg-gray-700 mt-2"></div>}

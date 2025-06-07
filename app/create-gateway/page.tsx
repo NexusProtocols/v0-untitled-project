@@ -234,10 +234,39 @@ export default function CreateGatewayPage() {
           revenue: 0,
         },
       }
+
+      // Save to Vercel Blob for global access
+      try {
+        const response = await fetch("/api/gateway/save", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(gatewayObject),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success) {
+            setMessage({ type: "success", text: "Gateway created and saved globally! Redirecting..." })
+          } else {
+            throw new Error("Failed to save to blob storage")
+          }
+        } else {
+          throw new Error("Failed to save to blob storage")
+        }
+      } catch (error) {
+        console.error("Error saving to blob storage:", error)
+        setMessage({ type: "error", text: "Failed to save gateway globally. Please try again." })
+        setIsSubmitting(false)
+        return
+      }
+
+      // Also save to localStorage as backup
       const existingGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
       existingGateways.push(gatewayObject)
       localStorage.setItem("nexus_gateways", JSON.stringify(existingGateways))
-      setMessage({ type: "success", text: "Gateway created successfully! Redirecting..." })
+
       setTimeout(() => {
         router.push("/manage-gateways")
       }, 2000)
@@ -318,6 +347,7 @@ export default function CreateGatewayPage() {
                   <div className="text-center">
                     <i className="fas fa-upload mb-2 text-2xl text-[#ff3e3e]"></i>
                     <p className="text-sm text-gray-400">Click to upload gateway image (max 10MB)</p>
+                    <p className="text-xs text-gray-500 mt-1">Recommended: 1920x1080px, Minimum: 500x500px</p>
                   </div>
                 </label>
               </div>

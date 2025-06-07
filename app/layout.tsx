@@ -21,16 +21,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Check if the current path is a gateway path
+  const isGatewayPath = typeof window !== "undefined" ? window.location.pathname.startsWith("/gateway/") : false
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-[#050505] text-white`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <div className="flex min-h-screen flex-col">
-              <Header />
+              {/* Header is not rendered on gateway pages */}
+              {!isGatewayPath && <Header />}
               <BanNotification />
               <main className="flex-1">{children}</main>
-              <Footer />
+              {/* Footer is not rendered on gateway pages */}
+              {!isGatewayPath && <Footer />}
             </div>
             <CookieConsent />
           </AuthProvider>

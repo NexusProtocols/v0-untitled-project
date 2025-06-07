@@ -1,8 +1,11 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { isAdmin } from "@/lib/admin"
+import { useRouter } from "next/navigation"
 
 type UserData = {
   username: string
@@ -29,7 +32,12 @@ type BanOptions = {
   hwidBan: boolean
 }
 
-export function AdminPanel({ username }: { username: string }) {
+interface AdminPanelProps {
+  username: string
+  onAuthenticated: () => void
+}
+
+export function AdminPanel({ username, onAuthenticated }: AdminPanelProps) {
   const { user } = useAuth()
   const [isAdminUser, setIsAdminUser] = useState(false)
   const [userData, setUserData] = useState<UserData | null>(null)
@@ -46,6 +54,10 @@ export function AdminPanel({ username }: { username: string }) {
   const [connectedAccounts, setConnectedAccounts] = useState<string[]>([])
   const [banDuration, setBanDuration] = useState("permanent")
   const [customBanReason, setCustomBanReason] = useState("")
+  const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const router = useRouter()
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -190,6 +202,35 @@ export function AdminPanel({ username }: { username: string }) {
     )
   }
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
+
+    try {
+      const response = await fetch("/api/admin/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        localStorage.setItem("admin_token", data.token)
+        onAuthenticated()
+      } else {
+        setError("Invalid password")
+      }
+    } catch (error) {
+      setError("Authentication failed")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   if (!isAdminUser) {
     return <div className="p-4 text-red-500">You don't have admin privileges</div>
   }
@@ -203,169 +244,59 @@ export function AdminPanel({ username }: { username: string }) {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <h2 className="text-xl font-bold">Admin Panel: {username}</h2>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/60 backdrop-blur-xl border border-red-500/20 rounded-2xl p-8 shadow-2xl">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 mx-auto mb-6 flex items-center justify-center">
+              <i className="fas fa-shield-alt text-4xl text-red-400"></i>
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Secure Authentication Required</h2>
+            <p className="text-gray-400">Please enter the admin password to continue.</p>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gray-100 p-4 rounded-lg">
-          <h3 className="font-semibold mb-2">User Information</h3>
-          <p>Email: {userData.email || "N/A"}</p>
-          <p>Joined: {new Date(userData.createdAt).toLocaleDateString()}</p>
-          <p>Status: {userData.isBanned ? "Banned" : "Active"}</p>
-          {userData.isBanned && <p>Ban Reason: {userData.bannedReason}</p>}
-        </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                Admin Password
+              </label>
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-black/60 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+                placeholder="Enter admin password"
+                required
+              />
+            </div>
 
-        <div className="bg-gray-100 p-4 rounded-lg">
-          <h3 className="font-semibold mb-2">Security Information</h3>
-          <p>IP: {userData.ip}</p>
-          <p>HWID: {userData.hwid}</p>
-          <p>OS: {userData.os || "N/A"}</p>
-          <p>Browser: {userData.browser || "N/A"}</p>
-        </div>
-      </div>
-
-      <div className="bg-gray-100 p-4 rounded-lg">
-        <h3 className="font-semibold mb-2">Connected Accounts</h3>
-        {connectedAccounts.length > 0 ? (
-          <ul className="list-disc pl-5">
-            {connectedAccounts.map((account) => (
-              <li key={account}>{account}</li>
-            ))}
-          </ul>
-        ) : (
-          <p>No connected accounts found</p>
-        )}
-      </div>
-
-      <div className="flex gap-2">
-        <button
-          onClick={() => setShowBanModal(true)}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-        >
-          Ban User
-        </button>
-        {userData.isBanned && (
-          <button onClick={handleUnbanUser} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-            Unban User
-          </button>
-        )}
-        <button
-          onClick={() => setShowDetailsModal(true)}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          View Full Details
-        </button>
-      </div>
-
-      {/* Ban Modal */}
-      {showBanModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full">
-            <h3 className="text-lg font-bold mb-4">Ban User: {username}</h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block mb-2">Ban Reason</label>
-                <select
-                  value={banReason}
-                  onChange={(e) => setBanReason(e.target.value)}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="">Select a reason</option>
-                  <option value="Cheating">Cheating</option>
-                  <option value="Harassment">Harassment</option>
-                  <option value="Spamming">Spamming</option>
-                  <option value="Custom">Custom</option>
-                </select>
-                {banReason === "Custom" && (
-                  <input
-                    type="text"
-                    value={customBanReason}
-                    onChange={(e) => setCustomBanReason(e.target.value)}
-                    placeholder="Enter custom reason"
-                    className="w-full p-2 border rounded mt-2"
-                  />
-                )}
+            {error && (
+              <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-3">
+                <p className="text-red-300 text-sm">{error}</p>
               </div>
+            )}
 
-              <div>
-                <label className="block mb-2">Ban Duration</label>
-                <select
-                  value={banDuration}
-                  onChange={(e) => setBanDuration(e.target.value)}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="permanent">Permanent</option>
-                  <option value="7d">7 Days</option>
-                  <option value="30d">30 Days</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block mb-2">Ban Options</label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={banOptions.accountBan}
-                      onChange={(e) => setBanOptions({ ...banOptions, accountBan: e.target.checked })}
-                      className="mr-2"
-                    />
-                    Account Ban
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={banOptions.ipBan}
-                      onChange={(e) => setBanOptions({ ...banOptions, ipBan: e.target.checked })}
-                      className="mr-2"
-                    />
-                    IP Ban
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={banOptions.hwidBan}
-                      onChange={(e) => setBanOptions({ ...banOptions, hwidBan: e.target.checked })}
-                      className="mr-2"
-                    />
-                    HWID Ban
-                  </label>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin mr-2"></div>
+                  Authenticating...
                 </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setShowBanModal(false)} className="px-4 py-2 border rounded">
-                  Cancel
-                </button>
-                <button onClick={handleBanUser} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
-                  Confirm Ban
-                </button>
-              </div>
-            </div>
-          </div>
+              ) : (
+                <>
+                  <i className="fas fa-sign-in-alt mr-2"></i>
+                  Authenticate
+                </>
+              )}
+            </button>
+          </form>
         </div>
-      )}
-
-      {/* Details Modal */}
-      {showDetailsModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg max-w-2xl w-full">
-            <h3 className="text-lg font-bold mb-4">Full User Details: {username}</h3>
-            <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-[60vh]">
-              {JSON.stringify(userData, null, 2)}
-            </pre>
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   )
 }

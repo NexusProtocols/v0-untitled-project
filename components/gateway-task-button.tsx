@@ -16,6 +16,7 @@ interface GatewayTaskButtonProps {
   }
   secureAuth?: boolean
   apiEndpoint?: string
+  isCompleted?: boolean
 }
 
 export function GatewayTaskButton({
@@ -27,9 +28,10 @@ export function GatewayTaskButton({
   content,
   secureAuth = false,
   apiEndpoint,
+  isCompleted = false,
 }: GatewayTaskButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [isCompleted, setIsCompleted] = useState(false)
+  const [taskCompleted, setTaskCompleted] = useState(isCompleted)
   const [countdown, setCountdown] = useState(0)
   const [taskStarted, setTaskStarted] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -37,15 +39,20 @@ export function GatewayTaskButton({
   const hasOpenedLink = useRef(false) // Prevent multiple opens
 
   useEffect(() => {
+    setTaskCompleted(isCompleted)
+  }, [isCompleted])
+
+  useEffect(() => {
     const completedTasks = JSON.parse(localStorage.getItem(`gateway_${gatewayId}_completed_tasks`) || "[]")
-    if (completedTasks.includes(`task-${taskNumber}`)) {
-      setIsCompleted(true)
+    const taskId = `task-${taskNumber}`
+    if (completedTasks.includes(taskId)) {
+      setTaskCompleted(true)
     }
   }, [gatewayId, taskNumber])
 
   // Handle task completion
   const handleComplete = async () => {
-    if (isCompleted) return
+    if (taskCompleted) return
 
     setIsLoading(true)
 
@@ -99,10 +106,13 @@ export function GatewayTaskButton({
     }
 
     const completedTasks = JSON.parse(localStorage.getItem(`gateway_${gatewayId}_completed_tasks`) || "[]")
-    completedTasks.push(`task-${taskNumber}`)
-    localStorage.setItem(`gateway_${gatewayId}_completed_tasks`, JSON.stringify(completedTasks))
+    const taskId = `task-${taskNumber}`
+    if (!completedTasks.includes(taskId)) {
+      completedTasks.push(taskId)
+      localStorage.setItem(`gateway_${gatewayId}_completed_tasks`, JSON.stringify(completedTasks))
+    }
 
-    setIsCompleted(true)
+    setTaskCompleted(true)
     setIsLoading(false)
     onComplete()
   }
@@ -110,7 +120,7 @@ export function GatewayTaskButton({
   // Update the task handlers and timers
   const handleDirectLinkTask = () => {
     // Prevent multiple opens
-    if (hasOpenedLink.current || taskStarted) return
+    if (hasOpenedLink.current || taskStarted || taskCompleted) return
 
     hasOpenedLink.current = true
     setTaskStarted(true)
@@ -146,7 +156,7 @@ export function GatewayTaskButton({
 
   // Handle interstitial ad task
   const handleInterstitialTask = () => {
-    if (taskStarted) return
+    if (taskStarted || taskCompleted) return
 
     setTaskStarted(true)
 
@@ -179,7 +189,7 @@ export function GatewayTaskButton({
 
   // Handle external validation task (Ad Maven)
   const handleExternalValidationTask = () => {
-    if (taskStarted) return
+    if (taskStarted || taskCompleted) return
 
     setTaskStarted(true)
 
@@ -215,7 +225,7 @@ export function GatewayTaskButton({
 
   // Handle AutoTag redirect task
   const handleAutoTagTask = () => {
-    if (taskStarted) return
+    if (taskStarted || taskCompleted) return
 
     setTaskStarted(true)
 
@@ -236,7 +246,7 @@ export function GatewayTaskButton({
 
   // Handle footer validation task
   const handleFooterValidationTask = () => {
-    if (taskStarted) return
+    if (taskStarted || taskCompleted) return
 
     setTaskStarted(true)
 
@@ -354,7 +364,7 @@ export function GatewayTaskButton({
   return (
     <div
       className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 ${
-        isCompleted
+        taskCompleted
           ? "border-green-500/50 bg-gradient-to-br from-green-900/20 to-green-800/10 shadow-lg shadow-green-500/10"
           : taskStarted
             ? "border-blue-500/50 bg-gradient-to-br from-blue-900/20 to-blue-800/10 shadow-lg shadow-blue-500/10"
@@ -365,7 +375,7 @@ export function GatewayTaskButton({
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
       {/* Progress bar */}
-      {taskStarted && !isCompleted && (
+      {taskStarted && !taskCompleted && (
         <div className="absolute top-0 left-0 right-0 h-1 bg-gray-800">
           <div
             className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-100 ease-out"
@@ -379,14 +389,14 @@ export function GatewayTaskButton({
           {/* Task number/icon */}
           <div
             className={`flex h-12 w-12 items-center justify-center rounded-xl font-bold transition-all duration-300 ${
-              isCompleted
+              taskCompleted
                 ? "bg-green-500 text-white shadow-lg shadow-green-500/25"
                 : taskStarted
                   ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
                   : "bg-gradient-to-br from-[#ff3e3e] to-[#ff0000] text-white shadow-lg shadow-[#ff3e3e]/25"
             }`}
           >
-            {isCompleted ? (
+            {taskCompleted ? (
               <i className="fas fa-check text-lg"></i>
             ) : taskStarted ? (
               <i className="fas fa-spinner fa-spin text-lg"></i>
@@ -399,7 +409,7 @@ export function GatewayTaskButton({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <h3 className="text-lg font-bold text-white">{getTaskTitle()}</h3>
-              {isCompleted && (
+              {taskCompleted && (
                 <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-full">
                   Completed
                 </span>
@@ -408,7 +418,7 @@ export function GatewayTaskButton({
             <p className="text-gray-400 text-sm mb-4 leading-relaxed">{getTaskDescription()}</p>
 
             {/* Task action */}
-            {!isCompleted && !taskStarted ? (
+            {!taskCompleted && !taskStarted ? (
               <button
                 onClick={getTaskHandler()}
                 className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] text-white font-semibold rounded-xl hover:from-[#ff0000] hover:to-[#cc0000] transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#ff3e3e]/25 group"
@@ -416,7 +426,7 @@ export function GatewayTaskButton({
                 <i className={`${getTaskIcon()} mr-3 group-hover:scale-110 transition-transform`}></i>
                 Start Task
               </button>
-            ) : !isCompleted && taskStarted ? (
+            ) : !taskCompleted && taskStarted ? (
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg">
                   <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>

@@ -45,6 +45,140 @@ type SortOptions = {
   sortOrder: "ascending" | "descending"
 }
 
+// Fallback data for when API fails
+const fallbackScripts: Script[] = [
+  {
+    id: "script-1",
+    title: "Universal ESP Script",
+    description:
+      "A universal ESP script that works with most games. Highlights players, items, and other important objects.",
+    code: "-- ESP code here",
+    author: "NexusTeam",
+    createdAt: "2023-05-15T12:00:00Z",
+    views: 1250,
+    likes: ["user1", "user2", "user3"],
+    isPremium: false,
+    isNexusTeam: true,
+    isVerified: true,
+    keySystem: false,
+    game: {
+      id: 1,
+      gameId: "universal",
+      name: "Universal",
+      imageUrl: "/placeholder.svg?height=160&width=320",
+    },
+    categories: ["utility", "visual"],
+  },
+  {
+    id: "script-2",
+    title: "Advanced Aimbot",
+    description: "Advanced aimbot with customizable settings including smoothness, FOV, and target selection.",
+    code: "-- Aimbot code here",
+    author: "ScriptMaster",
+    createdAt: "2023-06-20T15:30:00Z",
+    views: 980,
+    likes: ["user1", "user4"],
+    isPremium: true,
+    isNexusTeam: false,
+    isVerified: true,
+    keySystem: true,
+    game: {
+      id: 2,
+      gameId: "fps-games",
+      name: "FPS Games",
+      imageUrl: "/placeholder.svg?height=160&width=320",
+    },
+    categories: ["combat", "utility"],
+  },
+  {
+    id: "script-3",
+    title: "Auto Farm Script",
+    description: "Automatically farms resources and completes tasks in farming simulators.",
+    code: "-- Auto farm code here",
+    author: "FarmingPro",
+    createdAt: "2023-07-10T09:45:00Z",
+    views: 750,
+    likes: ["user2", "user5", "user6"],
+    isPremium: false,
+    isNexusTeam: false,
+    isVerified: false,
+    keySystem: false,
+    game: {
+      id: 3,
+      gameId: "farming-simulator",
+      name: "Farming Simulator",
+      imageUrl: "/placeholder.svg?height=160&width=320",
+    },
+    categories: ["automation", "farming"],
+  },
+]
+
+const FilterToggle = ({
+  label,
+  checked,
+  onChange,
+  icon,
+}: {
+  label: string
+  checked: boolean
+  onChange: () => void
+  icon: string
+}) => (
+  <motion.label
+    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
+      ${checked ? "bg-red-500/10 border-red-500/50" : "bg-white/5 border-white/10"} border`}
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+  >
+    <div className="relative flex items-center">
+      <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
+      <div
+        className={`w-5 h-5 rounded flex items-center justify-center transition-all
+        ${checked ? "bg-red-500" : "bg-white/10 border border-white/20"}`}
+      >
+        {checked && <i className="fas fa-check text-xs text-white"></i>}
+      </div>
+    </div>
+    <div className="flex items-center gap-2">
+      <i className={`fas ${icon} ${checked ? "text-red-400" : "text-gray-400"}`}></i>
+      <span className={`text-sm ${checked ? "text-white" : "text-gray-300"}`}>{label}</span>
+    </div>
+  </motion.label>
+)
+
+const SortOption = ({
+  label,
+  selected,
+  onChange,
+  icon,
+}: {
+  label: string
+  selected: boolean
+  onChange: () => void
+  icon: string
+}) => (
+  <motion.label
+    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
+      ${selected ? "bg-red-500/10 border-red-500/50" : "bg-white/5 border-white/10"} border`}
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+  >
+    <div className="relative flex items-center">
+      <input type="radio" checked={selected} onChange={onChange} className="sr-only" />
+      <div
+        className={`w-5 h-5 rounded-full flex items-center justify-center transition-all
+        ${selected ? "border-red-500" : "border-white/20"} border`}
+      >
+        {selected && <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>}
+      </div>
+    </div>
+    <div className="flex items-center gap-2">
+      <i className={`fas ${icon} ${selected ? "text-red-400" : "text-gray-400"}`}></i>
+      <span className={`text-sm ${selected ? "text-white" : "text-gray-300"}`}>{label}</span>
+    </div>
+  </motion.label>
+)
+
 export default function ScriptsPage() {
   const { user } = useAuth()
   const [scripts, setScripts] = useState<Script[]>([])
@@ -70,7 +204,6 @@ export default function ScriptsPage() {
     sortOrder: "descending",
   })
   const [fetchError, setFetchError] = useState<string | null>(null)
-  const [noScripts, setNoScripts] = useState(false)
 
   const handleImageError = (scriptId: string) => {
     console.log(`Image error for script: ${scriptId}`)
@@ -78,6 +211,26 @@ export default function ScriptsPage() {
       ...prev,
       [scriptId]: true,
     }))
+
+    // Update the script in localStorage to use placeholder image for future loads
+    try {
+      const storedScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
+      const updatedScripts = storedScripts.map((script: Script) => {
+        if (script.id === scriptId && script.game) {
+          return {
+            ...script,
+            game: {
+              ...script.game,
+              imageUrl: "/placeholder.svg?height=160&width=320",
+            },
+          }
+        }
+        return script
+      })
+      localStorage.setItem("nexus_scripts", JSON.stringify(updatedScripts))
+    } catch (error) {
+      console.error("Error updating script image:", error)
+    }
   }
 
   const toggleFilter = (filterName: keyof FilterOptions) => {
@@ -121,7 +274,6 @@ export default function ScriptsPage() {
   useEffect(() => {
     setIsLoading(true)
     setFetchError(null)
-    setNoScripts(false)
 
     // Build the API URL with search parameters
     let apiUrl = "/api/scripts"
@@ -156,11 +308,18 @@ export default function ScriptsPage() {
       apiUrl += `?${params.toString()}`
     }
 
-    console.log("Fetching scripts from:", apiUrl)
+    // Fetch scripts from API with a timeout
+    const fetchTimeout = setTimeout(() => {
+      if (isLoading) {
+        setIsLoading(false)
+        setFetchError("Request timed out. Using fallback data.")
+        setScripts(fallbackScripts)
+      }
+    }, 5000)
 
-    // Fetch scripts from API
     fetch(apiUrl)
       .then((response) => {
+        clearTimeout(fetchTimeout)
         if (!response.ok) {
           throw new Error(`Server responded with status: ${response.status}`)
         }
@@ -168,11 +327,13 @@ export default function ScriptsPage() {
       })
       .then((data) => {
         if (data.success && Array.isArray(data.scripts)) {
-          if (data.scripts.length === 0) {
-            setNoScripts(true)
-          } else {
-            setScripts(data.scripts)
-            console.log(`Loaded ${data.scripts.length} scripts`)
+          setScripts(data.scripts)
+
+          // Cache the scripts in localStorage for future use
+          try {
+            localStorage.setItem("nexus_scripts", JSON.stringify(data.scripts))
+          } catch (error) {
+            console.error("Error caching scripts:", error)
           }
         } else {
           throw new Error("Invalid response format")
@@ -181,9 +342,57 @@ export default function ScriptsPage() {
       .catch((error) => {
         console.error("Error loading scripts:", error)
         setFetchError(`Failed to fetch scripts. ${error.message}`)
-        setNoScripts(true)
+
+        // Try to load from localStorage first
+        try {
+          let storedScripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
+
+          if (storedScripts && storedScripts.length > 0) {
+            console.log("Using cached scripts from localStorage")
+
+            // Apply filters to stored scripts
+            if (filters.verified) {
+              storedScripts = storedScripts.filter((script: Script) => script.isVerified)
+            }
+            if (filters.keySystem) {
+              storedScripts = storedScripts.filter((script: Script) => script.keySystem)
+            }
+            if (filters.free) {
+              storedScripts = storedScripts.filter((script: Script) => !script.isPremium)
+            }
+            if (filters.paid) {
+              storedScripts = storedScripts.filter((script: Script) => script.isPremium)
+            }
+
+            // Apply search filter if search query exists
+            if (searchQuery) {
+              storedScripts = storedScripts.filter(
+                (script: Script) =>
+                  script.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  script.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  script.game?.name.toLowerCase().includes(searchQuery.toLowerCase()),
+              )
+            }
+
+            // Apply category filter if selected
+            if (selectedCategory) {
+              storedScripts = storedScripts.filter((script: Script) => script.categories?.includes(selectedCategory))
+            }
+
+            setScripts(storedScripts)
+          } else {
+            // If no localStorage data, use fallback data
+            console.log("Using fallback script data")
+            setScripts(fallbackScripts)
+          }
+        } catch (error) {
+          console.error("Error loading scripts from localStorage:", error)
+          // Use fallback data if localStorage fails
+          setScripts(fallbackScripts)
+        }
       })
       .finally(() => {
+        clearTimeout(fetchTimeout)
         setIsLoading(false)
       })
   }, [searchQuery, selectedCategory, selectedGame, filters, sortOptions])
@@ -361,7 +570,9 @@ export default function ScriptsPage() {
             <i className="fas fa-exclamation-triangle mr-2"></i>
             <span>{fetchError}</span>
           </div>
-          <div className="mt-1 text-sm text-gray-400">Please try refreshing the page or check your connection.</div>
+          <div className="mt-1 text-sm text-gray-400">
+            Showing fallback or cached data. Some features may be limited.
+          </div>
         </div>
       )}
 
@@ -609,7 +820,7 @@ export default function ScriptsPage() {
         </div>
       </div>
 
-      {noScripts || organizedScripts.length === 0 ? (
+      {organizedScripts.length === 0 ? (
         <div className="rounded-lg border border-white/10 bg-[#1a1a1a] p-8 text-center">
           <div className="mb-4 text-5xl text-red-500">
             <i className="fas fa-code"></i>
@@ -758,69 +969,3 @@ export default function ScriptsPage() {
     </div>
   )
 }
-
-const FilterToggle = ({
-  label,
-  checked,
-  onChange,
-  icon,
-}: {
-  label: string
-  checked: boolean
-  onChange: () => void
-  icon: string
-}) => (
-  <motion.label
-    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
-      ${checked ? "bg-red-500/10 border-red-500/50" : "bg-white/5 border-white/10"} border`}
-    whileHover={{ scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
-  >
-    <div className="relative flex items-center">
-      <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
-      <div
-        className={`w-5 h-5 rounded flex items-center justify-center transition-all
-        ${checked ? "bg-red-500" : "bg-white/10 border border-white/20"}`}
-      >
-        {checked && <i className="fas fa-check text-xs text-white"></i>}
-      </div>
-    </div>
-    <div className="flex items-center gap-2">
-      <i className={`fas ${icon} ${checked ? "text-red-400" : "text-gray-400"}`}></i>
-      <span className={`text-sm ${checked ? "text-white" : "text-gray-300"}`}>{label}</span>
-    </div>
-  </motion.label>
-)
-
-const SortOption = ({
-  label,
-  selected,
-  onChange,
-  icon,
-}: {
-  label: string
-  selected: boolean
-  onChange: () => void
-  icon: string
-}) => (
-  <motion.label
-    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors
-      ${selected ? "bg-red-500/10 border-red-500/50" : "bg-white/5 border-white/10"} border`}
-    whileHover={{ scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
-  >
-    <div className="relative flex items-center">
-      <input type="radio" checked={selected} onChange={onChange} className="sr-only" />
-      <div
-        className={`w-5 h-5 rounded-full flex items-center justify-center transition-all
-        ${selected ? "border-red-500" : "border-white/20"} border`}
-      >
-        {selected && <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>}
-      </div>
-    </div>
-    <div className="flex items-center gap-2">
-      <i className={`fas ${icon} ${selected ? "text-red-400" : "text-gray-400"}`}></i>
-      <span className={`text-sm ${selected ? "text-white" : "text-gray-300"}`}>{label}</span>
-    </div>
-  </motion.label>
-)

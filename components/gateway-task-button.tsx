@@ -10,14 +10,12 @@ interface GatewayTaskButtonProps {
   onComplete: () => void
   creatorId: string
   gatewayId: string
-  sessionId: string
   content?: {
     url?: string
     videoId?: string
   }
   secureAuth?: boolean
   apiEndpoint?: string
-  isCompleted?: boolean
 }
 
 export function GatewayTaskButton({
@@ -26,39 +24,21 @@ export function GatewayTaskButton({
   onComplete,
   creatorId,
   gatewayId,
-  sessionId,
   content,
   secureAuth = false,
   apiEndpoint,
-  isCompleted: initialIsCompleted = false,
 }: GatewayTaskButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [isCompleted, setIsCompleted] = useState(initialIsCompleted)
+  const [isCompleted, setIsCompleted] = useState(false)
+  const [countdown, setCountdown] = useState(0)
   const [taskStarted, setTaskStarted] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const taskFooterRef = useRef<HTMLDivElement>(null)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Update isCompleted if the prop changes
-  useEffect(() => {
-    setIsCompleted(initialIsCompleted)
-  }, [initialIsCompleted])
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current)
-      }
-    }
-  }, [])
 
   // Handle task completion
   const handleComplete = async () => {
     if (isCompleted) return
 
     setIsLoading(true)
-    setError(null)
 
     // If secure auth is enabled, validate with the creator's API
     if (secureAuth && apiEndpoint) {
@@ -72,7 +52,6 @@ export function GatewayTaskButton({
             gatewayId,
             creatorId,
             taskId: `task-${taskNumber}`,
-            sessionId,
             timestamp: Date.now(),
           }),
         })
@@ -81,23 +60,20 @@ export function GatewayTaskButton({
 
         if (!data.success) {
           setIsLoading(false)
-          setError("Task validation failed. Please try again.")
+          alert("Task validation failed. Please try again.")
           return
         }
       } catch (error) {
         console.error("Error validating task:", error)
         setIsLoading(false)
-        setError("Task validation failed. Please try again.")
+        alert("Task validation failed. Please try again.")
         return
       }
     }
 
     // Track task completion
     try {
-      const taskId = `task-${taskNumber}`
-      console.log(`Marking task ${taskId} as complete for session ${sessionId}`)
-
-      const response = await fetch("/api/gateway/track", {
+      await fetch("/api/gateway/track", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -105,29 +81,17 @@ export function GatewayTaskButton({
         body: JSON.stringify({
           gatewayId,
           creatorId,
-          sessionId,
           action: "task_complete",
-          taskId,
+          taskId: `task-${taskNumber}`,
         }),
       })
-
-      const data = await response.json()
-
-      if (!data.success) {
-        console.error("Error tracking task completion:", data.message || "Unknown error")
-        setError("Failed to track task completion. Please try again.")
-        setIsLoading(false)
-        return
-      }
-
-      setIsCompleted(true)
-      setIsLoading(false)
-      onComplete()
     } catch (error) {
       console.error("Error tracking task completion:", error)
-      setError("Failed to track task completion. Please try again.")
-      setIsLoading(false)
     }
+
+    setIsCompleted(true)
+    setIsLoading(false)
+    onComplete()
   }
 
   // Update the task handlers and timers
@@ -135,13 +99,15 @@ export function GatewayTaskButton({
     setTaskStarted(true)
     const url =
       content?.url ||
-      `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${creatorId}&gateway=${gatewayId}&sessionId=${sessionId}`
+      `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${creatorId}&gateway=${gatewayId}`
     window.open(url, "_blank")
 
     // Start countdown for completion (8 seconds for task 1)
-    timerRef.current = setTimeout(() => {
+    const timer = setTimeout(() => {
       handleComplete()
     }, 8000) // 8 seconds for task 1
+
+    return () => clearTimeout(timer)
   }
 
   // Handle interstitial ad task
@@ -155,13 +121,15 @@ export function GatewayTaskButton({
       // @ts-ignore
       window.aclib?.runInterstitial({
         zoneId: "9962174",
-        customParams: { creatorId, gatewayId, sessionId },
+        customParams: { creatorId, gatewayId },
       })
 
       // Start countdown for completion (25 seconds for task 2)
-      timerRef.current = setTimeout(() => {
+      const timer = setTimeout(() => {
         handleComplete()
       }, 25000) // 25 seconds for task 2
+
+      return () => clearTimeout(timer)
     }
     document.head.appendChild(script)
   }
@@ -172,18 +140,32 @@ export function GatewayTaskButton({
 
     // Generate a token for validation
     const token = Date.now().toString()
-    const returnUrl = `${window.location.origin}/Task4/Redirect?gateway=${gatewayId}&creator=${creatorId}&token=${token}&sessionId=${sessionId}`
+    const returnUrl = `${window.location.origin}/Task4/Redirect?gateway=${gatewayId}&creator=${creatorId}&token=${token}`
+
+    // Store token in sessionStorage with expiration
+    const sessionKey = `gateway_${gatewayId}_progress`
+    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+    progress.token = token
+    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
 
     // Open Ad Maven link
     window.open(
-      `https://free-content.pro/s?TFleLfjA&creator=${creatorId}&gateway=${gatewayId}&sessionId=${sessionId}&redirect=${encodeURIComponent(returnUrl)}`,
+      `https://free-content.pro/s?TFleLfjA&creator=${creatorId}&gateway=${gatewayId}&redirect=${encodeURIComponent(returnUrl)}`,
       "_blank",
     )
 
-    // For task 3, automatically complete after 20 seconds as requested
-    timerRef.current = setTimeout(() => {
-      handleComplete()
-    }, 20000) // 20 seconds for task 3 as requested
+    // Check for validation every second
+    const checkInterval = setInterval(() => {
+      const updatedProgress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+      if (updatedProgress.completedTasks && updatedProgress.completedTasks.includes("task-4")) {
+        clearInterval(checkInterval)
+        handleComplete()
+      }
+    }, 1000)
+
+    // Clear interval after 5 minutes to prevent memory leaks
+    setTimeout(() => clearInterval(checkInterval), 5 * 60 * 1000)
   }
 
   // Handle AutoTag redirect task
@@ -193,8 +175,16 @@ export function GatewayTaskButton({
     // Generate a token for validation
     const token = Date.now().toString()
 
-    // Redirect to AutoTag page with session ID
-    window.location.href = `/AutoTag?creator=${creatorId}&gateway=${gatewayId}&token=${token}&sessionId=${sessionId}`
+    // Store token in sessionStorage with expiration
+    const sessionKey = `gateway_${gatewayId}_progress`
+    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+    progress.token = token
+    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+    progress.currentTask = "task-4"
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+
+    // Redirect to AutoTag page
+    window.location.href = `/AutoTag?creator=${creatorId}&gateway=${gatewayId}&token=${token}`
   }
 
   // Handle footer validation task
@@ -205,14 +195,16 @@ export function GatewayTaskButton({
       // Create and load the script
       const script = document.createElement("script")
       script.src = "https://cdn.work.ink/js/redirect.js?id=700"
-      script.dataset.url = `https://work.ink/direct/700?creator=${creatorId}&gateway=${gatewayId}&sessionId=${sessionId}`
+      script.dataset.url = `https://work.ink/direct/700?creator=${creatorId}&gateway=${gatewayId}`
       script.dataset.ids = "TaskFooter"
       taskFooterRef.current.appendChild(script)
 
       // Start countdown for completion (10 seconds for task 5)
-      timerRef.current = setTimeout(() => {
+      const timer = setTimeout(() => {
         handleComplete()
       }, 10000) // 10 seconds for task 5
+
+      return () => clearTimeout(timer)
     }
   }
 
@@ -270,26 +262,22 @@ export function GatewayTaskButton({
     }
   }
 
-  // Check for task completion in session on mount
+  // Check for token in URL for external validation task
   useEffect(() => {
-    if (sessionId) {
-      fetch(`/api/gateway/session?sessionId=${sessionId}`)
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success && data.session && data.session.completedTasks) {
-            const taskId = `task-${taskNumber}`
-            if (data.session.completedTasks.includes(taskId)) {
-              console.log(`Task ${taskId} is already completed in session ${sessionId}`)
-              setIsCompleted(true)
-            }
-          }
-        })
-        .catch((error) => {
-          console.error("Error checking session:", error)
-        })
-    }
-  }, [sessionId, taskNumber])
+    if (taskType === "operagx") {
+      const urlParams = new URLSearchParams(window.location.search)
+      const token = urlParams.get("token")
+      const storedToken = localStorage.getItem("task3_token")
 
+      if (token && storedToken && token === storedToken) {
+        localStorage.setItem("task3_verified", "true")
+        localStorage.removeItem("task3_token")
+        handleComplete()
+      }
+    }
+  }, [taskType])
+
+  // Update the render function to not show countdown timer
   return (
     <div
       className={`rounded-lg border-l-4 ${isCompleted ? "border-green-500 bg-green-900/20" : "border-[#ff3e3e] bg-[#1a1a1a]"} p-6 transition-all duration-300`}
@@ -310,11 +298,6 @@ export function GatewayTaskButton({
 
       <div className="mb-6">
         <p className="text-gray-400">{getTaskDescription()}</p>
-        {error && (
-          <div className="mt-2 text-sm text-red-400 bg-red-500/10 p-2 rounded">
-            <i className="fas fa-exclamation-triangle mr-1"></i> {error}
-          </div>
-        )}
       </div>
 
       {!isCompleted && !taskStarted ? (

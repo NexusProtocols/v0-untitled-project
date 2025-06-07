@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useParams, useRouter, useSearchParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { SecureAd } from "@/components/secure-ad"
 import { CaptchaValidator } from "@/components/captcha-validator"
 import { GatewayTaskButton } from "@/components/gateway-task-button"
-import { v4 as uuidv4 } from "uuid"
 
 // Gateway step types
 type StepType = "redirect" | "article" | "operagx" | "youtube" | "direct"
@@ -26,7 +25,6 @@ interface GatewayStep {
 export default function GatewayPage() {
   const params = useParams()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [gateway, setGateway] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
@@ -36,115 +34,57 @@ export default function GatewayPage() {
   const [allTasksCompleted, setAllTasksCompleted] = useState(false)
   const [showFinalReward, setShowFinalReward] = useState(false)
   const [validationToken, setValidationToken] = useState("")
-  const [rewardContent, setRewardContent] = useState<string>("")
-  const [rewardUrl, setRewardUrl] = useState<string>("")
-  const [isRedirecting, setIsRedirecting] = useState(false)
   const rewardRef = useRef<HTMLDivElement>(null)
-  const [sessionId, setSessionId] = useState<string>("")
+  const [lastVisitTime, setLastVisitTime] = useState<number | null>(null)
 
   // Multi-stage gateway
   const totalStages = gateway?.stages?.length || 1
   const [currentStage, setCurrentStage] = useState(-1) // Start at -1 for CAPTCHA pre-stage
-  const [stagesCompleted, setStagesCompleted] = useState<boolean[]>(Array(totalStages + 1).fill(false)) // +1 for CAPTCHA pre-stage
-
-  // Check for session ID in URL or create a new one
-  useEffect(() => {
-    const urlSessionId = searchParams?.get("sessionId")
-
-    if (urlSessionId) {
-      console.log(`Using existing session ID: ${urlSessionId}`)
-      setSessionId(urlSessionId)
-
-      // Fetch session data
-      const fetchSessionData = async () => {
-        try {
-          const response = await fetch(`/api/gateway/session?sessionId=${urlSessionId}`)
-          const data = await response.json()
-
-          if (data.success && data.session) {
-            console.log(`Loaded session data:`, data.session)
-            // Restore session state
-            setCompletedTasks(data.session.completedTasks || [])
-            setCurrentStage(data.session.currentStage || -1)
-
-            // Update stages completed array
-            const newStagesCompleted = [...stagesCompleted]
-            if (data.session.currentStage >= 0) {
-              newStagesCompleted[0] = true // CAPTCHA stage
-              setCaptchaValidated(true)
-            }
-
-            for (let i = 1; i <= data.session.currentStage; i++) {
-              newStagesCompleted[i] = true
-            }
-            setStagesCompleted(newStagesCompleted)
-
-            if (data.session.currentStage >= 0) {
-              setShowTasks(true)
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching session data:", error)
-        }
-      }
-
-      fetchSessionData()
-    } else {
-      // Generate a new session ID
-      const newSessionId = uuidv4()
-      console.log(`Created new session ID: ${newSessionId}`)
-      setSessionId(newSessionId)
-
-      // Create a new session
-      const createSession = async () => {
-        try {
-          const response = await fetch("/api/gateway/session", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              gatewayId: params.gatewayId,
-              completedTasks: [],
-              currentStage: -1,
-            }),
-          })
-
-          const data = await response.json()
-          if (!data.success) {
-            console.error("Failed to create session:", data.message)
-          }
-        } catch (error) {
-          console.error("Error creating session:", error)
-        }
-      }
-
-      createSession()
-    }
-  }, [params.gatewayId, searchParams, stagesCompleted])
+  const stagesCompleted = Array(totalStages + 1).fill(false) // +1 for CAPTCHA pre-stage
 
   // Fetch gateway data
   useEffect(() => {
     const fetchGateway = async () => {
       try {
-        // Fetch gateway data from API with improved error handling
-        const response = await fetch(`/api/gateway/${params.gatewayId}`)
+        // Check if this user has visited recently (rate limiting)
+        const now = Date.now()
+        const lastVisit = localStorage.getItem(`gateway_visit_${params.gatewayId}`)
 
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.message || `HTTP error! Status: ${response.status}`)
+        if (lastVisit) {
+          const lastVisitTime = Number.parseInt(lastVisit)
+          const timeSinceLastVisit = now - lastVisitTime
+
+          // If less than 30 seconds since last visit, don't count as a new visit
+          if (timeSinceLastVisit < 30000) {
+            setLastVisitTime(lastVisitTime)
+          } else {
+            // Update visit time and count as a new visit
+            localStorage.setItem(`gateway_visit_${params.gatewayId}`, now.toString())
+            incrementGatewayVisits(params.gatewayId as string)
+          }
+        } else {
+          // First visit
+          localStorage.setItem(`gateway_visit_${params.gatewayId}`, now.toString())
+          incrementGatewayVisits(params.gatewayId as string)
         }
 
-        const data = await response.json()
+        // In a real implementation, fetch from API
+        // For now, get from localStorage
+        const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
+        const currentGateway = allGateways.find((g: any) => g.id === params.gatewayId)
 
-        if (!data.success) {
-          setError(data.message || "Failed to fetch gateway")
+        if (!currentGateway) {
+          setError("Gateway not found")
           setIsLoading(false)
           return
         }
 
-        setGateway(data.gateway)
-        console.log("Gateway data loaded:", data.gateway)
+        // Ensure gateway has steps array
+        if (!currentGateway.steps) {
+          currentGateway.steps = []
+        }
+
+        setGateway(currentGateway)
 
         // Check if user has a valid CAPTCHA token
         const captchaToken = localStorage.getItem("captchaToken")
@@ -156,42 +96,59 @@ export default function GatewayPage() {
 
           if (expiresAt > now) {
             setCaptchaValidated(true)
-
-            // Update stages completed
-            const newStagesCompleted = [...stagesCompleted]
-            newStagesCompleted[0] = true
-            setStagesCompleted(newStagesCompleted)
           }
         }
 
-        // Check URL parameters for task completion
-        const completedTask = searchParams?.get("task")
-        const isCompleted = searchParams?.get("completed") === "true"
+        // Check for session progress
+        const sessionKey = `gateway_${params.gatewayId}_progress`
+        const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
 
-        if (completedTask && isCompleted) {
-          const taskId = `task-${completedTask}`
+        // If we have valid progress that hasn't expired
+        if (progress.expiresAt && progress.expiresAt > Date.now()) {
+          // Restore progress
+          if (progress.completedTasks && progress.completedTasks.length > 0) {
+            setCompletedTasks(progress.completedTasks)
+          }
 
-          // Only add if not already in the completed tasks
-          if (!completedTasks.includes(taskId)) {
-            const updatedTasks = [...completedTasks, taskId]
+          // If we have a current stage, restore it
+          if (progress.currentStage !== undefined) {
+            setCurrentStage(progress.currentStage)
+
+            // If we're past the CAPTCHA stage, mark it as completed
+            if (progress.currentStage >= 0) {
+              setCaptchaValidated(true)
+            }
+
+            // If we're in a task stage, show tasks
+            if (progress.currentStage > 0) {
+              setShowTasks(true)
+            }
+          }
+
+          // Check URL parameters for task completion
+          const searchParams = new URLSearchParams(window.location.search)
+          const completedTask = searchParams.get("task")
+          const isCompleted = searchParams.get("completed") === "true"
+
+          if (completedTask && isCompleted && !progress.completedTasks?.includes(`task-${completedTask}`)) {
+            const updatedTasks = [...(progress.completedTasks || []), `task-${completedTask}`]
             setCompletedTasks(updatedTasks)
 
-            // Update session
-            updateSession(updatedTasks, currentStage)
+            // Update session storage
+            progress.completedTasks = updatedTasks
+            sessionStorage.setItem(sessionKey, JSON.stringify(progress))
           }
         }
       } catch (error) {
         console.error("Error fetching gateway:", error)
-        setError(error instanceof Error ? error.message : "An error occurred while fetching the gateway")
+        setError("An error occurred while fetching the gateway")
       } finally {
         setIsLoading(false)
       }
     }
 
-    if (params.gatewayId) {
-      fetchGateway()
-    }
-  }, [params.gatewayId, searchParams, completedTasks, currentStage, stagesCompleted])
+    fetchGateway()
+  }, [params.gatewayId])
 
   // Check if all tasks are completed
   useEffect(() => {
@@ -199,50 +156,101 @@ export default function GatewayPage() {
       gateway?.stages &&
       currentStage > 0 &&
       currentStage <= gateway.stages.length &&
-      gateway.stages[currentStage - 1]?.taskCount > 0 &&
-      completedTasks.length >= gateway.stages[currentStage - 1]?.taskCount &&
+      completedTasks.length === gateway.stages[currentStage - 1]?.taskCount &&
       showTasks
     ) {
-      console.log(`All tasks completed for stage ${currentStage}`)
       setAllTasksCompleted(true)
-
       // Mark current stage as completed
-      const newStagesCompleted = [...stagesCompleted]
-      newStagesCompleted[currentStage] = true
-      setStagesCompleted(newStagesCompleted)
+      stagesCompleted[currentStage] = true
 
       // If this is the final stage, show the reward
       if (currentStage === totalStages) {
         handleClaimReward()
       }
-    } else {
-      setAllTasksCompleted(false)
     }
-  }, [completedTasks, gateway, showTasks, currentStage, totalStages, stagesCompleted])
+  }, [completedTasks, gateway, showTasks, currentStage, totalStages])
 
-  // Function to update session in the database
-  const updateSession = async (tasks: string[], stage: number) => {
+  // Function to increment gateway visits
+  const incrementGatewayVisits = (gatewayId: string) => {
     try {
-      console.log(`Updating session ${sessionId} with ${tasks.length} tasks and stage ${stage}`)
-      const response = await fetch("/api/gateway/session", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sessionId,
-          completedTasks: tasks,
-          currentStage: stage,
-        }),
+      const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
+      const updatedGateways = allGateways.map((g: any) => {
+        if (g.id === gatewayId) {
+          // Initialize stats if not present
+          if (!g.stats) {
+            g.stats = { visits: 0, completions: 0, conversionRate: 0, revenue: 0 }
+          }
+
+          // Increment visits
+          const visits = (g.stats?.visits || 0) + 1
+          return {
+            ...g,
+            stats: {
+              ...g.stats,
+              visits,
+              conversionRate: g.stats?.completions ? (g.stats.completions / visits) * 100 : 0,
+              revenue: calculateEstimatedRevenue(visits, g.stats?.completions || 0, g.settings?.adLevel || 3),
+            },
+          }
+        }
+        return g
       })
 
-      const data = await response.json()
-      if (!data.success) {
-        console.error("Failed to update session:", data.message)
-      }
+      localStorage.setItem("nexus_gateways", JSON.stringify(updatedGateways))
     } catch (error) {
-      console.error("Error updating session:", error)
+      console.error("Error incrementing gateway visits:", error)
     }
+  }
+
+  // Function to increment gateway completions
+  const incrementGatewayCompletions = (gatewayId: string) => {
+    try {
+      const allGateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")
+      const updatedGateways = allGateways.map((g: any) => {
+        if (g.id === gatewayId) {
+          // Initialize stats if not present
+          if (!g.stats) {
+            g.stats = { visits: 1, completions: 0, conversionRate: 0, revenue: 0 }
+          }
+
+          // Increment completions
+          const completions = (g.stats?.completions || 0) + 1
+          const visits = g.stats?.visits || 1
+          return {
+            ...g,
+            stats: {
+              ...g.stats,
+              completions,
+              conversionRate: (completions / visits) * 100,
+              revenue: calculateEstimatedRevenue(visits, completions, g.settings?.adLevel || 3),
+            },
+          }
+        }
+        return g
+      })
+
+      localStorage.setItem("nexus_gateways", JSON.stringify(updatedGateways))
+    } catch (error) {
+      console.error("Error incrementing gateway completions:", error)
+    }
+  }
+
+  // Calculate estimated revenue
+  const calculateEstimatedRevenue = (visits: number, completions: number, adLevel: number) => {
+    // Base CPM rate ($ per 1000 visits)
+    const baseCPM = 2.5
+
+    // Adjust based on ad level
+    const adLevelMultiplier = 0.8 + adLevel * 0.2
+
+    // Adjust based on completion rate
+    const completionRate = visits > 0 ? completions / visits : 0
+    const completionMultiplier = 1 + completionRate * 0.5
+
+    // Calculate revenue
+    const revenue = (visits / 1000) * baseCPM * adLevelMultiplier * completionMultiplier
+
+    return Number.parseFloat(revenue.toFixed(2))
   }
 
   // Handle CAPTCHA validation
@@ -250,28 +258,30 @@ export default function GatewayPage() {
     setCaptchaValidated(true)
     setValidationToken(token)
     setCurrentStage(0) // Move to stage 0 (pre-stage)
+    stagesCompleted[0] = true // Mark CAPTCHA as completed
 
-    // Mark CAPTCHA as completed
-    const newStagesCompleted = [...stagesCompleted]
-    newStagesCompleted[0] = true
-    setStagesCompleted(newStagesCompleted)
-
-    // Update session
-    updateSession(completedTasks, 0)
+    // Store progress in sessionStorage
+    const sessionKey = `gateway_${params.gatewayId}_progress`
+    const progress = {
+      captchaValidated: true,
+      currentStage: 0,
+      completedTasks: [],
+      expiresAt: Date.now() + 15 * 60 * 1000, // 15 minutes
+    }
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
   }
 
   // Handle task completion
   const handleTaskComplete = (taskId: string) => {
-    console.log(`Task ${taskId} completed`)
+    const updatedTasks = [...completedTasks, taskId]
+    setCompletedTasks(updatedTasks)
 
-    // Only add if not already in the completed tasks
-    if (!completedTasks.includes(taskId)) {
-      const updatedTasks = [...completedTasks, taskId]
-      setCompletedTasks(updatedTasks)
-
-      // Update session
-      updateSession(updatedTasks, currentStage)
-    }
+    // Store progress in sessionStorage
+    const sessionKey = `gateway_${params.gatewayId}_progress`
+    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+    progress.completedTasks = updatedTasks
+    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
   }
 
   // Handle start tasks
@@ -279,8 +289,13 @@ export default function GatewayPage() {
     setShowTasks(true)
     setCurrentStage(1) // Move to stage 1 (first actual stage)
 
-    // Update session
-    updateSession(completedTasks, 1)
+    // Store progress in sessionStorage
+    const sessionKey = `gateway_${params.gatewayId}_progress`
+    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+    progress.currentStage = 1
+    progress.showTasks = true
+    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
   }
 
   // Move to next stage
@@ -292,8 +307,13 @@ export default function GatewayPage() {
       setCompletedTasks([])
       setAllTasksCompleted(false)
 
-      // Update session
-      updateSession([], nextStage)
+      // Store progress in sessionStorage
+      const sessionKey = `gateway_${params.gatewayId}_progress`
+      const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+      progress.currentStage = nextStage
+      progress.completedTasks = []
+      progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+      sessionStorage.setItem(sessionKey, JSON.stringify(progress))
     } else {
       // Final stage completed
       handleClaimReward()
@@ -302,8 +322,20 @@ export default function GatewayPage() {
 
   // Handle claim reward
   const handleClaimReward = async () => {
+    setShowFinalReward(true)
+    incrementGatewayCompletions(params.gatewayId as string)
+
+    // Clear session progress
+    sessionStorage.removeItem(`gateway_${params.gatewayId}_progress`)
+
     try {
-      console.log("Claiming reward for gateway:", params.gatewayId)
+      // Get the stored CAPTCHA token
+      const captchaToken = localStorage.getItem("captchaToken")
+
+      if (!captchaToken) {
+        setError("Session expired. Please refresh and try again.")
+        return
+      }
 
       // Mark the gateway as completed on the server
       const response = await fetch("/api/gateway/complete", {
@@ -313,38 +345,32 @@ export default function GatewayPage() {
         },
         body: JSON.stringify({
           gatewayId: params.gatewayId,
-          sessionId,
+          token: captchaToken,
+          completed: true,
+          stages: totalStages,
+          currentStage: currentStage,
         }),
       })
 
       const data = await response.json()
 
       if (!data.success) {
-        setError(data.message || "Failed to complete gateway")
+        setError(data.error || "Failed to complete gateway")
         return
       }
 
-      // Set the reward content or URL
-      if (gateway?.reward?.type === "paste" && gateway?.reward?.content) {
-        setRewardContent(gateway.reward.content)
-        setShowFinalReward(true)
-      } else if (gateway?.reward?.type === "url" && gateway?.reward?.url) {
+      // If reward is a URL, redirect with the token
+      if (gateway?.reward?.type === "url" && gateway?.reward?.url) {
         // Check if the URL already has query parameters
         const hasParams = gateway.reward.url.includes("?")
         const separator = hasParams ? "&" : "?"
 
-        // Set the redirect URL with the token
+        // Redirect to the reward URL with the token
         const redirectUrl = `${gateway.reward.url}${separator}token=${data.token}`
-        setRewardUrl(redirectUrl)
-        setIsRedirecting(true)
-        setShowFinalReward(true)
 
-        // Redirect after a short delay
         setTimeout(() => {
           window.location.href = redirectUrl
         }, 1500)
-      } else {
-        setError("Invalid reward configuration")
       }
     } catch (error) {
       console.error("Error completing gateway:", error)
@@ -352,11 +378,18 @@ export default function GatewayPage() {
     }
   }
 
+  // Handle scroll to reward
+  const handleScrollToReward = () => {
+    if (rewardRef.current) {
+      rewardRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
   // Handle copy reward
   const handleCopyReward = () => {
-    if (rewardContent) {
+    if (gateway?.reward?.content) {
       navigator.clipboard
-        .writeText(rewardContent)
+        .writeText(gateway.reward.content)
         .then(() => {
           alert("Content copied to clipboard!")
         })
@@ -373,11 +406,17 @@ export default function GatewayPage() {
     return taskTypes[index % taskTypes.length]
   }
 
-  // Function to check if a specific task is completed
-  const isTaskCompleted = (stageNum: number, taskNum: number) => {
-    const taskId = `task-${stageNum}-${taskNum}`
-    return completedTasks.includes(taskId)
-  }
+  // Update the useEffect hook to check for task completion in URL parameters
+  useEffect(() => {
+    // Check URL parameters for task completion
+    const searchParams = new URLSearchParams(window.location.search)
+    const completedTask = searchParams.get("task")
+    const isCompleted = searchParams.get("completed") === "true"
+
+    if (completedTask && isCompleted && !completedTasks.includes(`task-${completedTask}`)) {
+      handleTaskComplete(`task-${completedTask}`)
+    }
+  }, [])
 
   if (isLoading) {
     return (
@@ -461,10 +500,7 @@ export default function GatewayPage() {
                       <i className="fas fa-user mr-1"></i> {gateway?.creatorName || "Unknown"}
                     </span>
                     <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
-                      <i className="fas fa-tasks mr-1"></i> {gateway?.stages?.[currentStage - 1]?.taskCount || 0} Tasks
-                    </span>
-                    <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
-                      <i className="fas fa-key mr-1"></i> Session ID: {sessionId.substring(0, 8)}...
+                      <i className="fas fa-tasks mr-1"></i> {steps.length} Tasks
                     </span>
                   </div>
                 </div>
@@ -574,24 +610,19 @@ export default function GatewayPage() {
 
                 {/* Tasks */}
                 <div className="mb-8 space-y-4">
-                  {Array.from({ length: gateway?.stages?.[currentStage - 1]?.taskCount || 0 }).map((_, index) => {
-                    const taskId = `task-${currentStage}-${index + 1}`
-                    return (
-                      <GatewayTaskButton
-                        key={`task-${currentStage}-${index}`}
-                        taskType={getTaskType(index)}
-                        taskNumber={index + 1}
-                        onComplete={() => handleTaskComplete(taskId)}
-                        creatorId={gateway?.creatorId || "unknown"}
-                        gatewayId={gateway?.id || "unknown"}
-                        sessionId={sessionId}
-                        content={{
-                          url: `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${gateway?.creatorId || "unknown"}&gateway=${gateway?.id || "unknown"}&sessionId=${sessionId}`,
-                        }}
-                        isCompleted={completedTasks.includes(taskId)}
-                      />
-                    )
-                  })}
+                  {Array.from({ length: gateway?.stages?.[currentStage - 1]?.taskCount || 0 }).map((_, index) => (
+                    <GatewayTaskButton
+                      key={`task-${currentStage}-${index}`}
+                      taskType={getTaskType(index)}
+                      taskNumber={index + 1}
+                      onComplete={() => handleTaskComplete(`task-${currentStage}-${index}`)}
+                      creatorId={gateway?.creatorId || "unknown"}
+                      gatewayId={gateway?.id || "unknown"}
+                      content={{
+                        url: `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${gateway?.creatorId || "unknown"}&gateway=${gateway?.id || "unknown"}`,
+                      }}
+                    />
+                  ))}
                 </div>
 
                 {/* Next stage button */}
@@ -627,7 +658,7 @@ export default function GatewayPage() {
                   <p className="mb-6 text-gray-400">You have successfully completed all tasks.</p>
                 </div>
 
-                {gateway?.reward?.type === "paste" && rewardContent ? (
+                {gateway?.reward?.type === "paste" ? (
                   <div className="mb-6">
                     <div className="mb-4 rounded border border-white/10 bg-[#000000] p-4">
                       <div className="flex justify-between items-center mb-2">
@@ -641,22 +672,15 @@ export default function GatewayPage() {
                       </div>
                       <div className="relative">
                         <pre className="whitespace-pre-wrap break-all text-sm text-gray-300 font-mono bg-[#0a0a0a] p-4 rounded-lg max-h-96 overflow-y-auto">
-                          {rewardContent}
+                          {gateway?.reward?.content || "No content available"}
                         </pre>
                         <div className="absolute inset-0 pointer-events-none"></div>
                       </div>
                     </div>
                   </div>
-                ) : isRedirecting ? (
-                  <div className="mb-6 text-center">
-                    <p className="mb-4 text-white">Redirecting you to your reward...</p>
-                    <div className="flex justify-center">
-                      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-[#ff3e3e]"></div>
-                    </div>
-                  </div>
                 ) : (
                   <div className="mb-6 text-center">
-                    <p className="mb-4 text-white">Processing your reward...</p>
+                    <p className="mb-4 text-white">Redirecting you to your reward...</p>
                     <div className="flex justify-center">
                       <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-[#ff3e3e]"></div>
                     </div>

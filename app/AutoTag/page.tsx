@@ -2,18 +2,17 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
 
 export default function AutoTagPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [seconds, setSeconds] = useState(10)
   const [isRedirecting, setIsRedirecting] = useState(false)
-  const [taskCompleted, setTaskCompleted] = useState(false)
 
   const creatorId = searchParams?.get("creator") || "unknown"
   const gatewayId = searchParams?.get("gateway") || "unknown"
   const token = searchParams?.get("token") || Date.now().toString()
-  const sessionId = searchParams?.get("sessionId") || ""
 
   useEffect(() => {
     // Track that user visited the AutoTag page
@@ -27,9 +26,8 @@ export default function AutoTagPage() {
           body: JSON.stringify({
             gatewayId,
             creatorId,
-            sessionId,
             action: "task_start",
-            taskId: "task-4",
+            taskId: "autotag",
             userData: {
               userAgent: navigator.userAgent,
               screenSize: `${window.innerWidth}x${window.innerHeight}`,
@@ -44,23 +42,26 @@ export default function AutoTagPage() {
 
     trackVisit()
 
+    // Store progress in sessionStorage
+    const sessionKey = `gateway_${gatewayId}_progress`
+    const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+    progress.currentTask = "autotag"
+    progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
+    sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+
     // Start countdown
     const timer = setInterval(() => {
       setSeconds((prev) => {
         if (prev <= 1) {
           clearInterval(timer)
           setIsRedirecting(true)
-          setTaskCompleted(true)
 
           // Track completion
           trackCompletion()
 
-          // Redirect back to gateway with task completion parameters
+          // Redirect back to gateway
           setTimeout(() => {
-            // Use the correct format for the redirect URL
-            router.push(
-              `/key-gateway/${gatewayId}?creator=${creatorId}&token=${token}&task=4&completed=true&sessionId=${sessionId}`,
-            )
+            router.push(`/gateway/${gatewayId}?creator=${creatorId}&token=${token}`)
           }, 1000)
 
           return 0
@@ -70,36 +71,19 @@ export default function AutoTagPage() {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [creatorId, gatewayId, token, sessionId, router])
+  }, [creatorId, gatewayId, token, router])
 
-  // Update the trackCompletion function to properly mark the task as completed
+  // Track completion of AutoTag task
   const trackCompletion = async () => {
     try {
-      // Update session in the database
-      if (sessionId) {
-        try {
-          const response = await fetch(`/api/gateway/session?sessionId=${sessionId}`)
-          const data = await response.json()
-
-          if (data.success && data.session) {
-            const completedTasks = [...(data.session.completedTasks || []), "task-4"]
-
-            await fetch("/api/gateway/session", {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                sessionId,
-                completedTasks,
-                currentStage: data.session.currentStage,
-              }),
-            })
-          }
-        } catch (error) {
-          console.error("Error updating session:", error)
-        }
+      // Store completion in sessionStorage
+      const sessionKey = `gateway_${gatewayId}_progress`
+      const progress = JSON.parse(sessionStorage.getItem(sessionKey) || "{}")
+      progress.completedTasks = progress.completedTasks || []
+      if (!progress.completedTasks.includes("autotag")) {
+        progress.completedTasks.push("autotag")
       }
+      sessionStorage.setItem(sessionKey, JSON.stringify(progress))
 
       await fetch("/api/gateway/track", {
         method: "POST",
@@ -109,9 +93,8 @@ export default function AutoTagPage() {
         body: JSON.stringify({
           gatewayId,
           creatorId,
-          sessionId,
           action: "task_complete",
-          taskId: "task-4",
+          taskId: "autotag",
           userData: {
             userAgent: navigator.userAgent,
             screenSize: `${window.innerWidth}x${window.innerHeight}`,
@@ -123,12 +106,6 @@ export default function AutoTagPage() {
     } catch (error) {
       console.error("Failed to track AutoTag completion:", error)
     }
-  }
-
-  // Handle manual return to gateway without completing task
-  const handleReturnToGateway = () => {
-    // Return to gateway without completing the task
-    router.push(`/key-gateway/${gatewayId}?creator=${creatorId}&sessionId=${sessionId}`)
   }
 
   return (
@@ -155,16 +132,9 @@ export default function AutoTagPage() {
 
             <div className="text-3xl font-bold text-white mb-6">{seconds}</div>
 
-            <p className="text-sm text-gray-400 mb-4">
+            <p className="text-sm text-gray-400">
               Please do not close this window. You will be redirected automatically.
             </p>
-
-            <button
-              onClick={handleReturnToGateway}
-              className="text-sm text-[#ff3e3e] hover:text-white transition-colors"
-            >
-              Return to gateway (task will not be completed)
-            </button>
           </div>
         ) : (
           <div className="text-center">
@@ -182,6 +152,15 @@ export default function AutoTagPage() {
             </div>
           </div>
         )}
+
+        <div className="mt-8 text-center">
+          <Link
+            href={`/gateway/${gatewayId}?creator=${creatorId}&token=${token}`}
+            className="text-sm text-[#ff3e3e] hover:text-white transition-colors"
+          >
+            Return to gateway
+          </Link>
+        </div>
       </div>
     </div>
   )

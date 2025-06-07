@@ -1,47 +1,30 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useParams, useSearchParams } from "next/navigation"
-import Link from "next/link"
+import { useParams, useRouter } from "next/navigation"
 import { KeyGateway } from "@/components/key-gateway"
-import { v4 as uuidv4 } from "uuid"
+import Link from "next/link"
 
 export default function KeyGatewayPage() {
   const params = useParams()
-  const searchParams = useSearchParams()
   const router = useRouter()
   const [script, setScript] = useState<any | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [generatedKey, setGeneratedKey] = useState("")
   const [showKey, setShowKey] = useState(false)
-  const [sessionId, setSessionId] = useState<string>("")
-
-  // Get query parameters
-  const creatorId = searchParams?.get("creator") || ""
-  const token = searchParams?.get("token") || ""
-  const completedTask = searchParams?.get("task")
-  const isCompleted = searchParams?.get("completed") === "true"
-  const urlSessionId = searchParams?.get("sessionId")
 
   useEffect(() => {
-    // Set session ID from URL or generate a new one
-    if (urlSessionId) {
-      setSessionId(urlSessionId)
-    } else {
-      setSessionId(uuidv4())
-    }
-
-    const fetchScript = async () => {
+    const fetchScript = () => {
       try {
-        // Fetch script from API
-        const response = await fetch(`/api/scripts/${params.scriptId}`)
-        const data = await response.json()
+        // Get script from localStorage
+        const scripts = JSON.parse(localStorage.getItem("nexus_scripts") || "[]")
+        const foundScript = scripts.find((s: any) => s.id === params.scriptId)
 
-        if (data.success) {
-          setScript(data.script)
+        if (foundScript) {
+          setScript(foundScript)
         } else {
-          setError(data.message || "Script not found")
+          setError("Script not found")
         }
       } catch (error) {
         console.error("Error fetching script:", error)
@@ -52,45 +35,7 @@ export default function KeyGatewayPage() {
     }
 
     fetchScript()
-  }, [params.scriptId, urlSessionId])
-
-  // Check for task completion in URL parameters
-  useEffect(() => {
-    if (completedTask && isCompleted && sessionId) {
-      // Update session with completed task
-      const updateSession = async () => {
-        try {
-          const response = await fetch(`/api/gateway/session?sessionId=${sessionId}`)
-          const data = await response.json()
-
-          if (data.success && data.session) {
-            const completedTasks = [...(data.session.completedTasks || [])]
-            const taskId = `task-${completedTask}`
-
-            if (!completedTasks.includes(taskId)) {
-              completedTasks.push(taskId)
-
-              await fetch("/api/gateway/session", {
-                method: "PUT",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  sessionId,
-                  completedTasks,
-                  currentStage: data.session.currentStage,
-                }),
-              })
-            }
-          }
-        } catch (error) {
-          console.error("Error updating session:", error)
-        }
-      }
-
-      updateSession()
-    }
-  }, [completedTask, isCompleted, sessionId])
+  }, [params.scriptId])
 
   const handleKeyGenerated = (key: string) => {
     setGeneratedKey(key)
@@ -158,7 +103,7 @@ export default function KeyGatewayPage() {
               <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded">
                   <img
-                    src={script?.game?.imageUrl || "/placeholder.svg"}
+                    src={script?.imageUrl || "/placeholder.svg"}
                     alt={script?.title}
                     className="h-full w-full object-cover"
                   />
@@ -195,7 +140,6 @@ export default function KeyGatewayPage() {
                 adultAds={script?.adultAds || false}
                 onComplete={handleKeyGenerated}
                 isPremium={script?.isPremium}
-                sessionId={sessionId}
               />
             </div>
           </>

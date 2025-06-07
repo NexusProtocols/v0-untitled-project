@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { supabase, incrementGatewayCompletion } from "@/utils/supabase"
+import { incrementGatewayCompletion } from "@/utils/supabase"
 
 export async function POST(request: Request) {
   try {
@@ -10,10 +10,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Gateway ID is required" }, { status: 400 })
     }
 
-    // Only increment if Supabase is available
-    if (supabase) {
-      await incrementGatewayCompletion(gatewayId)
-    }
+    // Increment completion count in Supabase
+    await incrementGatewayCompletion(gatewayId)
 
     // Generate a completion token
     const completionToken = `token-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`

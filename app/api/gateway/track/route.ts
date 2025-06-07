@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { incrementGatewayVisit } from "@/utils/supabase"
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +23,9 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       )
     }
+
+    // Increment visit count in Supabase
+    await incrementGatewayVisit(gatewayId)
 
     // Get the gateway data to check for secure authentication
     const gateways = JSON.parse(localStorage.getItem("nexus_gateways") || "[]")

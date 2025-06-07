@@ -25,6 +25,7 @@ export default function CreateGatewayPage() {
   const [rateLimitEnabled, setRateLimitEnabled] = useState(true)
   const [rateLimitCount, setRateLimitCount] = useState(5)
   const [rateLimitPeriod, setRateLimitPeriod] = useState<"hour" | "day" | "week" | "month">("day")
+  const [isPublic, setIsPublic] = useState(true)
 
   // Multi-stage gateway (start with stage 1 only)
   const [stages, setStages] = useState([{ id: 1, level: 3, taskCount: 2 }])
@@ -208,6 +209,7 @@ export default function CreateGatewayPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         isActive: true,
+        isPublic: isPublic,
         stages: stages.map((stage) => ({
           ...stage,
           steps: generateStepsForStage(stage),
@@ -235,7 +237,7 @@ export default function CreateGatewayPage() {
         },
       }
 
-      // Save to Vercel Blob for global access
+      // Save to Supabase via API
       try {
         const response = await fetch("/api/gateway/save", {
           method: "POST",
@@ -250,13 +252,13 @@ export default function CreateGatewayPage() {
           if (data.success) {
             setMessage({ type: "success", text: "Gateway created and saved globally! Redirecting..." })
           } else {
-            throw new Error("Failed to save to blob storage")
+            throw new Error(data.error || "Failed to save to database")
           }
         } else {
-          throw new Error("Failed to save to blob storage")
+          throw new Error("Failed to save to database")
         }
       } catch (error) {
-        console.error("Error saving to blob storage:", error)
+        console.error("Error saving to database:", error)
         setMessage({ type: "error", text: "Failed to save gateway globally. Please try again." })
         setIsSubmitting(false)
         return
@@ -371,6 +373,37 @@ export default function CreateGatewayPage() {
                   </div>
                 </div>
               )}
+            </div>
+            <div className="mb-4">
+              <label className="mb-2 block font-medium text-[#ff3e3e]">Gateway Visibility</label>
+              <div className="flex flex-wrap gap-4">
+                <button
+                  type="button"
+                  onClick={() => setIsPublic(true)}
+                  className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
+                    isPublic ? "bg-[#ff3e3e] text-white" : "bg-[#000000] text-white border border-white/10"
+                  }`}
+                >
+                  <i className="fas fa-globe"></i>
+                  <div>
+                    <div className="font-semibold">Public</div>
+                    <div className="text-xs opacity-80">Anyone can access this gateway</div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPublic(false)}
+                  className={`interactive-element px-4 py-3 rounded-lg flex items-center gap-2 transition-all hover:scale-105 transform duration-200 ${
+                    !isPublic ? "bg-[#ff3e3e] text-white" : "bg-[#000000] text-white border border-white/10"
+                  }`}
+                >
+                  <i className="fas fa-lock"></i>
+                  <div>
+                    <div className="font-semibold">Private</div>
+                    <div className="text-xs opacity-80">Only you can access this gateway</div>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
 

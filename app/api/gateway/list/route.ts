@@ -1,29 +1,21 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { list } from "@vercel/blob"
+import { NextResponse } from "next/server"
+import { getAllGateways, getUserGateways } from "@/utils/supabase"
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
-    // List all gateways from Vercel Blob
-    const { blobs } = await list({
-      prefix: "gateways/",
-    })
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("userId")
 
-    const gateways = []
-    for (const blob of blobs) {
-      try {
-        const response = await fetch(blob.url)
-        if (response.ok) {
-          const gateway = await response.json()
-          gateways.push(gateway)
-        }
-      } catch (error) {
-        console.error(`Error fetching gateway from ${blob.url}:`, error)
-      }
+    let gateways
+    if (userId) {
+      gateways = await getUserGateways(userId)
+    } else {
+      gateways = await getAllGateways()
     }
 
     return NextResponse.json({ success: true, gateways })
   } catch (error) {
-    console.error("Error listing gateways from blob storage:", error)
+    console.error("Error listing gateways:", error)
     return NextResponse.json({ success: false, error: "Failed to list gateways" }, { status: 500 })
   }
 }

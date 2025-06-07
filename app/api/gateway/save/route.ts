@@ -1,22 +1,30 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { put } from "@vercel/blob"
+import { saveGateway } from "@/utils/supabase"
 
 export async function POST(request: NextRequest) {
   try {
     const gateway = await request.json()
 
-    if (!gateway.id) {
-      return NextResponse.json({ success: false, error: "Gateway ID is required" }, { status: 400 })
+    if (!gateway) {
+      return NextResponse.json({ success: false, error: "Gateway data is required" }, { status: 400 })
     }
 
-    // Save to Vercel Blob
-    const blob = await put(`gateways/${gateway.id}.json`, JSON.stringify(gateway), {
-      access: "public",
-    })
+    // Generate ID if not provided
+    if (!gateway.id) {
+      gateway.id = `gateway-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+    }
 
-    return NextResponse.json({ success: true, url: blob.url })
+    // Add timestamps if not present
+    if (!gateway.created_at) {
+      gateway.created_at = new Date().toISOString()
+    }
+    gateway.updated_at = new Date().toISOString()
+
+    const savedGateway = await saveGateway(gateway)
+
+    return NextResponse.json({ success: true, gateway: savedGateway })
   } catch (error) {
-    console.error("Error saving gateway to blob storage:", error)
+    console.error("Error saving gateway:", error)
     return NextResponse.json({ success: false, error: "Failed to save gateway" }, { status: 500 })
   }
 }

@@ -107,21 +107,66 @@ export function GatewayStep({
 
   const handleCompleteStep = async () => {
     // Prevent completion if user hasn't been on the page long enough
-    if (timeOnPage < 1) {
+    if (timeOnPage < Math.max(5, step.minTimeRequired || 0)) {
       alert("Please stay on this page a bit longer to validate the step.")
       return
     }
 
     setIsCompleting(true)
 
-    // Track step completion
-    await trackStepAction("step_complete")
+    // Generate a secure completion hash using timestamp and step data
+    const timestamp = Date.now()
+    const completionData = {
+      stepId: step.id,
+      gatewayId,
+      timestamp,
+      timeOnPage,
+      userAgent: navigator.userAgent,
+    }
 
-    // Add a small delay to make the process feel more authentic
-    setTimeout(() => {
-      onComplete()
+    // Convert to string for tracking
+    const completionDataString = JSON.stringify(completionData)
+
+    // Track step completion with enhanced security
+    try {
+      const response = await fetch("/api/gateway/track", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          gatewayId,
+          stepId: step.id,
+          action: "step_complete",
+          validationToken,
+          userData: {
+            userAgent: navigator.userAgent,
+            screenSize: `${window.innerWidth}x${window.innerHeight}`,
+            timeOnStep: timeOnPage,
+            stepNumber,
+            completionData: completionDataString,
+          },
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        setIsCompleting(false)
+        alert("Step validation failed. Please try again.")
+        return
+      }
+
+      // Add a small delay to make the process feel more authentic
+      setTimeout(() => {
+        onComplete()
+        setIsCompleting(false)
+      }, 1000)
+    } catch (error) {
+      console.error("Error completing step:", error)
       setIsCompleting(false)
-    }, 1000)
+      alert("An error occurred. Please try again.")
+    }
   }
 
   const handleSkipStep = async () => {

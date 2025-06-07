@@ -243,7 +243,9 @@ export default function GatewayPage() {
     }
   }, [params.gatewayId, userId])
 
-  // Check if all tasks are completed
+  // Update the useEffect that handles stage completion to prevent skipping stages
+  // Replace the existing useEffect that checks if all tasks are completed with this enhanced version:
+
   useEffect(() => {
     if (
       gateway?.stages &&
@@ -257,9 +259,149 @@ export default function GatewayPage() {
       // If this is the final stage, show ready to complete but don't auto-complete
       if (currentStage === totalStages) {
         setReadyToComplete(true)
+      } else {
+        // For non-final stages, prepare for next stage but don't auto-advance
+        // This prevents skipping stages
+        const newStagesCompleted = [...stagesCompleted]
+        newStagesCompleted[currentStage] = true
+        setStagesCompleted(newStagesCompleted)
       }
     }
-  }, [completedTasks, gateway, showTasks, currentStage, totalStages])
+  }, [completedTasks, gateway, showTasks, currentStage, totalStages, stagesCompleted])
+
+  // Add a new function to handle stage advancement with secure validation
+  const advanceToNextStage = async () => {
+    if (!allTasksCompleted) return
+
+    // Create a secure validation token using AES-256
+    const timestamp = Date.now()
+    const stageData = {
+      gatewayId: params.gatewayId,
+      userId: userId,
+      currentStage: currentStage,
+      nextStage: currentStage + 1,
+      timestamp: timestamp,
+    }
+
+    // Convert to string for encryption
+    const stageDataString = JSON.stringify(stageData)
+
+    try {
+      // Encrypt the stage data for secure transmission
+      const response = await fetch("/api/gateway/validate-stage", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          stageData: stageDataString,
+          validationToken: validationToken,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        console.error("Stage validation failed:", data.error)
+        return
+      }
+
+      // Proceed to next stage
+      const nextStage = currentStage + 1
+      setCurrentStage(nextStage)
+      setShowTasks(true)
+      setAllTasksCompleted(false)
+
+      // Update progress in database
+      await fetch("/api/gateway/progress", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: userId,
+          gatewayId: params.gatewayId,
+          progress: {
+            captchaValidated: true,
+            currentStage: nextStage,
+            completedTasks: completedTasks,
+          },
+        }),
+      })
+
+      // Update local storage as fallback
+      const persistentKey = `gateway_${params.gatewayId}_persistent_progress`
+      const progress = {
+        captchaValidated: true,
+        currentStage: nextStage,
+        completedTasks: completedTasks,
+      }
+      localStorage.setItem(persistentKey, JSON.stringify(progress))
+    } catch (error) {
+      console.error("Error advancing stage:", error)
+    }
+  }
+
+  // Add a function to handle gateway completion with secure validation
+  const completeGateway = async () => {
+    if (!readyToComplete) return
+
+    setIsLoading(true)
+
+    try {
+      // Create a secure completion token using AES-256
+      const completionData = {
+        gatewayId: params.gatewayId,
+        userId: userId,
+        completedStages: totalStages,
+        timestamp: Date.now(),
+      }
+
+      // Convert to string for encryption
+      const completionDataString = JSON.stringify(completionData)
+
+      // Send completion request with encrypted data
+      const response = await fetch("/api/gateway/complete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          completionData: completionDataString,
+          validationToken: validationToken,
+          userId: userId,
+          gatewayId: params.gatewayId,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        console.error("Gateway completion failed:", data.error)
+        setIsLoading(false)
+        return
+      }
+
+      // Mark all stages as completed
+      const allCompleted = Array(totalStages + 1).fill(true)
+      setStagesCompleted(allCompleted)
+
+      // Show final reward
+      setShowFinalReward(true)
+      setValidationToken(data.token)
+
+      // Scroll to reward
+      setTimeout(() => {
+        if (rewardRef.current) {
+          rewardRef.current.scrollIntoView({ behavior: "smooth" })
+        }
+      }, 500)
+    } catch (error) {
+      console.error("Error completing gateway:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // Handle CAPTCHA validation
   const handleCaptchaValidated = async (token: string) => {

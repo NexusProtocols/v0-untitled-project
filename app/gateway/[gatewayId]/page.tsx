@@ -413,16 +413,15 @@ export default function GatewayPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
-        <div className="text-center">
+      <div className="container mx-auto px-5 py-16">
+        <div className="flex items-center justify-center py-12">
           <div className="relative">
-            <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="w-16 h-16 border-4 border-red-500/20 border-t-red-500 rounded-full animate-spin"></div>
             <div
-              className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-red-400 rounded-full animate-spin mx-auto"
+              className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-red-400 rounded-full animate-spin"
               style={{ animationDirection: "reverse", animationDuration: "1.5s" }}
             ></div>
           </div>
-          <p className="text-white/80 text-lg">Loading gateway...</p>
         </div>
       </div>
     )
@@ -450,230 +449,277 @@ export default function GatewayPage() {
     )
   }
 
+  // Ensure gateway has steps array
+  const steps = gateway?.steps || []
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-red-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div
-          className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: "1s" }}
-        ></div>
-        <div
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: "2s" }}
-        ></div>
+    <div className="min-h-screen bg-[#050505] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1a1a1a] to-[#050505]">
+      {/* Top banner ad */}
+      <div className="container mx-auto px-5 pt-8">
+        <div className="flex justify-center">
+          <SecureAd adType="BANNER_728x90" creatorId={gateway?.creatorId || "unknown"} />
+        </div>
       </div>
 
-      {/* Close button */}
-      <div className="absolute top-6 right-6 z-50">
-        <Link
-          href="/"
-          className="w-12 h-12 bg-black/40 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-black/60 transition-all duration-200 group"
-        >
-          <i className="fas fa-times text-lg group-hover:scale-110 transition-transform"></i>
-        </Link>
-      </div>
+      {/* Main content */}
+      <div className="container mx-auto px-5 py-8">
+        <div className="relative">
+          {/* Side ads */}
+          <div className="absolute -left-40 top-0 hidden xl:block">
+            <SecureAd adType="BANNER_160x600" creatorId={gateway?.creatorId || "unknown"} />
+          </div>
+          <div className="absolute -right-40 top-0 hidden xl:block">
+            <SecureAd adType="BANNER_160x600" creatorId={gateway?.creatorId || "unknown"} />
+          </div>
 
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          {/* Gateway Card */}
-          <div className="bg-gradient-to-br from-gray-800/40 to-gray-900/40 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-            {/* Hero Image */}
-            <div className="relative h-64 overflow-hidden">
-              <img
-                src={gateway?.imageUrl || "/placeholder.svg?height=256&width=400"}
-                alt={gateway?.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-
-              {/* Floating info badge */}
-              <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-xl border border-white/20 rounded-full px-4 py-2">
-                <p className="text-white/90 text-sm font-medium">{gateway?.creatorName || "Unknown Creator"}</p>
-              </div>
-
-              {/* Progress indicator */}
-              <div className="absolute bottom-4 left-4 right-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white/80 text-sm font-medium">
-                    {currentStage < 1 ? "Verification" : `Stage ${currentStage}/${totalStages}`}
-                  </span>
-                  <span className="text-white/60 text-sm">
-                    {Math.round(((currentStage + 1) / (totalStages + 1)) * 100)}%
-                  </span>
-                </div>
-                <div className="h-2 bg-black/40 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-red-500 to-red-400 rounded-full transition-all duration-500 ease-out"
-                    style={{
-                      width: `${((currentStage + 1) / (totalStages + 1)) * 100}%`,
-                    }}
-                  ></div>
+          <div className="mx-auto max-w-3xl">
+            {/* Header with Gateway Info */}
+            <div className="mb-8 rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-6 shadow-lg shadow-[#ff3e3e]/5">
+              <div className="flex flex-col md:flex-row gap-6">
+                {gateway?.imageUrl && (
+                  <div className="w-full md:w-1/3">
+                    <div className="relative h-48 w-full overflow-hidden rounded-lg">
+                      <img
+                        src={gateway.imageUrl || "/placeholder.svg"}
+                        alt={gateway.title}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="w-full md:w-2/3">
+                  <h1 className="mb-2 text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff3e3e] to-[#ff0000]">
+                    {gateway?.title || "Gateway"}
+                  </h1>
+                  <p className="mb-4 text-gray-400">
+                    {gateway?.description || "Complete all tasks to access the content"}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
+                      <i className="fas fa-user mr-1"></i> {gateway?.creatorName || "Unknown"}
+                    </span>
+                    <span className="rounded bg-[#050505] px-2 py-1 text-gray-300">
+                      <i className="fas fa-tasks mr-1"></i> {steps.length} Tasks
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Content */}
-            <div className="p-8">
-              <h1 className="text-2xl font-bold text-white mb-2">{gateway?.title || "Gateway Access"}</h1>
-              <p className="text-gray-300 mb-6 leading-relaxed">
-                {gateway?.description || "Complete the verification steps to access your content"}
-              </p>
-
-              {/* CAPTCHA validation */}
-              {!captchaValidated ? (
-                <div className="space-y-4">
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <i className="fas fa-shield-alt text-2xl text-red-400"></i>
-                    </div>
-                    <h3 className="text-lg font-semibold text-white mb-2">Security Verification</h3>
-                    <p className="text-gray-400 text-sm">Please complete the security check to continue</p>
-                  </div>
-                  <CaptchaValidator onValidated={handleCaptchaValidated} />
+            {/* Multi-stage progress indicator */}
+            <div className="mb-8">
+              <div className="text-center mb-2">
+                <h2 className="text-lg font-medium text-white">
+                  {currentStage < 1 ? "Verification" : `Stage ${currentStage} of ${totalStages}`}
+                </h2>
+              </div>
+              <div className="flex justify-center items-center gap-2 mb-4">
+                {/* CAPTCHA verification stage */}
+                <div
+                  className={`relative w-10 h-10 rounded-full flex items-center justify-center ${
+                    currentStage === -1
+                      ? "bg-[#ff3e3e] text-white"
+                      : stagesCompleted[0]
+                        ? "bg-green-500 text-white"
+                        : "bg-[#1a1a1a] text-gray-400"
+                  }`}
+                >
+                  {currentStage === -1 && (
+                    <div className="absolute inset-0 rounded-full bg-[#ff3e3e] animate-ping opacity-30"></div>
+                  )}
+                  {stagesCompleted[0] ? <i className="fas fa-check"></i> : <i className="fas fa-shield-alt"></i>}
                 </div>
-              ) : !showTasks && !showFinalReward ? (
-                <div className="text-center space-y-6">
-                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
-                    <i className="fas fa-check-circle text-2xl text-green-400"></i>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-2">Verification Complete</h3>
-                    <p className="text-gray-400 text-sm mb-6">Ready to begin the gateway process</p>
-                  </div>
-                  <button
-                    onClick={handleStartTasks}
-                    className="w-full py-4 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-200 transform hover:scale-105 flex items-center justify-center group"
+
+                {/* Gateway stages */}
+                {Array.from({ length: totalStages }).map((_, index) => (
+                  <div
+                    key={index}
+                    className={`relative w-10 h-10 rounded-full flex items-center justify-center ${
+                      index + 1 === currentStage
+                        ? "bg-[#ff3e3e] text-white"
+                        : stagesCompleted[index + 1]
+                          ? "bg-green-500 text-white"
+                          : "bg-[#1a1a1a] text-gray-400"
+                    }`}
                   >
-                    <i className="fas fa-play mr-3 group-hover:scale-110 transition-transform"></i>
-                    Start Gateway
-                  </button>
+                    {index + 1 === currentStage && (
+                      <div className="absolute inset-0 rounded-full bg-[#ff3e3e] animate-ping opacity-30"></div>
+                    )}
+                    {stagesCompleted[index + 1] ? <i className="fas fa-check"></i> : <span>{index + 1}</span>}
+                  </div>
+                ))}
+              </div>
+              <div className="h-2 w-full bg-[#111] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] transition-all duration-500"
+                  style={{
+                    width: `${((currentStage + 1 + (stagesCompleted[currentStage + 1] ? 1 : 0)) / (totalStages + 1)) * 100}%`,
+                  }}
+                ></div>
+              </div>
+            </div>
+
+            {/* CAPTCHA validation */}
+            {!captchaValidated ? (
+              <CaptchaValidator onValidated={handleCaptchaValidated} />
+            ) : !showTasks && !showFinalReward ? (
+              <div className="mb-8 rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-6 text-center">
+                <div className="mb-4 inline-block rounded-full bg-[#ff3e3e]/20 p-4">
+                  <i className="fas fa-rocket text-4xl text-[#ff3e3e]"></i>
                 </div>
-              ) : showTasks && !showFinalReward ? (
-                <div className="space-y-6">
-                  {/* Task progress */}
-                  <div className="bg-black/20 rounded-xl p-4 border border-white/5">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-white font-medium">
-                        Progress: {completedTasks.length}/{gateway?.stages?.[currentStage - 1]?.taskCount || 0}
-                      </span>
-                      <span className="text-red-400 font-semibold">
-                        {gateway?.stages?.[currentStage - 1]?.taskCount > 0
-                          ? Math.round((completedTasks.length / gateway.stages[currentStage - 1].taskCount) * 100)
-                          : 0}
-                        %
-                      </span>
+                <h2 className="mb-2 text-xl font-bold text-white">Ready to Begin</h2>
+                <p className="mb-6 text-gray-400">
+                  You're about to start the gateway process. Complete all tasks to access the content.
+                </p>
+                <button
+                  onClick={handleStartTasks}
+                  className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] text-white font-semibold rounded-xl hover:from-[#ff0000] hover:to-[#cc0000] transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#ff3e3e]/25"
+                >
+                  <i className="fas fa-play mr-3"></i> Start Tasks
+                </button>
+              </div>
+            ) : showTasks && !showFinalReward ? (
+              <>
+                {/* Progress bar */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm text-white font-medium">
+                      {completedTasks.length} of {gateway?.stages?.[currentStage - 1]?.taskCount || 0} Tasks Completed
                     </div>
-                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-red-500 to-red-400 rounded-full transition-all duration-500"
-                        style={{
-                          width: `${
-                            gateway?.stages?.[currentStage - 1]?.taskCount > 0
-                              ? (completedTasks.length / gateway.stages[currentStage - 1].taskCount) * 100
-                              : 0
-                          }%`,
-                        }}
-                      ></div>
+                    <div className="text-sm text-gray-400">
+                      {gateway?.stages?.[currentStage - 1]?.taskCount > 0
+                        ? Math.round((completedTasks.length / gateway.stages[currentStage - 1].taskCount) * 100)
+                        : 0}
+                      % Complete
                     </div>
                   </div>
-
-                  {/* Tasks */}
-                  <div className="space-y-4">
-                    {Array.from({ length: gateway?.stages?.[currentStage - 1]?.taskCount || 0 }).map((_, index) => (
-                      <GatewayTaskButton
-                        key={`task-${currentStage}-${index}`}
-                        taskType={getTaskType(index)}
-                        taskNumber={index + 1}
-                        onComplete={() => handleTaskComplete(`task-${currentStage}-${index}`)}
-                        creatorId={gateway?.creatorId || "unknown"}
-                        gatewayId={gateway?.id || "unknown"}
-                        content={{
-                          url: `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${gateway?.creatorId || "unknown"}&gateway=${gateway?.id || "unknown"}`,
-                        }}
-                      />
-                    ))}
+                  <div className="h-2 w-full bg-[#111] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] transition-all duration-500"
+                      style={{
+                        width: `${
+                          gateway?.stages?.[currentStage - 1]?.taskCount > 0
+                            ? (completedTasks.length / gateway.stages[currentStage - 1].taskCount) * 100
+                            : 0
+                        }%`,
+                      }}
+                    ></div>
                   </div>
+                </div>
 
-                  {/* Next stage button */}
-                  {allTasksCompleted && (
+                {/* Tasks */}
+                <div className="mb-8 space-y-4">
+                  {Array.from({ length: gateway?.stages?.[currentStage - 1]?.taskCount || 0 }).map((_, index) => (
+                    <GatewayTaskButton
+                      key={`task-${currentStage}-${index}`}
+                      taskType={getTaskType(index)}
+                      taskNumber={index + 1}
+                      onComplete={() => handleTaskComplete(`task-${currentStage}-${index}`)}
+                      creatorId={gateway?.creatorId || "unknown"}
+                      gatewayId={gateway?.id || "unknown"}
+                      content={{
+                        url: `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${gateway?.creatorId || "unknown"}&gateway=${gateway?.id || "unknown"}`,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Next stage button */}
+                {allTasksCompleted && (
+                  <div className="mb-8 text-center">
                     <button
                       onClick={handleNextStage}
-                      className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105 flex items-center justify-center group"
+                      className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-green-500/25"
                     >
                       <span className="mr-3">
                         {currentStage === totalStages ? "Complete Gateway" : "Continue to Next Stage"}
                       </span>
-                      <i className="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                      <i className="fas fa-arrow-right"></i>
                     </button>
-                  )}
+                  </div>
+                )}
+
+                {/* Bottom ads */}
+                <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <SecureAd adType="BANNER_300x250" creatorId={gateway?.creatorId || "unknown"} />
+                  <SecureAd adType="BANNER_300x250_ALT" creatorId={gateway?.creatorId || "unknown"} />
                 </div>
-              ) : (
-                <div className="text-center space-y-6">
-                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
-                    <i className="fas fa-trophy text-2xl text-green-400"></i>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-2">Gateway Complete!</h3>
-                    <p className="text-gray-400 text-sm mb-6">You have successfully completed all verification steps</p>
-                  </div>
 
-                  {gateway?.reward?.type === "paste" ? (
-                    <div className="space-y-4">
-                      <div className="bg-black/40 border border-white/10 rounded-xl p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-white font-medium">Your Reward:</span>
-                          <button
-                            onClick={handleCopyReward}
-                            className="px-3 py-1 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30 transition-colors"
-                          >
-                            <i className="fas fa-copy mr-1"></i> Copy
-                          </button>
-                        </div>
-                        <div className="bg-black/60 rounded-lg p-4 max-h-48 overflow-y-auto">
-                          <pre className="text-gray-300 text-sm font-mono whitespace-pre-wrap break-all">
-                            {gateway?.reward?.content || "No content available"}
-                          </pre>
-                        </div>
+                {/* Native banner */}
+                <div className="mb-8">
+                  <SecureAd adType="NATIVE_BANNER_1" creatorId={gateway?.creatorId || "unknown"} />
+                </div>
+              </>
+            ) : (
+              <div className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-8">
+                <div className="text-center mb-6">
+                  <div className="mb-4 inline-block rounded-full bg-green-500/20 p-4">
+                    <i className="fas fa-check-circle text-4xl text-green-500"></i>
+                  </div>
+                  <h2 className="mb-2 text-xl font-bold text-white">Gateway Completed!</h2>
+                  <p className="mb-6 text-gray-400">You have successfully completed all tasks.</p>
+                </div>
+
+                {gateway?.reward?.type === "paste" ? (
+                  <div className="mb-6">
+                    <div className="mb-4 rounded border border-white/10 bg-[#000000] p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-white font-medium">Your Reward:</h3>
+                        <button
+                          onClick={handleCopyReward}
+                          className="px-4 py-2 bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] text-white font-medium rounded-lg hover:from-[#ff0000] hover:to-[#cc0000] transition-all duration-200 transform hover:scale-105"
+                        >
+                          <i className="fas fa-copy mr-2"></i> Copy to Clipboard
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <pre className="whitespace-pre-wrap break-all text-sm text-gray-300 font-mono bg-[#0a0a0a] p-4 rounded-lg max-h-96 overflow-y-auto">
+                          {gateway?.reward?.content || "No content available"}
+                        </pre>
+                        <div className="absolute inset-0 pointer-events-none"></div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-center space-x-2 text-white">
-                        <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce"></div>
-                        <div
-                          className="w-2 h-2 bg-red-500 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.1s" }}
-                        ></div>
-                        <div
-                          className="w-2 h-2 bg-red-500 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.2s" }}
-                        ></div>
-                      </div>
-                      <p className="text-gray-300">Redirecting to your reward...</p>
+                  </div>
+                ) : (
+                  <div className="mb-6 text-center">
+                    <p className="mb-4 text-white">Redirecting you to your reward...</p>
+                    <div className="flex justify-center space-x-1">
+                      <div className="w-2 h-2 bg-[#ff3e3e] rounded-full animate-bounce"></div>
+                      <div
+                        className="w-2 h-2 bg-[#ff3e3e] rounded-full animate-bounce"
+                        style={{ animationDelay: "0.1s" }}
+                      ></div>
+                      <div
+                        className="w-2 h-2 bg-[#ff3e3e] rounded-full animate-bounce"
+                        style={{ animationDelay: "0.2s" }}
+                      ></div>
                     </div>
-                  )}
+                  </div>
+                )}
 
+                <div className="mt-6 text-center">
                   <Link
                     href="/"
-                    className="inline-flex items-center px-6 py-3 bg-gray-700/50 text-white rounded-xl hover:bg-gray-600/50 transition-all duration-200"
+                    className="inline-flex items-center px-6 py-3 border border-[#ff3e3e] text-[#ff3e3e] font-semibold rounded-xl hover:bg-[#ff3e3e]/10 transition-all duration-200 transform hover:scale-105"
                   >
-                    <i className="fas fa-home mr-2"></i> Return Home
+                    <i className="fas fa-home mr-2"></i> Back to Home
                   </Link>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Subtle ads */}
-          {showTasks && (
-            <div className="mt-8 space-y-4 opacity-60">
-              <div className="flex justify-center">
-                <SecureAd adType="BANNER_300x250" creatorId={gateway?.creatorId || "unknown"} />
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom banner ads */}
+      <div className="container mx-auto px-5 py-8">
+        <div className="mb-8 flex justify-center">
+          <SecureAd adType="BANNER_728x90" creatorId={gateway?.creatorId || "unknown"} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SecureAd adType="BANNER_300x250" creatorId={gateway?.creatorId || "unknown"} />
+          <SecureAd adType="NATIVE_BANNER_2" creatorId={gateway?.creatorId || "unknown"} className="h-full" />
+          <SecureAd adType="BANNER_300x250_ALT" creatorId={gateway?.creatorId || "unknown"} />
         </div>
       </div>
     </div>

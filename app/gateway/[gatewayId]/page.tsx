@@ -139,6 +139,12 @@ export default function GatewayPage() {
             sessionStorage.setItem(sessionKey, JSON.stringify(progress))
           }
         }
+
+        // Restore completed tasks from localStorage
+        const storedCompletedTasks = localStorage.getItem(`gateway_${params.gatewayId}_completed_tasks`)
+        if (storedCompletedTasks) {
+          setCompletedTasks(JSON.parse(storedCompletedTasks))
+        }
       } catch (error) {
         console.error("Error fetching gateway:", error)
         setError("An error occurred while fetching the gateway")
@@ -282,6 +288,9 @@ export default function GatewayPage() {
     progress.completedTasks = updatedTasks
     progress.expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
     sessionStorage.setItem(sessionKey, JSON.stringify(progress))
+
+    // Save completed tasks to localStorage
+    localStorage.setItem(`gateway_${params.gatewayId}_completed_tasks`, JSON.stringify(updatedTasks))
   }
 
   // Handle start tasks

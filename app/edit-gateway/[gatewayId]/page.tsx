@@ -134,11 +134,26 @@ export default function EditGatewayPage() {
       setMessage({ type: "error", text: "File must be an image" })
       return
     }
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      if (event.target?.result) setGatewayImage(event.target.result as string)
+
+    const img = new Image()
+    img.onload = () => {
+      if (img.width < 600 || img.height < 300) {
+        setMessage({
+          type: "error",
+          text: "Image dimensions must be at least 600x300 pixels",
+        })
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        if (event.target?.result) setGatewayImage(event.target.result as string)
+      }
+      reader.readAsDataURL(file)
     }
-    reader.readAsDataURL(file)
+    img.onerror = () => {
+      setMessage({ type: "error", text: "Failed to load image" })
+    }
+    img.src = URL.createObjectURL(file)
   }
 
   // Multi-stage logic
@@ -346,7 +361,7 @@ export default function EditGatewayPage() {
               </div>
               {gatewayImage && (
                 <div className="mt-4 rounded border border-white/10 bg-[#050505] p-2">
-                  <div className="relative h-40 w-full overflow-hidden rounded">
+                  <div className="relative h-64 w-full overflow-hidden rounded">
                     <img
                       src={gatewayImage || "/placeholder.svg"}
                       alt="Gateway preview"

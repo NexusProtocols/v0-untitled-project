@@ -374,7 +374,7 @@ export default function AdminDashboardPage() {
 
           <div className="rounded-lg border-l-4 border-[#ff3e3e] bg-[#1a1a1a] p-8">
             <div className="mb-6 text-center">
-              <div className="inline-block mb-4 text-5xl text-[#ff3e3e] pulse-effect">
+              <div className="inline-block mb-4 text-5xl text-[#ff3e3e]">
                 <i className="fas fa-shield-alt"></i>
               </div>
               <h2 className="mb-2 text-xl font-bold text-white">Secure Authentication Required</h2>

@@ -190,11 +190,11 @@ export default function ManageGatewaysPage() {
               className="interactive-element rounded-lg border border-white/10 bg-[#1a1a1a] overflow-hidden transition-all hover:border-[#ff3e3e]/50 hover:shadow-lg hover:shadow-[#ff3e3e]/5 cursor-pointer"
               onClick={() => handleViewGateway(gateway.id)}
             >
-              <div className="relative h-40 w-full overflow-hidden">
+              <div className="relative h-48 w-full overflow-hidden">
                 <img
                   src={gateway.imageUrl || "/placeholder.svg?height=200&width=400"}
                   alt={gateway.title || "Gateway"}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover object-position: center"
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                   <h3 className="text-lg font-bold text-white">{gateway.title || "Untitled Gateway"}</h3>

@@ -36,6 +36,13 @@ export function GatewayTaskButton({
   const taskFooterRef = useRef<HTMLDivElement>(null)
   const hasOpenedLink = useRef(false) // Prevent multiple opens
 
+  useEffect(() => {
+    const completedTasks = JSON.parse(localStorage.getItem(`gateway_${gatewayId}_completed_tasks`) || "[]")
+    if (completedTasks.includes(`task-${taskNumber}`)) {
+      setIsCompleted(true)
+    }
+  }, [gatewayId, taskNumber])
+
   // Handle task completion
   const handleComplete = async () => {
     if (isCompleted) return
@@ -91,6 +98,10 @@ export function GatewayTaskButton({
       console.error("Error tracking task completion:", error)
     }
 
+    const completedTasks = JSON.parse(localStorage.getItem(`gateway_${gatewayId}_completed_tasks`) || "[]")
+    completedTasks.push(`task-${taskNumber}`)
+    localStorage.setItem(`gateway_${gatewayId}_completed_tasks`, JSON.stringify(completedTasks))
+
     setIsCompleted(true)
     setIsLoading(false)
     onComplete()
@@ -103,6 +114,13 @@ export function GatewayTaskButton({
 
     hasOpenedLink.current = true
     setTaskStarted(true)
+
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    const adLevel = Number.parseInt(new URLSearchParams(window.location.search).get("adLevel") || "3")
+    if (isMobile && adLevel < 4) {
+      handleComplete()
+      return
+    }
 
     const url =
       content?.url ||

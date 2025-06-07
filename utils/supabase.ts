@@ -1,32 +1,13 @@
 import { createClient } from "@supabase/supabase-js"
 
-// Get environment variables with fallbacks
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Create a single supabase client for the entire app
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
-// Check if environment variables are available
-if (!supabaseUrl || !supabaseKey) {
-  console.warn("Supabase environment variables not found. Using fallback mode.")
-}
+export const supabase = createClient(supabaseUrl, supabaseKey)
 
-// Create supabase client only if environment variables are available
-export const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null
-
-// Gateway functions with fallbacks
+// Gateway functions
 export async function saveGateway(gatewayData: any) {
-  if (!supabase) {
-    // Fallback to localStorage for development
-    const gateways = JSON.parse(localStorage.getItem("gateways") || "[]")
-    const newGateway = {
-      ...gatewayData,
-      id: gatewayData.id || `gateway-${Date.now()}`,
-      created_at: new Date().toISOString(),
-    }
-    gateways.push(newGateway)
-    localStorage.setItem("gateways", JSON.stringify(gateways))
-    return newGateway
-  }
-
   // Check if gateway already exists (for updates)
   if (gatewayData.id) {
     const { data, error } = await supabase.from("gateways").update(gatewayData).eq("id", gatewayData.id).select()
@@ -51,12 +32,6 @@ export async function saveGateway(gatewayData: any) {
 }
 
 export async function getGateway(gatewayId: string) {
-  if (!supabase) {
-    // Fallback to localStorage
-    const gateways = JSON.parse(localStorage.getItem("gateways") || "[]")
-    return gateways.find((g: any) => g.id === gatewayId) || null
-  }
-
   const { data, error } = await supabase.from("gateways").select("*").eq("id", gatewayId).single()
 
   if (error) {
@@ -68,12 +43,6 @@ export async function getGateway(gatewayId: string) {
 }
 
 export async function getUserGateways(userId: string) {
-  if (!supabase) {
-    // Fallback to localStorage
-    const gateways = JSON.parse(localStorage.getItem("gateways") || "[]")
-    return gateways.filter((g: any) => g.creator_id === userId)
-  }
-
   const { data, error } = await supabase
     .from("gateways")
     .select("*")
@@ -89,11 +58,6 @@ export async function getUserGateways(userId: string) {
 }
 
 export async function getAllGateways() {
-  if (!supabase) {
-    // Fallback to localStorage
-    return JSON.parse(localStorage.getItem("gateways") || "[]")
-  }
-
   const { data, error } = await supabase.from("gateways").select("*").order("created_at", { ascending: false })
 
   if (error) {
@@ -106,11 +70,6 @@ export async function getAllGateways() {
 
 // Gateway stats functions
 export async function incrementGatewayVisit(gatewayId: string) {
-  if (!supabase) {
-    // Fallback - do nothing for now
-    return
-  }
-
   // First get current stats
   const { data: gateway } = await supabase.from("gateways").select("stats").eq("id", gatewayId).single()
 
@@ -141,11 +100,6 @@ export async function incrementGatewayVisit(gatewayId: string) {
 }
 
 export async function incrementGatewayCompletion(gatewayId: string) {
-  if (!supabase) {
-    // Fallback - do nothing for now
-    return
-  }
-
   // First get current stats
   const { data: gateway } = await supabase.from("gateways").select("stats").eq("id", gatewayId).single()
 
@@ -177,13 +131,6 @@ export async function incrementGatewayCompletion(gatewayId: string) {
 
 // Gateway progress functions
 export async function saveUserProgress(userId: string, gatewayId: string, progress: any) {
-  if (!supabase) {
-    // Fallback to localStorage
-    const key = `progress_${userId}_${gatewayId}`
-    localStorage.setItem(key, JSON.stringify(progress))
-    return
-  }
-
   const { error } = await supabase.from("gateway_progress").upsert([
     {
       user_id: userId,
@@ -200,13 +147,6 @@ export async function saveUserProgress(userId: string, gatewayId: string, progre
 }
 
 export async function getUserProgress(userId: string, gatewayId: string) {
-  if (!supabase) {
-    // Fallback to localStorage
-    const key = `progress_${userId}_${gatewayId}`
-    const stored = localStorage.getItem(key)
-    return stored ? JSON.parse(stored) : null
-  }
-
   const { data, error } = await supabase
     .from("gateway_progress")
     .select("progress_data")
@@ -225,13 +165,6 @@ export async function getUserProgress(userId: string, gatewayId: string) {
 
 // Task completion functions
 export async function saveCompletedTasks(userId: string, gatewayId: string, tasks: string[]) {
-  if (!supabase) {
-    // Fallback to localStorage
-    const key = `tasks_${userId}_${gatewayId}`
-    localStorage.setItem(key, JSON.stringify(tasks))
-    return
-  }
-
   const { error } = await supabase.from("completed_tasks").upsert([
     {
       user_id: userId,
@@ -248,13 +181,6 @@ export async function saveCompletedTasks(userId: string, gatewayId: string, task
 }
 
 export async function getCompletedTasks(userId: string, gatewayId: string) {
-  if (!supabase) {
-    // Fallback to localStorage
-    const key = `tasks_${userId}_${gatewayId}`
-    const stored = localStorage.getItem(key)
-    return stored ? JSON.parse(stored) : []
-  }
-
   const { data, error } = await supabase
     .from("completed_tasks")
     .select("tasks")

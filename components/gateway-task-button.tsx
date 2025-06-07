@@ -32,6 +32,7 @@ export function GatewayTaskButton({
   const [isCompleted, setIsCompleted] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const [taskStarted, setTaskStarted] = useState(false)
+  const [progress, setProgress] = useState(0)
   const taskFooterRef = useRef<HTMLDivElement>(null)
 
   // Handle task completion
@@ -102,12 +103,19 @@ export function GatewayTaskButton({
       `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${creatorId}&gateway=${gatewayId}`
     window.open(url, "_blank")
 
-    // Start countdown for completion (8 seconds for task 1)
-    const timer = setTimeout(() => {
-      handleComplete()
-    }, 8000) // 8 seconds for task 1
+    // Start progress animation
+    let progressValue = 0
+    const progressInterval = setInterval(() => {
+      progressValue += 100 / 80 // 8 seconds = 80 intervals of 100ms
+      setProgress(Math.min(progressValue, 100))
 
-    return () => clearTimeout(timer)
+      if (progressValue >= 100) {
+        clearInterval(progressInterval)
+        handleComplete()
+      }
+    }, 100)
+
+    return () => clearInterval(progressInterval)
   }
 
   // Handle interstitial ad task
@@ -124,12 +132,19 @@ export function GatewayTaskButton({
         customParams: { creatorId, gatewayId },
       })
 
-      // Start countdown for completion (25 seconds for task 2)
-      const timer = setTimeout(() => {
-        handleComplete()
-      }, 25000) // 25 seconds for task 2
+      // Start progress animation (25 seconds)
+      let progressValue = 0
+      const progressInterval = setInterval(() => {
+        progressValue += 100 / 250 // 25 seconds = 250 intervals of 100ms
+        setProgress(Math.min(progressValue, 100))
 
-      return () => clearTimeout(timer)
+        if (progressValue >= 100) {
+          clearInterval(progressInterval)
+          handleComplete()
+        }
+      }, 100)
+
+      return () => clearInterval(progressInterval)
     }
     document.head.appendChild(script)
   }
@@ -199,12 +214,19 @@ export function GatewayTaskButton({
       script.dataset.ids = "TaskFooter"
       taskFooterRef.current.appendChild(script)
 
-      // Start countdown for completion (10 seconds for task 5)
-      const timer = setTimeout(() => {
-        handleComplete()
-      }, 10000) // 10 seconds for task 5
+      // Start progress animation (10 seconds)
+      let progressValue = 0
+      const progressInterval = setInterval(() => {
+        progressValue += 100 / 100 // 10 seconds = 100 intervals of 100ms
+        setProgress(Math.min(progressValue, 100))
 
-      return () => clearTimeout(timer)
+        if (progressValue >= 100) {
+          clearInterval(progressInterval)
+          handleComplete()
+        }
+      }, 100)
+
+      return () => clearInterval(progressInterval)
     }
   }
 
@@ -230,15 +252,15 @@ export function GatewayTaskButton({
   const getTaskTitle = () => {
     switch (taskType) {
       case "redirect":
-        return "Direct Link Task"
+        return "Visit Link"
       case "article":
-        return "Interstitial Ad Task"
+        return "View Advertisement"
       case "operagx":
-        return "External Validation Task"
+        return "Complete Offer"
       case "youtube":
-        return "AutoTag Redirect Task"
+        return "Verify Action"
       case "direct":
-        return "Footer Validation Task"
+        return "Complete Task"
       default:
         return `Task ${taskNumber}`
     }
@@ -248,17 +270,35 @@ export function GatewayTaskButton({
   const getTaskDescription = () => {
     switch (taskType) {
       case "redirect":
-        return "Click the button to open a direct link in a new tab"
+        return "Click to open the link and wait for verification"
       case "article":
-        return "Complete the interstitial ad to continue"
+        return "View the advertisement to continue"
       case "operagx":
-        return "Visit the external site and stay for at least 10 seconds"
+        return "Complete the external offer to proceed"
       case "youtube":
-        return "Complete the AutoTag redirect to continue"
+        return "Complete the verification process"
       case "direct":
-        return "Complete the footer validation to continue"
+        return "Complete the required action"
       default:
         return "Complete this task to continue"
+    }
+  }
+
+  // Get task icon based on type
+  const getTaskIcon = () => {
+    switch (taskType) {
+      case "redirect":
+        return "fas fa-external-link-alt"
+      case "article":
+        return "fas fa-eye"
+      case "operagx":
+        return "fas fa-gift"
+      case "youtube":
+        return "fas fa-check-circle"
+      case "direct":
+        return "fas fa-mouse-pointer"
+      default:
+        return "fas fa-play"
     }
   }
 
@@ -277,53 +317,90 @@ export function GatewayTaskButton({
     }
   }, [taskType])
 
-  // Update the render function to not show countdown timer
   return (
     <div
-      className={`rounded-lg border-l-4 ${isCompleted ? "border-green-500 bg-green-900/20" : "border-[#ff3e3e] bg-[#1a1a1a]"} p-6 transition-all duration-300`}
+      className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+        isCompleted
+          ? "border-green-500/50 bg-gradient-to-br from-green-900/20 to-green-800/10 shadow-lg shadow-green-500/10"
+          : taskStarted
+            ? "border-blue-500/50 bg-gradient-to-br from-blue-900/20 to-blue-800/10 shadow-lg shadow-blue-500/10"
+            : "border-gray-700/50 bg-gradient-to-br from-gray-900/40 to-gray-800/20 hover:border-[#ff3e3e]/50 hover:shadow-lg hover:shadow-[#ff3e3e]/10"
+      }`}
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+      {/* Background gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+      {/* Progress bar */}
+      {taskStarted && !isCompleted && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gray-800">
           <div
-            className={`flex h-8 w-8 items-center justify-center rounded-full ${isCompleted ? "bg-green-500" : "bg-[#ff3e3e]"} text-white`}
-          >
-            {isCompleted ? <i className="fas fa-check"></i> : taskNumber}
-          </div>
-          <h3 className="text-xl font-bold text-white">{getTaskTitle()}</h3>
-        </div>
-        {isCompleted && (
-          <div className="rounded-full bg-green-500/20 px-3 py-1 text-sm font-medium text-green-400">Completed</div>
-        )}
-      </div>
-
-      <div className="mb-6">
-        <p className="text-gray-400">{getTaskDescription()}</p>
-      </div>
-
-      {!isCompleted && !taskStarted ? (
-        <div className="text-center">
-          <button
-            onClick={getTaskHandler()}
-            className="interactive-element button-glow button-3d rounded bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] px-6 py-3 font-semibold text-white transition-all hover:shadow-lg hover:shadow-[#ff3e3e]/20"
-          >
-            <i className="fas fa-play mr-2"></i> Start Task {taskNumber}
-          </button>
-        </div>
-      ) : !isCompleted && taskStarted ? (
-        <div className="text-center">
-          <div className="mb-4">
-            <div className="inline-block rounded-full bg-[#ff3e3e]/20 px-4 py-2 text-lg font-bold text-white">
-              <i className="fas fa-spinner fa-spin mr-2"></i> Processing...
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="text-center">
-          <div className="inline-block rounded-full bg-green-500/20 p-3">
-            <i className="fas fa-check-circle text-2xl text-green-500"></i>
-          </div>
+            className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-100 ease-out"
+            style={{ width: `${progress}%` }}
+          ></div>
         </div>
       )}
+
+      <div className="relative p-6">
+        <div className="flex items-start gap-4">
+          {/* Task number/icon */}
+          <div
+            className={`flex h-12 w-12 items-center justify-center rounded-xl font-bold transition-all duration-300 ${
+              isCompleted
+                ? "bg-green-500 text-white shadow-lg shadow-green-500/25"
+                : taskStarted
+                  ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
+                  : "bg-gradient-to-br from-[#ff3e3e] to-[#ff0000] text-white shadow-lg shadow-[#ff3e3e]/25"
+            }`}
+          >
+            {isCompleted ? (
+              <i className="fas fa-check text-lg"></i>
+            ) : taskStarted ? (
+              <i className="fas fa-spinner fa-spin text-lg"></i>
+            ) : (
+              <span className="text-lg">{taskNumber}</span>
+            )}
+          </div>
+
+          {/* Task content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-lg font-bold text-white">{getTaskTitle()}</h3>
+              {isCompleted && (
+                <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-full">
+                  Completed
+                </span>
+              )}
+            </div>
+            <p className="text-gray-400 text-sm mb-4 leading-relaxed">{getTaskDescription()}</p>
+
+            {/* Task action */}
+            {!isCompleted && !taskStarted ? (
+              <button
+                onClick={getTaskHandler()}
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#ff3e3e] to-[#ff0000] text-white font-semibold rounded-xl hover:from-[#ff0000] hover:to-[#cc0000] transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#ff3e3e]/25 group"
+              >
+                <i className={`${getTaskIcon()} mr-3 group-hover:scale-110 transition-transform`}></i>
+                Start Task
+              </button>
+            ) : !isCompleted && taskStarted ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 text-blue-400 rounded-lg">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">Processing...</span>
+                </div>
+                {progress > 0 && <span className="text-xs text-gray-500">{Math.round(progress)}%</span>}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-green-400">
+                <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <i className="fas fa-check text-sm"></i>
+                </div>
+                <span className="font-medium">Task Completed</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Task footer for footer validation task */}
       {taskType === "direct" && <div id="TaskFooter" ref={taskFooterRef}></div>}

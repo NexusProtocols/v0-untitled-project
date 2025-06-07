@@ -1,40 +1,30 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { FaDiscord } from "react-icons/fa"
+import type React from "react"
+
+import { getDiscordOAuthURL } from "@/lib/discord-config"
 
 interface DiscordLoginButtonProps {
-  isLinking?: boolean
+  type?: "login" | "linking"
   className?: string
+  children?: React.ReactNode
 }
 
-export function DiscordLoginButton({ isLinking = false, className = "" }: DiscordLoginButtonProps) {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-
-  const handleLogin = async () => {
-    setIsLoading(true)
-
-    try {
-      // Redirect to our API route that will handle the Discord OAuth flow
-      router.push(`/api/discord/login${isLinking ? "?link=true" : ""}`)
-    } catch (error) {
-      console.error("Discord login error:", error)
-      setIsLoading(false)
-    }
+export function DiscordLoginButton({ type = "login", className = "", children }: DiscordLoginButtonProps) {
+  const handleDiscordAuth = () => {
+    const authUrl = getDiscordOAuthURL(type)
+    window.location.href = authUrl
   }
 
+  const defaultText = type === "login" ? "Continue with Discord" : "Link Discord Account"
+
   return (
-    <Button
-      variant="outline"
-      className={`flex items-center gap-2 bg-[#5865F2] text-white hover:bg-[#4752C4] ${className}`}
-      onClick={handleLogin}
-      disabled={isLoading}
+    <button
+      onClick={handleDiscordAuth}
+      className={`inline-flex items-center justify-center gap-3 px-6 py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#5865F2]/25 ${className}`}
     >
-      <FaDiscord className="h-5 w-5" />
-      {isLinking ? "Link Discord Account" : "Login with Discord"}
-    </Button>
+      <i className="fab fa-discord text-xl"></i>
+      {children || defaultText}
+    </button>
   )
 }

@@ -34,6 +34,7 @@ export function GatewayTaskButton({
   const [taskStarted, setTaskStarted] = useState(false)
   const [progress, setProgress] = useState(0)
   const taskFooterRef = useRef<HTMLDivElement>(null)
+  const hasOpenedLink = useRef(false) // Prevent multiple opens
 
   // Handle task completion
   const handleComplete = async () => {
@@ -97,10 +98,17 @@ export function GatewayTaskButton({
 
   // Update the task handlers and timers
   const handleDirectLinkTask = () => {
+    // Prevent multiple opens
+    if (hasOpenedLink.current || taskStarted) return
+
+    hasOpenedLink.current = true
     setTaskStarted(true)
+
     const url =
       content?.url ||
       `https://geometrydoomeddrone.com/az0utitpz4?key=883f2bc65de3ac114b8ad78247cfc0b3&creator=${creatorId}&gateway=${gatewayId}`
+
+    // Only open when button is clicked
     window.open(url, "_blank")
 
     // Start progress animation
@@ -120,6 +128,8 @@ export function GatewayTaskButton({
 
   // Handle interstitial ad task
   const handleInterstitialTask = () => {
+    if (taskStarted) return
+
     setTaskStarted(true)
 
     // Create and load the ad script
@@ -151,6 +161,8 @@ export function GatewayTaskButton({
 
   // Handle external validation task (Ad Maven)
   const handleExternalValidationTask = () => {
+    if (taskStarted) return
+
     setTaskStarted(true)
 
     // Generate a token for validation
@@ -185,6 +197,8 @@ export function GatewayTaskButton({
 
   // Handle AutoTag redirect task
   const handleAutoTagTask = () => {
+    if (taskStarted) return
+
     setTaskStarted(true)
 
     // Generate a token for validation
@@ -204,6 +218,8 @@ export function GatewayTaskButton({
 
   // Handle footer validation task
   const handleFooterValidationTask = () => {
+    if (taskStarted) return
+
     setTaskStarted(true)
 
     if (taskFooterRef.current) {

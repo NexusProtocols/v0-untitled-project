@@ -12,16 +12,20 @@ export async function POST(request: NextRequest) {
 
     console.log("Exchanging code for access token...")
 
-    // CRITICAL: Make sure these values exactly match what's registered with Discord
     const clientId = process.env.DISCORD_CLIENT_ID
     const clientSecret = process.env.DISCORD_CLIENT_SECRET
-    const redirectUri = process.env.DISCORD_REDIRECT_URI
 
-    // Log the values (without exposing the full secret)
+    // Determine redirect URI based on state
+    const redirectUri =
+      state === "linking"
+        ? "https://nexuslive.vercel.app/discord-linking"
+        : "https://nexuslive.vercel.app/discord-login"
+
     console.log("OAuth Configuration:", {
       clientId,
       clientSecretProvided: !!clientSecret,
       redirectUri,
+      state,
     })
 
     // Exchange code for access token
@@ -30,7 +34,7 @@ export async function POST(request: NextRequest) {
       client_secret: clientSecret || "",
       grant_type: "authorization_code",
       code,
-      redirect_uri: redirectUri || "",
+      redirect_uri: redirectUri,
     })
 
     try {
@@ -73,6 +77,11 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Get Discord avatar URL
+      const avatarUrl = discordUser.avatar
+        ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png?size=256`
+        : `https://cdn.discordapp.com/embed/avatars/${discordUser.discriminator % 5}.png`
+
       return NextResponse.json({
         success: true,
         user: {
@@ -80,6 +89,8 @@ export async function POST(request: NextRequest) {
           username: discordUser.username,
           email: discordUser.email,
           verified: discordUser.verified,
+          avatar: avatarUrl,
+          discriminator: discordUser.discriminator,
           isLinking: state === "linking",
         },
       })
